@@ -90,7 +90,7 @@ button{cursor:pointer;touch-action:manipulation}button:focus-visible,select:focu
 <div class="mu">Optional Supabase sync. Your existing browser data stays local until you sign in. Use the same account on both devices. Requires HTTPS (GitHub Pages).</div>
 <div class="tools" style="margin-top:9px"><input id="sbUrl" placeholder="Supabase project URL (https://…supabase.co)" aria-label="Supabase URL" style="min-width:230px;flex:1"><input id="sbKey" placeholder="Supabase publishable / anon key" aria-label="Supabase public key" style="min-width:220px;flex:1"><button class="btn alt" id="sbConfig">Save cloud settings</button></div>
 <div class="tools"><input id="sbEmail" type="email" placeholder="Email" aria-label="Email"><input id="sbPassword" type="password" placeholder="Password (8+ characters)" aria-label="Password"><button class="btn" id="sbSignIn">Sign in</button><button class="btn alt" id="sbSignUp">Create account</button><button class="btn alt" id="sbSignOut">Sign out</button></div>
-<div class="tools"><button class="btn alt" id="sbSyncNow">Sync now</button><button class="btn alt" id="sbBackup">Download local data backup</button><span class="mu" id="sbStatus" role="status" aria-live="polite">Cloud sync not configured; local data unchanged.</span></div>
+<div class="tools"><button class="btn alt" id="sbSyncNow">Sync now</button><button class="btn alt" id="sbRestoreCloud">Use cloud data on this device</button><button class="btn alt" id="sbBackup">Download local data backup</button><span class="mu" id="sbStatus" role="status" aria-live="polite">Cloud sync not configured; local data unchanged.</span></div>
 </section>
 <h2 id="myParlays">My parlays</h2><div id="sumry" class="card"></div>
 <div class="card"><b>Player statistics CSV</b><div class="mu" style="margin:5px 0 8px">Imported player statistics are retained in this browser until you select Clear imported stats.</div><div class="tools"><span style="display:inline-flex;flex-direction:column;align-items:flex-start;gap:5px"><button class="btn" type="button" id="chooseCSV">Choose CSV file</button><span id="csvFileName" class="mu" role="status">Empty</span></span><input id="csvUpload" type="file" accept=".csv,.tsv,text/csv,text/tab-separated-values" style="position:absolute;width:1px;height:1px;opacity:0;pointer-events:none" aria-label="Choose player statistics CSV"><select id="statMode" aria-label="Player data source"><option value="blend">Combined: uploaded + onboard</option><option value="upload">Uploaded only</option><option value="onboard">Onboard only</option></select><button class="btn alt" id="clearCSV">Clear imported stats</button></div><div id="csvState" class="mu">Empty — no imported player statistics.</div></div>
@@ -1027,14 +1027,19 @@ async function sync(initial=false){
   const cloud=remote.payload||{},cloudString=stable(cloud),timestamp=Date.parse(remote.updated_at)||0;
   if(initial){
    if(current!==cloudString){
-    const hasLocal=Object.keys(local).some(k=>['nflp-saved-v1','nflp-draft-slips-v3','nflp-import-v3'].includes(k));
-    if(!hasLocal||confirm('This account already has cloud data.\\n\\nOK = restore cloud data to this device (a local safety backup is kept).\\nCancel = keep this device’s data and upload it to cloud, replacing the cloud copy.\\n\\nTo avoid accidental replacement, download a backup first if unsure.')){
-     restore(cloud);return;
-    }
-    if(!confirm('Replace the existing cloud copy with this device’s local data? This may overwrite changes made on your other device.')){status('Sync paused. No data overwritten.');return}
-    await push(uid,local);
-   }else{lastPushed=current;remoteUpdated=timestamp;status('Cloud and device are in sync.')}
-   started=true;return;
+    const meaningfulLocal=Object.entries(local).some(([k,v])=>{
+      if(k.includes('saved')||k.includes('draft')||k.includes('import')){
+        try {const x=JSON.parse(v);return Array.isArray(x)?x.length>0:!!(x&&typeof x==='object'&&Object.keys(x).length>0)}
+        catch{return !!v}
+      }
+      return false;
+    });
+    if(!meaningfulLocal){restore(cloud);return;}
+    status('Cloud data available. Select “Use cloud data on this device” to restore it. Your local copy will be backed up first.');
+    started=false;return;
+   }
+   lastPushed=current;remoteUpdated=timestamp;started=true;
+   status('Cloud and device are in sync.');return;
   }
   if(current!==lastPushed){
    // Local edits are authoritative, unless a remote edit happened since last sync.
@@ -1071,6 +1076,18 @@ $('sbSignIn').onclick=()=>sign('signin');
 $('sbSignUp').onclick=()=>sign('signup');
 $('sbSignOut').onclick=()=>{storeAuth(null);started=false;status('Signed out. Local data preserved.');};
 $('sbBackup').onclick=download;
+$('sbRestoreCloud').onclick=async()=>{
+ if(!auth){status('Sign in first.');return;}
+ if(busy){status('Sync is already running. Please wait.');return;}
+ busy=true;
+ try{
+  const uid=await userId();const remote=await readRemote(uid);
+  if(!remote){status('No cloud copy exists for this account. Nothing restored.');return;}
+  if(!confirm('Restore your saved cloud data to this device?\n\nA safety backup of this device’s local data will be stored first. The cloud copy will NOT be overwritten.'))return;
+  restore(remote.payload||{});
+ }catch(e){status('Restore failed: '+e.message)}finally{busy=false}
+};
+
 $('sbSyncNow').onclick=async()=>{if(!auth){status('Sign in first.');return}await sync(!started)};
 config=configLoad();auth=authLoad();
 $('sbUrl').value=config.url||'';$('sbKey').value=config.key||'';
