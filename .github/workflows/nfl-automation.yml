@@ -1,0 +1,36 @@
+name: NFL statistics and pregame prediction snapshots
+on:
+  schedule:
+    # Every 3 hours; snapshots are created once per upcoming game, at least 30m before kickoff.
+    - cron: '17 */3 * * *'
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: nfl-automation
+  cancel-in-progress: false
+jobs:
+  refresh-and-snapshot:
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+          cache-dependency-path: requirements-automation.txt
+      - run: pip install -r requirements-automation.txt
+      - run: python -m playwright install --with-deps chromium
+      - name: Refresh stats and upload to Supabase
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          NFL_SEASON: ${{ vars.NFL_SEASON || '2026' }}
+        run: python export_automated.py
+      - name: Archive original pregame predictions
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          NFL_SEASON: ${{ vars.NFL_SEASON || '2026' }}
+        run: python snapshot_predictions.py
