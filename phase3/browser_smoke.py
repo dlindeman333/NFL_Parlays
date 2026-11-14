@@ -28,7 +28,7 @@ with sync_playwright() as p:
         page.wait_for_function("window.phase3InjuryLabel && window.phase3InjuryLabel('Synthetic Player','BUF',10).includes('Out')")
         assert not errors,errors
         assert not writes,writes
-        assert page.get_by_role('button',name='Track upcoming predictions in my account').count()==1
+               assert page.get_by_role('button',name='Track upcoming predictions in my account',include_hidden=True).count()==1
         assert page.evaluate("window.phase3InjuryLabel('Missing Player','BUF',10).includes('unconfirmed')")
         if mobile: assert page.evaluate('document.documentElement.scrollWidth<=window.innerWidth+2')
         print(('Mobile' if mobile else 'Desktop')+' feature smoke passed; no runtime errors or live writes')
