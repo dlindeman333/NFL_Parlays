@@ -1,4 +1,5 @@
 <!DOCTYPE html>
+<!-- Phase 3 final production candidate RC3; writes restricted to production URL; deployment approval pending -->
 <html lang="en"><head><meta charset="utf-8"><title>NFL Parlay Builder</title>
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <style>
@@ -84,7 +85,8 @@ button{cursor:pointer;touch-action:manipulation}button:focus-visible,select:focu
 
 .sports-links{display:inline-flex;gap:7px;flex-wrap:wrap}.sports-links a{display:inline-flex;align-items:center;gap:6px;background:var(--card);min-height:40px}.sports-links img{width:24px;height:24px;object-fit:contain}.sv .row>.btn[data-saved-action="edit"]{margin-right:0}.sv .row>.btn[data-saved-action="delete-parlay"]{margin-left:0}#savedParlaySlips,#draftManagement{scroll-margin-top:12px}#draftManagement{border-top:2px solid var(--bd);padding-top:8px;margin-top:18px}
 .week-group-heading{font-size:1.4rem;font-weight:800;letter-spacing:.02em;margin:20px 0 12px;padding:10px 14px;border-left:5px solid #3b82f6;background:rgba(59,130,246,.09);border-radius:6px}
-.setup-modal{border:1.5px solid var(--bd);border-radius:14px;background:var(--card);color:var(--tx);width:min(760px,96vw);max-height:88vh;padding:0;box-shadow:0 20px 70px #0006}.setup-modal::backdrop{background:#0009}.setup-content{padding:18px;max-height:85vh;overflow:auto}.setup-head{display:flex;align-items:center;justify-content:space-between;gap:12px}.setup-modal input[type=email],.setup-modal input[type=password]{padding:9px;border:1.5px solid var(--bd);border-radius:8px;background:var(--card);color:var(--tx);max-width:100%}.setup-modal .tools{margin:12px 0}.setup-modal section{border-top:1px solid var(--bd);padding-top:12px;margin-top:15px}.setup-modal h2{margin-top:4px}.setup-modal .mu{overflow-wrap:anywhere}
+.setup-modal{border:1.5px solid var(--bd);border-radius:14px;background:var(--card);color:var(--tx);width:min(760px,96vw);max-height:88vh;padding:0;box-shadow:0 20px 70px #0006}.setup-modal::backdrop{background:#0009}.setup-content{padding:18px;max-height:85vh;overflow:auto}.setup-head{display:flex;align-items:center;justify-content:space-between;gap:12px}.setup-modal input[type=email],.setup-modal input[type=password]{padding:9px;border:1.5px solid var(--bd);border-radius:8px;background:var(--card);color:var(--tx);max-width:100%}.setup-modal .tools{margin:12px 0}.setup-modal #sbAuthForm label{display:flex;flex-direction:column;gap:4px;font-size:12px;font-weight:650;min-width:min(100%,180px)}.setup-modal #sbAuthForm input{width:100%}.setup-modal section{border-top:1px solid var(--bd);padding-top:12px;margin-top:15px}.setup-modal h2{margin-top:4px}.setup-modal .mu{overflow-wrap:anywhere}
+#cloudParlayPicker::backdrop{background:rgba(0,0,0,.62)}
 </style>
 <style>
 .pred-dashboard{display:grid;gap:16px;margin:14px 0}
@@ -100,28 +102,68 @@ button{cursor:pointer;touch-action:manipulation}button:focus-visible,select:focu
 .pred-chart-svg{display:block;width:100%;height:auto;max-height:330px}
 .pred-table-scroll{overflow-x:auto}
 @media(max-width:480px){.pred-kpis{gap:6px}.pred-kpi{padding:10px}.pred-chart-card{padding:10px}}
+#topAccountPanel #sbAuthForm{display:flex;align-items:end;flex-wrap:wrap;gap:8px}#topAccountPanel #sbAuthForm label{display:flex;flex-direction:column;gap:4px;font-size:12px;font-weight:650}#topAccountPanel #sbAuthForm input{padding:9px;border:1px solid var(--bd);border-radius:8px;background:var(--card);color:var(--tx);max-width:100%}#topAccountPanel #topAccountIndicator{overflow-wrap:anywhere}
 </style>
-</head><body>
+<style id="phase3MobileSlipStyles">
+#phase3MobileSlipToggle{display:none}
+#phase3MobileSlipDialog{background:var(--card);color:var(--tx);border:1px solid var(--bd);border-radius:16px 16px 0 0;padding:16px;width:100%;max-width:100%;max-height:85dvh;margin:auto 0 0;overflow:auto;box-sizing:border-box}
+#phase3MobileSlipDialog::backdrop{background:rgba(0,0,0,.6)}
+#phase3MobileSlipDialog .mobile-slip-heading{display:flex;justify-content:space-between;align-items:center;gap:12px;margin-bottom:12px}
+@media(max-width:700px){#phase3MobileSlipToggle{display:block;position:fixed;bottom:calc(12px + env(safe-area-inset-bottom));right:12px;z-index:30;box-shadow:0 5px 18px #0005}body{padding-bottom:75px}}
+</style>
+<style id="phase3PrivacyShellStyles">
+body.phase3-privacy-locked > :not(.hd):not(#topAccountPanel):not(#phase3KickoffCountdown):not(.toolbar):not(.refresh-status-line):not(.navlinks):not(#setupDialog):not(#advancedSetupDialog):not(script){display:none!important}
+#phase3PrivacyNotice{margin-top:8px;padding:10px;border:1px solid var(--bd);border-radius:8px;font-size:13px}
+</style>
+<style id="phase3KickoffCountdownStyles">
+#phase3KickoffCountdown{margin:10px 0 12px;padding:12px 14px;text-align:center;border:1px solid var(--bd);border-radius:12px;background:var(--card)}
+#phase3KickoffCountdown .kickoff-title{font-size:13px;font-weight:800;letter-spacing:.045em}
+#phase3KickoffCountdown .kickoff-heading{display:flex;align-items:center;justify-content:space-between;gap:10px}
+#phase3KickoffCountdown .kickoff-week{font-size:clamp(15px,3.6vw,21px);font-weight:900;letter-spacing:.04em;border:1px solid var(--bd);border-radius:8px;padding:5px 12px;background:var(--sel);white-space:nowrap}
+#phase3KickoffCountdown .kickoff-clock{display:flex;justify-content:center;gap:8px;margin:9px 0 5px}
+#phase3KickoffCountdown .kickoff-unit{min-width:64px;flex:0 1 95px;padding:7px 4px;border-radius:8px;background:var(--sel)}
+#phase3KickoffCountdown .kickoff-value{display:block;font-size:clamp(19px,4vw,27px);font-weight:800;font-variant-numeric:tabular-nums}
+#phase3KickoffCountdown .kickoff-label{font-size:11px;color:var(--mu)}
+#phase3KickoffCountdown .kickoff-note{font-size:12px;color:var(--mu)}
+@media(max-width:400px){#phase3KickoffCountdown .kickoff-clock{gap:5px}#phase3KickoffCountdown .kickoff-unit{min-width:0}}
+</style>
+</head><body class="phase3-privacy-locked">
 <div class="hd"><div class="row" style="justify-content:space-between"><h1>NFL Parlay Builder</h1><button id="theme" class="btn alt" type="button" aria-label="Toggle dark mode">◐ Theme</button></div><div class="mu" id="sub"></div></div>
+<section id="phase3KickoffCountdown" aria-label="Countdown to next NFL kickoff" aria-live="off">
+ <div class="kickoff-heading"><div class="kickoff-title">🏈 NEXT NFL KICKOFF</div><strong id="kickoffWeek" class="kickoff-week" aria-label="NFL week">WEEK --</strong></div>
+ <div class="kickoff-clock" role="timer" aria-label="Time remaining to next kickoff">
+  <div class="kickoff-unit"><span class="kickoff-value" id="kickoffDays">--</span><span class="kickoff-label">Days</span></div>
+  <div class="kickoff-unit"><span class="kickoff-value" id="kickoffHours">--</span><span class="kickoff-label">Hours</span></div>
+  <div class="kickoff-unit"><span class="kickoff-value" id="kickoffMinutes">--</span><span class="kickoff-label">Minutes</span></div>
+  <div class="kickoff-unit"><span class="kickoff-value" id="kickoffSeconds">--</span><span class="kickoff-label">Seconds</span></div>
+ </div>
+ <div class="kickoff-note" id="kickoffStatus" role="status" aria-live="polite">Checking NFL schedule…</div>
+</section>
+<section id="topAccountPanel" class="card" aria-label="NFL Parlay Builder account" style="margin:10px 0 12px;border:1px solid var(--bd)"><div class="tools" style="justify-content:space-between;align-items:center;margin:0 0 6px"><strong>🔐 NFL Parlay Builder · Your Account</strong><span class="mu" style="font-weight:700;color:#047857" id="topEnvironment">PRODUCTION CANDIDATE — GUARDED SYNC</span></div><div id="accountIdentityCard" role="status" aria-live="polite" style="border:1px solid var(--bd);border-radius:10px;padding:12px;margin:8px 0;display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap"><div><div class="mu">Signed in as</div><strong id="topAccountIndicator">Checking sign-in…</strong></div><span id="topConnectionBadge" class="mu">Not connected</span></div><div id="topAuthMount"></div><div class="mu" style="margin-top:7px">Guarded cloud sync and deletion are available only at the production URL after sign-in and account checks. Automated prediction publishing remains disabled.</div></section>
 <div class="toolbar"><label for="seasonSelect" style="font-weight:700">Season</label><select id="seasonSelect" aria-label="NFL season"></select><label for="wkTop" style="font-weight:700">Week</label><select id="wkTop" aria-label="NFL week (top selector)"></select><button id="refresh" class="btn" type="button">↻ Refresh NFL schedule</button><button id="boxRefresh" class="btn alt" type="button" hidden>↻ Load completed team box scores</button></div><div class="refresh-status-line"><span class="data-state" id="dataState" role="status" aria-live="polite">Offline snapshot • 2026 weeks 9–10</span></div>
-<div class="navlinks"><button id="openSetup" class="btn alt" type="button">⚙ Setup</button><a href="#myParlays">My parlays</a><a href="#builderSettingsTitle">Builder</a><a href="#gameSection">Games</a><a href="#recommendations">Potential plays</a><a href="#advancedPredictions">AI Matchups</a></div>
+<div class="card" style="border-color:#b45309"><b>Release candidate safety · guarded parlay operations</b><div class="mu">Guarded saved-parlay sync requires verified account ownership and matching cloud/device data. Deletion requires backup and confirmation. Automated prediction publishing remains disabled.</div></div>
+<div class="navlinks"><a href="#myParlays">My parlays</a><a href="#builderSettingsTitle">Builder</a><a href="#gameSection">Games</a><a href="#recommendations">Potential plays</a><a href="#advancedPredictions">AI Matchups</a></div>
 
 <dialog id="setupDialog" class="setup-modal" aria-label="Setup"><div class="setup-content"><div class="setup-head"><h2 style="margin:0">⚙ Setup</h2><button class="btn alt" type="button" id="closeSetup">Close ✕</button></div><section id="cloudSyncPanel">
 <h2 style="margin:0 0 8px">Cloud sync · PC &amp; iPhone</h2>
 <div class="mu">Supabase connection is already configured. Sign in with your own account; use the same account on your PC and iPhone. Your existing browser data stays local until you sign in. Requires HTTPS (GitHub Pages).</div>
 <div class="mu" style="margin-top:9px">Cloud connection is preconfigured. Sign in or create your own account below.</div>
-<div class="tools"><input id="sbEmail" type="email" placeholder="Email" aria-label="Email"><input id="sbPassword" type="password" placeholder="Password (8+ characters)" aria-label="Password"><button class="btn" id="sbSignIn">Sign in</button><button class="btn alt" id="sbSignUp">Create account</button><button class="btn alt" id="sbSignOut">Sign out</button></div>
-<div class="tools"><button class="btn alt" id="sbSyncNow">Sync now</button><button class="btn alt" id="sbRestoreCloud">Use cloud data on this device</button><button class="btn alt" id="sbUploadLocal" type="button">Upload this device's parlays to cloud</button><button class="btn alt" id="sbBackup">Download local data backup</button><span class="mu" id="sbStatus" role="status" aria-live="polite">Cloud sync not configured; local data unchanged.</span></div>
+<form id="sbAuthForm" class="tools" autocomplete="on" method="post" action="#" aria-label="Cloud account sign in"><label for="sbEmail">Email <input id="sbEmail" name="username" type="email" inputmode="email" autocomplete="username" autocapitalize="none" autocorrect="off" spellcheck="false" placeholder="Email" required></label><label for="sbPassword">Password <input id="sbPassword" name="password" type="password" autocomplete="current-password" placeholder="Password (8+ characters)" required></label><button class="btn" id="sbSignIn" type="submit">Sign in</button><button class="btn alt" id="sbSignUp" type="button">Create account</button><button class="btn alt" id="sbSignOut" type="button">Sign out</button></form>
+<div class="tools"><button class="btn alt" id="sbSyncNow">Sync now</button><button class="btn alt" id="sbBackup">Download local data backup</button><span class="mu" id="sbStatus" role="status" aria-live="polite">Cloud sync not configured; local data unchanged.</span></div>
 </section>
 <section id="csvSetup"><h2>Upload NFL Stats</h2><div id="autoStatsStatus" class="mu" role="status">Cloud NFL statistics: checking…</div><div class="mu" style="margin:5px 0 8px">Imported player statistics are retained in this browser until you select Clear imported stats.</div><div class="tools"><span style="display:inline-flex;flex-direction:column;align-items:flex-start;gap:5px"><button class="btn" type="button" id="chooseCSV">Choose CSV file</button><span id="csvFileName" class="mu" role="status">Empty</span></span><input id="csvUpload" type="file" accept=".csv,.tsv,text/csv,text/tab-separated-values" style="position:absolute;width:1px;height:1px;opacity:0;pointer-events:none" aria-label="Choose player statistics CSV"><button class="btn alt" id="clearCSV">Clear imported stats</button></div><div id="csvState" class="mu">Empty — no imported player statistics.</div><div class="mu" id="csvLastUpload" style="margin-top:7px" role="status">Latest upload: Never</div><div class="mu">Data source: Onboard + uploaded NFL stats (automatic)</div></section></div></dialog>
+<dialog id="advancedSetupDialog" class="setup-modal" aria-label="Advanced Options"><div class="setup-content"><div class="setup-head"><h2 style="margin:0">⚙ Advanced Options</h2><button class="btn alt" type="button" id="closeAdvancedSetup">Close ✕</button></div><div id="advancedSetupMount"></div></div></dialog>
+<details id="phase3DataHealth" class="card" style="margin:12px 0" aria-label="Data health and synchronization status"><summary style="cursor:pointer;font-weight:700">Data health &amp; synchronization status</summary><p class="mu">Device-level diagnostics only. These indicators do not certify that NFL feeds are current or that cloud writes are enabled.</p><div id="phase3HealthResults" role="status" aria-live="polite">Checking local connection…</div><button type="button" class="btn alt" id="phase3HealthRefresh" style="margin-top:8px">Refresh status</button></details>
 <h2 id="myParlays">My parlays</h2><div id="sumry" class="card"></div>
-<section id="savedParlaySlips" style="margin-top:18px"><h2>Saved parlay slips</h2><div class="mu">Showing saved parlays for the selected NFL week. Expand previous weeks to see older slips.</div><div class="tools"><button type="button" class="btn alt" id="toggleSavedPrevious" aria-expanded="false" aria-controls="savedPreviousWeeks">Show previous weeks saved parlays</button></div><div id="saved"></div><div class="mu" id="savedActionStatus" role="status" aria-live="polite"></div><div class="tools" style="margin-top:12px"><button class="btn alt" id="copyAllSaved">Copy all saved parlays</button><button type="button" class="btn alt" id="deleteAllSaved">Delete all saved parlays</button></div></section>
+<section id="savedParlaySlips" style="margin-top:18px"><h2>Saved parlay slips</h2><div class="mu">Showing saved parlays for the selected NFL week. Expand previous weeks to see older slips.</div><div class="tools"><button type="button" class="btn alt" id="toggleSavedPrevious" aria-expanded="false" aria-controls="savedPreviousWeeks">Show previous weeks saved parlays</button></div><div id="saved"></div><div class="mu" id="savedActionStatus" role="status" aria-live="polite"></div><div class="tools" style="margin-top:12px"><button class="btn alt" id="copyAllSaved">Copy all saved parlays</button><button type="button" class="btn alt" id="deleteAllSaved">Delete all my saved parlays…</button></div></section>
 <!-- Active parlay summary and actions above draft slip listing -->
 <div class="bar"><div id="b1">0 / 3 legs<small>Pick legs below</small></div><div id="b2" style="text-align:right">—<small></small></div></div>
 <div class="card" id="slip"></div>
 
 <div class="row" style="margin:8px 0"><button class="btn" id="save">Save parlay</button><button class="btn alt" id="cp">Copy slip</button><button class="btn alt" id="xl">Export spreadsheet</button><span class="mu" id="msg"></span></div>
 
+<button type="button" class="btn" id="phase3MobileSlipToggle" aria-haspopup="dialog" aria-controls="phase3MobileSlipDialog" aria-expanded="false">View active slip</button>
+<dialog id="phase3MobileSlipDialog" aria-label="Active parlay slip"><div class="mobile-slip-heading"><strong>Active parlay slip</strong><button type="button" class="btn alt" id="phase3MobileSlipClose">Close</button></div><div id="phase3MobileSlipContents"></div></dialog>
 <h2 id="builderSettingsTitle">Week &amp; pick filters</h2>
 <div class="mu" style="margin-bottom:8px">Select the NFL week, game type, kickoff, and pick filters here.</div>
 <div class="card" id="builderControls">
@@ -132,6 +174,7 @@ button{cursor:pointer;touch-action:manipulation}button:focus-visible,select:focu
   </div>
   <div class="row" style="margin-top:10px"><b>Kickoff</b></div><div class="row" id="tf" style="margin-top:4px"></div>
 <div class="row" style="margin-top:10px"><b>Picks</b></div><div class="row" id="pf" style="margin-top:4px"></div>
+<div class="row" style="margin-top:12px"><button type="button" class="btn alt" id="resetBuilderFilters" onclick="resetBuilderFilters()">Reset filters</button><span class="mu">Kickoff, pick type, and game search are remembered on this device.</span></div>
 <div class="mu" id="hint" style="margin-top:8px"></div>
 </div>
 
@@ -146,21 +189,64 @@ button{cursor:pointer;touch-action:manipulation}button:focus-visible,select:focu
 
 <h2 id="recommendations">Potential plays</h2>
 <div class="mu">Recommendations for Week 10 based on the original model. Schedule refresh updates matchups and final scores, but does not update team records, player stats, or model probabilities. These are not sportsbook odds.</div>
-<div id="plays"></div>
+<div id="recommendationActionStatus" class="mu" role="status" aria-live="polite" style="margin:8px 0"></div><div id="plays"></div>
 <p class="mu">Team TD, passing and rushing picks are estimates against standard reference lines. Player picks use season totals from StatsCrew league leaders (Pro-Football-Reference blocks automated access), so only leading QBs, RBs and TD scorers appear, lines are each player’s season average, and TD counts may miss receiving scores for backs. Odds shown are model-estimated (about 4.5% margin built in), and spread/total lines are model reference lines, not sportsbook prices. Check your book for real lines before betting. These are estimates, not guarantees; same-game legs are correlated, so books price them differently. Please bet responsibly.</p>
 
 <h2 id="advancedPredictions">AI Matchup Recommendations</h2>
-<div class="mu">Data-driven matchup analysis using available model estimates and imported player game logs. Not a live generative AI service. Sportsbook lines are optional and entered manually; no paid API or background odds scraping.</div>
+<details id="phase3AdvancedMethodology" class="card" style="margin:8px 0 12px"><summary style="cursor:pointer;font-weight:700">How matchup analysis works (advanced details)</summary><p class="mu">Data-driven matchup analysis using available model estimates and imported player game logs. Not a live generative AI service. Sportsbook lines are optional and entered manually; no paid API or background odds scraping.</p><p class="mu">Model estimates are not sportsbook odds. Verify current lines, player availability, and kickoff times before making selections.</p></details>
 <div class="tools" role="tablist" aria-label="AI Matchups sections"><button type="button" class="btn" id="advTabRecommendations" aria-selected="true">Recommendations</button><button type="button" class="btn alt" id="advTabPerformance" aria-selected="false">Prediction Performance</button></div><div id="advRecommendationPanel"><div class="card"><div class="tools"><label for="advView"><b>View</b></label><select id="advView"><option value="picks">Top picks</option><option value="games">Game matchups</option><option value="parlays">Suggested parlay</option></select><label for="advMarket"><b>Market</b></label><select id="advMarket"><option value="all">All</option><option value="ps">Passing yards</option><option value="ru">Rushing yards</option><option value="td">Touchdowns</option></select></div><div id="advStatus" class="mu" role="status"></div><div id="advResults"></div><div id="advEditor" class="card" hidden><b id="advEditTitle">Sportsbook line</b><div class="mu">Enter a line you personally verified at the sportsbook. These values are not automatically refreshed or cloud-synced.</div><div class="tools"><select id="advBook"><option>DraftKings</option><option>FanDuel</option><option>Other</option></select><label>Line <input id="advLine" type="number" min="0" step="0.5" placeholder="225.5"></label><label>American odds <input id="advOdds" type="number" step="1" placeholder="-110"></label><button class="btn" id="advSaveLine" type="button">Save line</button><button class="btn alt" id="advCancelLine" type="button">Cancel</button></div></div></div>
-</div><div id="advPerformancePanel" hidden><div class="card"><b>Tracked AI recommendations</b><p class="mu">Save a pregame snapshot of the currently ranked recommendations. Once final player statistics are imported, this tab grades the original lines without changing the prediction engine. Snapshots stay in this browser; export a backup to preserve them. Only pregame snapshots count.</p><div class="tools"><button type="button" class="btn" id="advTrackSnapshot">Save current Top 12 predictions</button><button type="button" class="btn alt" id="advExportTracking">Export tracking history</button><button type="button" class="btn alt" id="advImportTracking">Import tracking history</button><input type="file" id="advImportTrackingFile" accept=".json,application/json" hidden></div><div id="advTrackingStatus" class="mu" role="status"></div><div id="advTrackingResults"></div></div><h2 id="aiPerformance">Previous Week &amp; Season AI Performance</h2><div id="boxState" class="mu" role="status" aria-live="polite" hidden></div><div id="archivedPerformance" class="card"><b>Archived pregame prediction accuracy</b><div class="mu">Checking for timestamped pregame snapshots…</div></div><div id="performance"></div><dialog id="performanceDetails" class="performance-modal" aria-label="AI performance pick details"><div class="performance-modal-inner"><div class="performance-modal-head"><h3 id="performanceDetailsTitle">Pick details</h3><button type="button" class="btn alt" id="closePerformanceDetails">Close ✕</button></div><div id="performanceDetailsBody"></div></div></dialog><div class="mu">Only predictions with verifiable final results are scored. Player props require matching weekly CSV data. The existing performance cards below are retrospective model evaluations; archived pregame accuracy is shown separately above; unavailable outcomes are excluded from hit percentages.</div>
+</div><div id="advPerformancePanel" hidden><div class="card"><b>Tracked AI recommendations</b><p class="mu">Save a local snapshot of currently ranked recommendations at least 30 minutes before scheduled kickoff. These browser snapshots are not independently verified official predictions. Once final player statistics are imported, this tab grades the original lines without changing the prediction engine. Snapshots stay in this browser; export a backup to preserve them. Only pregame snapshots count.</p><div class="tools"><button type="button" class="btn" id="advTrackSnapshot">Save current Top 12 predictions</button><button type="button" class="btn alt" id="advExportTracking">Export tracking history</button><button type="button" class="btn alt" id="advImportTracking">Import tracking history</button><input type="file" id="advImportTrackingFile" accept=".json,application/json" hidden></div><div id="advTrackingStatus" class="mu" role="status"></div><div id="advTrackingResults"></div></div><div id="cloudUserPredictionHistory" class="card" style="margin-top:12px"><b>My cloud prediction history</b><p class="mu">Read-only preview of prediction tracking saved for your signed-in account. This does not upload local snapshots or change cloud records.</p><div id="cloudUserPredictionHistoryStatus" class="mu" role="status">Sign in to view your cloud prediction history.</div><div id="cloudUserPredictionHistoryResults"></div><button class="btn alt" type="button" id="cloudUserPredictionHistoryRefresh">Refresh my cloud history</button></div><div id="cloudOfficialGrades" class="card" style="margin-top:12px"><b>Official cloud grading</b><p class="mu">Verified cloud grade records are shown separately from browser estimates. No records are changed here.</p><div id="cloudOfficialGradesStatus" class="mu" role="status">Waiting to load cloud grades…</div><div id="cloudOfficialGradesResults"></div><button class="btn alt" type="button" id="cloudOfficialGradesRefresh">Refresh official grades</button></div><h2 id="aiPerformance">Previous Week &amp; Season AI Performance</h2><div id="boxState" class="mu" role="status" aria-live="polite" hidden></div><div id="archivedPerformance" class="card"><b>Archived pregame prediction accuracy</b><div class="mu">Checking for timestamped pregame snapshots…</div></div><div id="performance"></div><dialog id="performanceDetails" class="performance-modal" aria-label="AI performance pick details"><div class="performance-modal-inner"><div class="performance-modal-head"><h3 id="performanceDetailsTitle">Pick details</h3><button type="button" class="btn alt" id="closePerformanceDetails">Close ✕</button></div><div id="performanceDetailsBody"></div></div></dialog><div class="mu">Only predictions with verifiable final results are scored. Player props require matching weekly CSV data. The existing performance cards below are retrospective model evaluations; archived pregame accuracy is shown separately above; unavailable outcomes are excluded from hit percentages.</div>
 
 </div>
 <script>
+// Production storage is isolated from all legacy and TEST browser keys.
+// No migration, deletion, or adoption of the old shared keys occurs.
+function phase3ScopedStorage(storage){
+ const namespace='nflp-production-isolated-v1:';
+ const names=()=>Array.from({length:storage.length},(_,i)=>storage.key(i)).filter(k=>k&&k.startsWith(namespace));
+ return Object.freeze({
+  get length(){return names().length},
+  key(i){const k=names()[i];return k===undefined?null:k.slice(namespace.length)},
+  getItem(k){return storage.getItem(namespace+String(k))},
+  setItem(k,v){storage.setItem(namespace+String(k),String(v))},
+  removeItem(k){storage.removeItem(namespace+String(k))},
+  eventKey(k){return k===null?null:k.startsWith(namespace)?k.slice(namespace.length):undefined}
+ });
+}
+const phase3LocalStorage=phase3ScopedStorage(window.localStorage);
+const phase3SessionStorage=phase3ScopedStorage(window.sessionStorage);
+</script>
+<script>
+(function(){
+  const target=document.getElementById('phase3HealthResults');
+  const refresh=document.getElementById('phase3HealthRefresh');
+  if(!target||!refresh)return;
+  function update(){
+    const online=navigator.onLine===false?'Device reports offline':'Device reports online (server reachability unverified)';
+    const cloud=document.getElementById('sbStatus');
+    const cloudText=cloud?(cloud.textContent||'').trim():'Cloud status unavailable';
+    const stats=document.getElementById('autoStatsStatus');
+    const statsText=stats?(stats.textContent||'').trim():'NFL statistics status unavailable';
+    target.replaceChildren();
+    for(const [label,value] of [['Network',online],['Cloud sync',cloudText],['NFL statistics',statsText],['Cloud writes',window.phase3WriteGateStatus?window.phase3WriteGateStatus():'Checking production URL']]){
+      const p=document.createElement('p');p.className='mu';
+      const b=document.createElement('strong');b.textContent=label+': ';
+      p.append(b,document.createTextNode(value));target.appendChild(p);
+    }
+  }
+  refresh.addEventListener('click',update);
+  window.addEventListener('online',update);
+  window.addEventListener('offline',update);
+  document.getElementById('phase3DataHealth').addEventListener('toggle',e=>{if(e.target.open)update()});
+  update();
+})();
+</script>
+<script>
 const NFL_SEASON_KEY="nflp-selected-season-v1";
 const currentNFLSeason=()=>{const d=new Date();const parts=new Intl.DateTimeFormat("en-US",{timeZone:"America/New_York",year:"numeric",month:"numeric"}).formatToParts(d);const year=Number(parts.find(x=>x.type==="year").value),month=Number(parts.find(x=>x.type==="month").value);return month<3?year-1:year};
-const SEASON=(()=>{const n=Number(localStorage.getItem(NFL_SEASON_KEY));return Number.isInteger(n)&&n>=2020&&n<=currentNFLSeason()+1?n:currentNFLSeason()})();
+const SEASON=(()=>{const n=Number(phase3LocalStorage.getItem(NFL_SEASON_KEY));return Number.isInteger(n)&&n>=2020&&n<=currentNFLSeason()+1?n:currentNFLSeason()})();
 const MODEL_SEASON=2026;
-const seasonSelect=document.getElementById("seasonSelect");for(let y=currentNFLSeason()+1;y>=2020;y--){const o=document.createElement("option");o.value=y;o.textContent=y;seasonSelect.appendChild(o)}seasonSelect.value=SEASON;seasonSelect.onchange=()=>{localStorage.setItem(NFL_SEASON_KEY,seasonSelect.value);location.reload()};
+const seasonSelect=document.getElementById("seasonSelect");for(let y=currentNFLSeason()+1;y>=2020;y--){const o=document.createElement("option");o.value=y;o.textContent=y;seasonSelect.appendChild(o)}seasonSelect.value=SEASON;seasonSelect.onchange=()=>{phase3LocalStorage.setItem(NFL_SEASON_KEY,seasonSelect.value);location.reload()};
 const T={ARI:["Cardinals",3,5],ATL:["Falcons",3,5],BAL:["Ravens",4,4],BUF:["Bills",6,1],CAR:["Panthers",3,4],CHI:["Bears",6,2],CIN:["Bengals",5,2],CLE:["Browns",5,3],DAL:["Cowboys",3,5],DEN:["Broncos",6,2],DET:["Lions",5,2],GB:["Packers",5,3],HOU:["Texans",2,5],IND:["Colts",2,6],JAC:["Jaguars",5,2],KC:["Chiefs",5,2],LV:["Raiders",4,4],LAC:["Chargers",0,7],LA:["Rams",4,4],MIA:["Dolphins",1,6],MIN:["Vikings",6,1],NE:["Patriots",5,3],NO:["Saints",2,5],NYG:["Giants",4,2],NYJ:["Jets",2,6],PHI:["Eagles",2,6],PIT:["Steelers",6,2],SF:["49ers",6,1],SEA:["Seahawks",4,4],TB:["Buccaneers",3,5],TEN:["Titans",1,7],WAS:["Commanders",2,4]};
 // [home, away, homePts, awayPts] completed games feed
 const R=[["HOU","NYG",21,27],["ARI","DEN",16,30],["LV","LA",21,35],["DET","GB",20,17],["SEA","KC",20,3],["PHI","DAL",21,38],["GB","CAR",27,19],["JAC","IND",42,7],["CIN","TEN",43,36],["PIT","CLE",27,6],["DET","MIN",19,15],["TB","ATL",16,0],["DAL","ARI",30,33],["NYJ","LV",33,38],["BUF","BAL",36,10],["LA","LAC",24,9],["MIA","NE",19,24],["DEN","KC",28,24],["WAS","PHI",27,10],["SEA","CHI",17,34]];
@@ -193,6 +279,14 @@ function estimatedNFLWeek(){
  return Math.max(1,Math.min(18,Math.floor((today-firstTuesday)/604800000)+1));
 }
 const CUR=10,WKS=SEASON===MODEL_SEASON?{9:build(G9),10:build(G)}:{};const BUNDLED_FINALS=SEASON===MODEL_SEASON?build(G9):[];
+const BUILDER_FILTERS_KEY="nflp-builder-filters-v1";
+function readBuilderFilters(){
+ try{const x=JSON.parse(phase3LocalStorage.getItem(BUILDER_FILTERS_KEY)||"null");
+  if(!x||typeof x!=="object"||Array.isArray(x))return {};
+  return {tf:typeof x.tf==="string"?x.tf:"all",pf:typeof x.pf==="string"?x.pf:"all",query:typeof x.query==="string"?x.query.slice(0,120):""};
+ }catch(e){return {}}
+}
+const rememberedBuilderFilters=readBuilderFilters();
 let wk=estimatedNFLWeek(),games=WKS[wk]||[],tf="all",pf="all",openG=null,gameQuery="",liveWeeks=new Set();
 let startupScheduleSelection=true, userSelectedWeek=false;
 const gpOf=t=>T[t][1]+T[t][2],PLY=[];
@@ -213,7 +307,13 @@ const hr=tm=>{const m=/(\d+):(\d+) (AM|PM)/.exec(tm);return m?(+m[1]%12)+(m[3]==
 const bucket=tm=>{const h=hr(tm);return h<11?"early":h<15?"aft":h<19?"eve":"late"};
 const vis=g=>(tf==="all"||bucket(g.tm)===tf)&&(!gameQuery||`${g.a} ${g.h} ${T[g.a]?.[0]||""} ${T[g.h]?.[0]||""}`.toLowerCase().includes(gameQuery));
 const TF=[["all","All"],["early","Early 9–10a"],["aft","Afternoon 12–2p"],["eve","Evening 4–6p"],["late","Late 7–10p"]],PF=[["all","All"],["td","TD"],["ps","Passing"],["ru","Rushing"]];
-function drawF(){$("tf").innerHTML=TF.map(([k,l])=>`<button class="fp ${tf===k?"on":""}" onclick="tf='${k}';drawF();draw();plays()">${l}</button>`).join("");$("pf").innerHTML=PF.map(([k,l])=>`<button class="fp ${pf===k?"on":""}" onclick="pf='${k}';drawF();draw();plays()">${l}</button>`).join("")}
+function saveBuilderFilters(){try{phase3LocalStorage.setItem(BUILDER_FILTERS_KEY,JSON.stringify({tf,pf,query:gameQuery}))}catch(e){}}
+function setBuilderFilter(type,value){if(type==="tf"&&TF.some(x=>x[0]===value))tf=value;else if(type==="pf"&&PF.some(x=>x[0]===value))pf=value;else return;saveBuilderFilters();drawF();draw();plays()}
+function resetBuilderFilters(){tf="all";pf="all";gameQuery="";const search=$("gameSearch");if(search)search.value="";saveBuilderFilters();drawF();draw();plays();renderAdvanced()}
+function drawF(){$("tf").innerHTML=TF.map(([k,l])=>`<button class="fp ${tf===k?"on":""}" onclick="setBuilderFilter('tf','${k}')">${l}</button>`).join("");$("pf").innerHTML=PF.map(([k,l])=>`<button class="fp ${pf===k?"on":""}" onclick="setBuilderFilter('pf','${k}')">${l}</button>`).join("")}
+if(TF.some(x=>x[0]===rememberedBuilderFilters.tf))tf=rememberedBuilderFilters.tf;
+if(PF.some(x=>x[0]===rememberedBuilderFilters.pf))pf=rememberedBuilderFilters.pf;
+gameQuery=rememberedBuilderFilters.query||"";
 function tog(id){openG=openG===id?null:id;draw()}
 function addp(id,m,s){if(games.find(g=>g.id===id)?.sc)return;if(mode==="same"&&focus!==id)setFocus(id);pick(id,m,s)}
 const propBtns=(g,k,b)=>["a","h"].map(t=>{const p=g.pp[t][k+"p"],sub=q=>am(dec(q))+" · "+Math.round(q*100)+"%";return`<div class="m">${t==="a"?g.a:g.h} ${PN[k][0]} · line ${PN[k][1]}</div>`+b(k+t,"o","Over",sub(p))+b(k+t,"u","Under",sub(1-p))}).join("");
@@ -253,7 +353,7 @@ function pick(gid,mkt,side){
   if(legs.length>=N){$("hint").textContent="Slip is full: remove a leg or raise the leg count.";return draw()}
   legs.push({gid,mkt,side});draw()}
 const SLIPS_KEY="nflp-draft-slips-v3";let slips=[],activeSlip=0,slipSeq=1;
-try{const obj=JSON.parse(localStorage.getItem(SLIPS_KEY)||"null");if(obj&&Array.isArray(obj.slips)&&obj.slips.length){slips=obj.slips;activeSlip=obj.active||0;slipSeq=obj.seq||1}}catch(e){}
+try{const obj=JSON.parse(phase3LocalStorage.getItem(SLIPS_KEY)||"null");if(obj&&Array.isArray(obj.slips)&&obj.slips.length){slips=obj.slips;activeSlip=obj.active||0;slipSeq=obj.seq||1}}catch(e){}
 // Only drafts containing selections are considered in progress. Old empty drafts
 // (including a leftover Slip 5) should not dictate the next startup number.
 slips=slips.filter(s=>s&&Array.isArray(s.legs)&&s.legs.length>0);
@@ -263,7 +363,7 @@ else{
  slipSeq=Math.max(slipSeq,maxId);
  if(!slips.some(s=>s.id===activeSlip))activeSlip=slips[0].id;
 }
-function syncActiveSlip(){const s=slips.find(s=>s.id===activeSlip);if(!s)return;s.wk=wk;s.mode=mode;s.N=N;s.stake=+$('stake').value||0;s.legs=legs.map(l=>({...l}));s.focus=focus;try{localStorage.setItem(SLIPS_KEY,JSON.stringify({slips,active:activeSlip,seq:slipSeq}))}catch(e){}}
+function syncActiveSlip(){const s=slips.find(s=>s.id===activeSlip);if(!s)return;s.wk=wk;s.mode=mode;s.N=N;s.stake=+$('stake').value||0;s.legs=legs.map(l=>({...l}));s.focus=focus;try{phase3LocalStorage.setItem(SLIPS_KEY,JSON.stringify({slips,active:activeSlip,seq:slipSeq}))}catch(e){}}
 function draftLegText(s,l){if(l.custom)return l.t+" ("+(l.m||"Saved selection")+", "+(l.o||"odds unavailable")+")";try{const g=(WKS[s.wk]||[]).find(g=>g.id===l.gid);if(!g)return l.mkt+' '+l.side;const previous=games;games=WKS[s.wk];try{return legOf(l).txt}finally{games=previous}}catch(e){return l.mkt+' '+l.side}}
 function renderSlipTabs(){
  const visible=slips.filter(s=>s.legs.length>0||s.id===activeSlip);
@@ -294,7 +394,7 @@ function draftCopyText(s){return `${s.name} — NFL Week ${s.wk} (${s.mode==='sa
 async function copyText(text,label){let ok=false;try{await navigator.clipboard.writeText(text);ok=true}catch(e){}if(!ok){const ta=document.createElement('textarea');ta.value=text;ta.style.cssText='position:fixed;left:-9999px';document.body.appendChild(ta);ta.select();try{ok=document.execCommand('copy')}catch(e){}ta.remove()}if(ok){$('msg').textContent=label+' copied.'}else{const blob=new Blob([text],{type:'text/plain'});downloadFile(blob,'nfl-parlays.txt','text/plain');$('msg').textContent='Clipboard unavailable; text file downloaded.'}}
 function copyDraftSlip(id){syncActiveSlip();const s=slips.find(s=>s.id===id);if(s)copyText(draftCopyText(s),s.name)}
 function clearDraftSlip(id){syncActiveSlip();const s=slips.find(s=>s.id===id);if(!s||!s.legs.length)return;if(!confirm('Clear all legs in '+s.name+'?'))return;s.legs=[];if(id===activeSlip){legs=[];draw()}else{syncActiveSlip();renderSlipTabs();persistDraftSlips()}}
-function persistDraftSlips(){try{localStorage.setItem(SLIPS_KEY,JSON.stringify({slips,active:activeSlip,seq:slipSeq}))}catch(e){}}
+function persistDraftSlips(){try{phase3LocalStorage.setItem(SLIPS_KEY,JSON.stringify({slips,active:activeSlip,seq:slipSeq}))}catch(e){}}
 function deleteDraftSlip(id){
  syncActiveSlip();
  const target=slips.find(s=>s.id===id);
@@ -346,9 +446,43 @@ function draw(){
   const st=Math.max(0,+$("stake").value||0);let D=1,P=1;
   const li=legs.map((L,i)=>{const x=legOf(L);D*=x.d;P*=x.p;return`<div class="leg"><div><b>${x.txt}</b><div class="mu">${x.g.a} @ ${x.g.h} · ${am(x.d)}</div></div><button class="x" aria-label="Clear this leg" title="Clear this leg" onclick="legs.splice(${i},1);draw()">✕</button></div>`}).join("");
   $("slip").innerHTML=legs.length?li+`<div class="mu" style="margin-top:8px">Win chance (est.): ${f1(P*100)}%${mode==="same"?" · legs correlated, treat as rough":""}</div>`:`<span class="mu">Your slip is empty.</span>`;
+  // Advisory only: do not silently change or submit the user's selections.
+  const prebetWarnings=validateDraftForBet(legs,games,N,mode);
+  if(prebetWarnings.length){
+    const panel=document.createElement('div');
+    panel.className='warn';panel.setAttribute('role','status');panel.setAttribute('aria-label','Pre-bet validation warnings');
+    panel.style.marginTop='10px';
+    const heading=document.createElement('strong');heading.textContent='Review before betting';panel.appendChild(heading);
+    const list=document.createElement('ul');
+    for(const warning of prebetWarnings){const item=document.createElement('li');item.textContent=warning;list.appendChild(item)}
+    panel.appendChild(list);$('slip').appendChild(panel);
+  }
   const full=legs.length===N;
   $("b1").innerHTML=`${legs.length}/${N} legs<small>${full?"Parlay ready":legs.length>N?"Remove "+(legs.length-N)+" leg(s) of your choice":"Add "+(N-legs.length)+" more"}</small>`;
   $("b2").innerHTML=legs.length?`${am(D)} · ${D.toFixed(2)}x<small>$${st} pays $${(st*D).toFixed(2)}</small>`:`—<small></small>`;
+}
+function validateDraftForBet(selections,weekGames,requiredLegs,slipMode){
+ const warnings=[];
+ if(!Array.isArray(selections)||!selections.length)return warnings;
+ if(selections.length!==requiredLegs)warnings.push(`Slip has ${selections.length} of ${requiredLegs} required legs.`);
+ const byId=new Map((weekGames||[]).map(g=>[String(g.id),g]));
+ const seen=new Set(),byMarket=new Map(),gameIds=new Set();
+ for(const leg of selections){
+  const game=byId.get(String(leg.gid));
+  if(!game){warnings.push('A selection is no longer in the selected week.');continue}
+  if(game.sc)warnings.push('A selected game is already completed.');
+  gameIds.add(String(leg.gid));
+  const key=String(leg.gid)+'|'+String(leg.mkt)+'|'+String(leg.side);
+  if(seen.has(key))warnings.push('The same selection appears more than once.');
+  seen.add(key);
+  const market=String(leg.gid)+'|'+String(leg.mkt);
+  if(byMarket.has(market)&&byMarket.get(market)!==String(leg.side))warnings.push('Opposing sides of the same market appear on this slip.');
+  byMarket.set(market,String(leg.side));
+ }
+ if(slipMode==='same'&&gameIds.size>1)warnings.push('Same-game slip contains selections from multiple games.');
+ if(slipMode==='multi'&&gameIds.size<selections.length)warnings.push('Multiple legs share a game; correlation may affect estimated odds.');
+ warnings.push('Reference lines and model odds are not live sportsbook quotes. Verify all lines, odds, injuries, and kickoff times before placing a bet.');
+ return [...new Set(warnings)];
 }
 function togglePreviousGames(){showPreviousGames=!showPreviousGames;renderPreviousGames()}
 function renderPreviousGames(){
@@ -373,29 +507,57 @@ $("lm").onclick=()=>{N=Math.max(2,N-1);draw();plays();if(legs.length>N)$("msg").
 $("lp").onclick=()=>{N=Math.min(mode==="same"?3:8,N+1);draw();plays()};
 $("stake").oninput=draw;
 // recommendations
+function quickAddRecommended(gid,mkt,side){
+ const feedback=(message)=>{const el=document.getElementById('recommendationActionStatus');if(el)el.textContent=message;$('msg').textContent=message;};
+ const game=games.find(g=>String(g.id)===String(gid));
+ if(!game||game.sc){feedback('Game unavailable or completed.');return}
+ if(mode==='same'&&focus!==game.id){feedback('Select this game with Build here, or switch to multi-game.');return}
+ if(legs.some(l=>String(l.gid)===String(gid)&&l.mkt===mkt&&l.side===side)){feedback('Already in active slip.');return}
+ if(legs.length>=N){feedback('Slip full. Increase leg target or remove a pick.');return}
+ pick(game.id,mkt,side);
+ feedback('Pick added to active slip. Verify current sportsbook lines and odds.');
+}
 function plays(){if(SEASON!==MODEL_SEASON){$("plays").innerHTML=`<div class="card warn">Predictions are disabled for ${SEASON}: the model still uses 2026 team baselines. Schedule, final scores, and season-specific cloud statistics remain available. Update the model inputs before enabling forecasts for this season.</div>`;window._arr=[];return;}
   const arr=(WKS[wk]||[]).filter(g=>!g.sc).map(g=>{const home=g.p>=.5,t=home?g.h:g.a,o=home?g.a:g.h,p=home?g.p:1-g.p,mg=Math.abs(g.m);
     const edge=g.fp==null?null:(home?g.pm-g.fp:(1-g.pm)-(1-g.fp));
     return{g,t,o,p,home,mg,edge,s:S[t],so:S[o]}}).sort((a,b)=>b.p-a.p);
   const why=x=>`${x.t} ${T[x.t][1]}-${T[x.t][2]}, scoring ${f1(x.s.ppg)} and allowing ${f1(x.s.opp)} per game vs ${x.o} at ${f1(x.so.ppg)} / ${f1(x.so.opp)}. Model margin ${f1(x.mg)} pts.`;
   let h="";
-  h+=`<div class="card"><b>Top moneyline plays</b>`+arr.slice(0,6).map(x=>`<div class="pl ${x.p<.68?"med":""}"><b>${x.t} ML</b> vs ${x.o} · ${Math.round(x.p*100)}% · ${am(dec(x.p))}<div class="mu">${why(x)}</div></div>`).join("")+`</div>`;
+  h+=`<div class="card"><b>Top moneyline plays</b>`+arr.slice(0,6).map(x=>`<div class="pl ${x.p<.68?"med":""}"><b>${x.t} ML</b> vs ${x.o} · ${Math.round(x.p*100)}% · ${am(dec(x.p))}<div class="mu">${why(x)}</div><button type="button" class="btn alt" onclick="quickAddRecommended('${x.g.id}','ml','${x.home?'h':'a'}')">+ Add to parlay</button></div>`).join("")+`</div>`;
   if(pf!=="all"){const L=[];(WKS[wk]||[]).filter(g=>!g.sc&&vis(g)).forEach(g=>["a","h"].forEach(t=>{const p=g.pp[t][pf+"p"],o=p>=.5;L.push({g,t,o,p:o?p:1-p})}));L.sort((a,b)=>b.p-a.p);
-  h+=`<div class="card"><b>Top ${PL[pf]} plays</b>`+(L.slice(0,6).map(x=>{const tm=x.t==="a"?x.g.a:x.g.h;return`<div class="pl ${x.p<.6?"med":""}"><b>${tm} ${x.o?"Over":"Under"} ${PN[pf][1]} ${PN[pf][0]}</b> · ${Math.round(x.p*100)}% · ${am(dec(x.p))}<div class="mu">vs ${x.t==="a"?x.g.h:x.g.a} · projected ${pf==="td"?f1(x.g.pp[x.t].td)+" TDs":Math.round(x.g.pp[x.t][pf+"y"])+" yds"}</div></div>`}).join("")||`<div class="mu">No games in this kickoff window.</div>`)+`</div>`}
+  h+=`<div class="card"><b>Top ${PL[pf]} plays</b>`+(L.slice(0,6).map(x=>{const tm=x.t==="a"?x.g.a:x.g.h;return`<div class="pl ${x.p<.6?"med":""}"><b>${tm} ${x.o?"Over":"Under"} ${PN[pf][1]} ${PN[pf][0]}</b> · ${Math.round(x.p*100)}% · ${am(dec(x.p))}<div class="mu">vs ${x.t==="a"?x.g.h:x.g.a} · projected ${pf==="td"?f1(x.g.pp[x.t].td)+" TDs":Math.round(x.g.pp[x.t][pf+"y"])+" yds"}</div><button type="button" class="btn alt" onclick="quickAddRecommended('${x.g.id}','${pf+x.t}','${x.o?'o':'u'}')">+ Add to parlay</button></div>`}).join("")||`<div class="mu">No games in this kickoff window.</div>`)+`</div>`}
   {const Q=[];(WKS[wk]||[]).filter(g=>!g.sc&&vis(g)).forEach(g=>PLY.forEach(p=>{if((p.tm===g.a||p.tm===g.h)&&(pf==="all"||p.k===pf)){const s=pstat(p,g);if(!s)return;const o=p.k==="td"||s.p>=.5;Q.push({p,g,o,q:o?s.p:1-s.p,s})}}));Q.sort((a,b)=>b.q-a.q);
-  h+=`<div class="card"><b>Top player picks${pf==="all"?"":" ("+PL[pf]+")"}</b>`+(Q.slice(0,6).map(x=>`<div class="pl ${x.q<.6?"med":""}"><b>${x.p.k==="td"?x.p.n+" anytime TD":x.p.n+" "+(x.o?"Over ":"Under ")+x.s.line+(x.p.k==="ps"?" pass yds":" rush yds")}</b> · ${Math.round(x.q*100)}% · ${am(dec(x.q))}<div class="mu">${x.g.a} @ ${x.g.h}</div></div>`).join("")||`<div class="mu">No player data for this window.</div>`)+`</div>`}
+  h+=`<div class="card"><b>Top player picks${pf==="all"?"":" ("+PL[pf]+")"}</b>`+(Q.slice(0,6).map(x=>`<div class="pl ${x.q<.6?"med":""}"><b>${x.p.k==="td"?x.p.n+" anytime TD":x.p.n+" "+(x.o?"Over ":"Under ")+x.s.line+(x.p.k==="ps"?" pass yds":" rush yds")}</b> · ${Math.round(x.q*100)}% · ${am(dec(x.q))}<div class="mu">${x.g.a} @ ${x.g.h}</div><button type="button" class="btn alt" onclick="quickAddRecommended('${x.g.id}','p${x.p.i}','${x.o?'o':'u'}')">+ Add to parlay</button></div>`).join("")||`<div class="mu">No player data for this window.</div>`)+`</div>`}
   const top=arr.slice(0,N),D=top.reduce((a,x)=>a*dec(x.p),1),P=top.reduce((a,x)=>a*x.p,1);
   h+=`<div class="card"><b>Suggested ${N}-leg multi-game parlay</b><div style="margin:6px 0">${top.map(x=>x.t+" ML").join(" + ")}</div><div class="mu">Est. win chance ${f1(P*100)}% · pays about ${D.toFixed(2)}x (${am(D)})</div><div style="margin-top:8px"><button class="btn" onclick="load()">Load into slip</button></div></div>`;
   const sgc=arr.filter(x=>x.g.tot>=40).sort((a,b)=>(b.p+b.g.tot/100)-(a.p+a.g.tot/100))[0];
   if(sgc)h+=`<div class="card"><b>Same-game idea: ${sgc.g.a} @ ${sgc.g.h}</b><div style="margin:6px 0">${sgc.t} ML + ${sgc.t} ${sgc.home?sg(-sgc.g.sp):sg(sgc.g.sp)}</div><div class="mu">Strongest favorite with a ${f1(sgc.mg)}-pt projected margin, projected total ${sgc.g.tot}. Stacking ML and spread on one side is highly correlated.</div><div style="margin-top:8px"><button class="btn" onclick="loadSG('${sgc.g.id}','${sgc.home?"h":"a"}')">Load into slip</button></div></div>`;
-  const val=arr.filter(x=>x.edge!=null).sort((a,b)=>b.edge-a.edge).slice(0,2);
-  h+=`<div class="card"><b>Where the model disagrees with the feed</b>`+val.map(x=>`<div class="pl med"><b>${x.t} ML</b> · model ${Math.round((x.home?x.g.pm:1-x.g.pm)*100)}% vs feed ${Math.round((x.home?x.g.fp:1-x.g.fp)*100)}%<div class="mu">${why(x)} Small sample of games, so treat as a lean.</div></div>`).join("")+`</div>`;
-  const completed=(WKS[wk]||[]).filter(g=>g.sc);if(completed.length){h+=`<div class="card"><b>Completed games · Potential Plays results</b><div class="mu">Retrospective moneyline picks based on the currently loaded model; not pregame predictions.</div>${completed.map(g=>{const home=g.p>=.5,side=home?'h':'a',team=home?g.h:g.a,hit=grade({...g,week:wk},'ml',side);return`<div class="pl ${hit===true?'hit':hit===false?'miss':'pending'}"><b>${team} ML</b> · ${hit===true?'HIT':hit===false?'MISS':'Not graded'} · Final ${g.a} ${g.sc[0]} – ${g.h} ${g.sc[1]}</div>`}).join('')}</div>`}
+  // Retrospective evaluations only: these are not verified pregame predictions.
+  const completed=(WKS[wk]||[]).filter(g=>g.sc);
+  if(completed.length){
+    const groups=new Map();
+    const marketName=m=>m==='ml'?'Moneyline':m==='sp'?'Spread':m==='tot'?'Game total':/^(td|ps|ru)[ah]$/.test(m)?'Team props':/^p\d+$/.test(m)?'Player props':'Other';
+    completed.forEach(g=>bestFor(g).forEach(pick=>{
+      const kind=marketName(pick.m),bucket=groups.get(kind)||[];
+      const detail=gradeDetail({...g,week:wk},pick.m,pick.s);
+      const team=pick.m==='ml'?(pick.s==='h'?g.h:g.a):`${g.a} @ ${g.h}`;
+      bucket.push({team,market:pick.m,side:pick.s,result:detail.result,reason:detail.reason});
+      groups.set(kind,bucket);
+    }));
+    h+=`<div class="card"><b>Completed games · Potential Plays results by bet type</b><div class="mu">Retrospective model evaluations using currently loaded data, not verified pregame picks. Unavailable statistics and pushes are not counted as hits or misses.</div>`;
+    for(const [kind,rows] of groups){
+      const hits=rows.filter(x=>x.result===true).length,misses=rows.filter(x=>x.result===false).length;
+      h+=`<details><summary><b>${kind}</b> · ${hits} hits · ${misses} misses · ${rows.length-hits-misses} ungraded</summary>`;
+      h+=rows.map(x=>`<div class="pl ${x.result===true?'hit':x.result===false?'miss':'pending'}"><b>${x.team} · ${x.market} ${x.side}</b> · ${x.result===true?'HIT':x.result===false?'MISS':'Ungraded'}<div class="mu">${x.reason}</div></div>`).join('');
+      h+='</details>';
+    }
+    h+='</div>';
+  }
   $("plays").innerHTML=h;window._arr=arr}
 // Advanced, explainable matchup recommendations. Uses only data already in this app.
 // No sportsbook API requests or private credentials are embedded.
 const ADV_ODDS_KEY='nflp-manual-props-v1';
-let advManual={};try{advManual=JSON.parse(localStorage.getItem(ADV_ODDS_KEY)||'{}')||{}}catch(e){}
+let advManual={};try{advManual=JSON.parse(phase3LocalStorage.getItem(ADV_ODDS_KEY)||'{}')||{}}catch(e){}
 const advKey=(g,p)=>[SEASON,wk,g.a,g.h,p.n,p.k].join('|');
 function advLogs(p){return importedPlayer(p).filter(r=>Number.isFinite(Number(r[p.k==='ps'?'passing_yards':p.k==='ru'?'rushing_yards':'touchdowns']))).sort((a,b)=>Number(b.week)-Number(a.week));}
 function advAvg(a){return a.length?a.reduce((v,x)=>v+x,0)/a.length:null;}
@@ -430,7 +592,7 @@ function advSaveOdds(key){
  if(!line||!Number.isFinite(Number(line))||Number(line)<0){$('advStatus').textContent='Enter a valid nonnegative sportsbook line.';return;}
  if(!odds||!Number.isFinite(Number(odds))||Number(odds)===0){$('advStatus').textContent='Enter American odds, e.g. -110 or +120.';return;}
  advManual[key]={line:Number(line),odds:Number(odds),book,updated:new Date().toISOString()};
- try{localStorage.setItem(ADV_ODDS_KEY,JSON.stringify(advManual))}catch(e){$('advStatus').textContent='Browser storage full; sportsbook line could not be saved.';return;}
+ try{phase3LocalStorage.setItem(ADV_ODDS_KEY,JSON.stringify(advManual))}catch(e){$('advStatus').textContent='Browser storage full; sportsbook line could not be saved.';return;}
  renderAdvanced();$('advStatus').textContent='Manual sportsbook line saved on this device. Verify the line is still current before using it.';
 }
 function advAdd(index){
@@ -492,7 +654,12 @@ function renderAdvanced(){
   html=groups.map(id=>{const rows=all.filter(x=>x.g.id===id),g=rows[0].g;return `<h3>${esc(g.a)} @ ${esc(g.h)}</h3><div class="mu">Model margin: ${g.m.toFixed(1)} points toward ${g.m>=0?esc(g.h):esc(g.a)}; total: ${g.tot.toFixed(1)}. These are estimates, not current betting lines.</div>`+rows.slice(0,4).map(x=>advCard(x,all.indexOf(x))).join('')}).join('');
  }else if(view==='parlays'){
   const unique=[],seen=new Set();for(const x of all){if(seen.has(x.g.id))continue;seen.add(x.g.id);unique.push(x);if(unique.length===5)break;}
-  html='<div class="mu">Illustrative multi-game combination. Picks are selected from different games to reduce obvious same-game correlation; independence and combined probability are not guaranteed. Review each selection and current sportsbook line.</div>'+unique.map(x=>advCard(x,all.indexOf(x))).join('');
+  const legSummary=unique.map((x,i)=>{
+   const marketLabel=x.p.k==='td'?'Anytime touchdown':x.p.k==='ps'?'Passing yards':'Rushing yards';
+   const lineText=x.line==null?'Reference line unavailable':`${x.prob>=.5?'Over':'Under'} ${x.line}`;
+   return `<li><b>${esc(x.p.n)}</b> — ${esc(marketLabel)} · ${esc(lineText)}<div class="mu">${esc(x.g.a)} @ ${esc(x.g.h)} · ${x.manual?'Manually entered '+esc(x.manual.book)+' odds '+esc(String(x.odds)):'No verified sportsbook odds'}</div></li>`;
+  }).join('');
+  html=`<section aria-label="Suggested parlay details" class="card"><h3>Suggested ${unique.length}-leg parlay</h3><div class="mu">Illustrative picks from different games, not a verified sportsbook ticket. Model probabilities are uncalibrated; combined odds and independence are not assumed.</div><ol>${legSummary}</ol><div class="mu">Use the Add to active slip control below each pick. Verify live lines, odds, kickoff and injuries before saving.</div></section>`+unique.map(x=>advCard(x,all.indexOf(x))).join('');
  }else html=all.slice(0,12).map((x,i)=>advCard(x,i)).join('');
  root.innerHTML=html||'<div class="mu">No eligible upcoming player predictions for the selected week. Refresh the NFL schedule or change the market filter.</div>';
 }
@@ -510,30 +677,69 @@ populateWeeks();
 $("wk").onchange=e=>{userSelectedWeek=true;setWk(+e.target.value)};$("wkTop").onchange=e=>{userSelectedWeek=true;setWk(+e.target.value)};
 $("sub").textContent=SEASON+" season · "+(SEASON===MODEL_SEASON?"2026 model baselines":"schedule and results only; prediction model requires season-specific baselines");
 const KEY="nflp-saved-v1";let saved=[];
-try{saved=JSON.parse(localStorage.getItem(KEY)||"[]")}catch(e){}
-const persist=()=>{try{localStorage.setItem(KEY,JSON.stringify(saved))}catch(e){$("msg").textContent="Couldn’t store locally; export soon."}};
+try{saved=JSON.parse(phase3LocalStorage.getItem(KEY)||"[]")}catch(e){}
+const persist=()=>{try{phase3LocalStorage.setItem(KEY,JSON.stringify(saved));return true}catch(e){$("msg").textContent="Save failed: device storage is unavailable. Your selections are preserved; please free storage or export a backup.";return false}};
 const money=n=>(n<0?"-$":"$")+Math.abs(n).toFixed(2);
 const pl=s=>s.status==="won"?(+s.amt||0):s.status==="lost"?-(+s.amt||0):0;
 const typ=s=>s.mode==="same"?"Same game":"Multi-game";
 $("save").onclick=()=>{
- if(legs.length!==N){$("msg").textContent=legs.length>N?"Remove "+(legs.length-N)+" leg(s) of your choice before saving.":"Fill all "+N+" legs first.";return}
+ if(!legs.length){$("msg").textContent="Add at least one valid selection before saving.";return}
+ if(legs.length>N){$("msg").textContent="Remove "+(legs.length-N)+" leg(s) of your choice before saving.";return}
+ // The leg-count target is a filter, not a minimum required to save.
+ // Reject invalid selections, completed games, duplicate legs, and opposing markets.
+ const currentGames=new Map(games.map(g=>[String(g.id),g]));
+ const seenSelections=new Set(),marketSides=new Map(),selectedGameIds=new Set();
+ for(const leg of legs){
+   const game=currentGames.get(String(leg.gid));
+   if(!game||game.sc){$("msg").textContent="Cannot save: a selection is unavailable or its game is completed.";return}
+   if(!leg.mkt||!leg.side){$("msg").textContent="Cannot save: a selection is incomplete.";return}
+   const selectionKey=String(leg.gid)+'|'+String(leg.mkt)+'|'+String(leg.side);
+   const marketKey=String(leg.gid)+'|'+String(leg.mkt);
+   if(seenSelections.has(selectionKey)||marketSides.has(marketKey)&&marketSides.get(marketKey)!==String(leg.side)){
+     $("msg").textContent="Cannot save: duplicate or opposing selections were found.";return;
+   }
+   seenSelections.add(selectionKey);marketSides.set(marketKey,String(leg.side));selectedGameIds.add(String(leg.gid));
+ }
+ if(mode==='same'&&selectedGameIds.size>1){$("msg").textContent="Cannot save: same-game slips must contain selections from one game.";return}
+ const fewerLegs=legs.length<N;
+ // Persistent, accessible notice: the transient #msg is overwritten after saving.
+ let legNotice=document.getElementById('phase3LegFilterNotice');
+ if(!legNotice){
+   legNotice=document.createElement('div');
+   legNotice.id='phase3LegFilterNotice';
+   legNotice.setAttribute('role','status');
+   legNotice.setAttribute('aria-live','polite');
+   legNotice.style.cssText='margin:8px 0;padding:9px 12px;border:1px solid #8aa4c2;border-radius:8px;font-size:14px;';
+   $("save").parentElement.insertAdjacentElement('afterend',legNotice);
+ }
+ legNotice.hidden=!fewerLegs;
+ if(fewerLegs)legNotice.textContent=`Info: ${legs.length} selected vs ${N}-leg filter. You can save this parlay without changing the filter.`;
  const st=Math.max(0,+$("stake").value||0);let D=1;
  const L=legs.map(l=>{const x=legOf(l);D*=x.d;return{t:x.txt,m:x.g.a+" @ "+x.g.h,o:am(x.d)}});
- saved.unshift({id:Date.now(),wk,mode,stake:st,dec:D,legs:L,status:"open",amt:0});
- persist();legs=[];draw();renderSaved();$("msg").textContent="Saved."};
+ const proposedName=prompt('Optional parlay name (up to 80 characters). Leave blank for Untitled Parlay:','');
+ if(proposedName===null)return;
+ const parlayName=proposedName.trim().slice(0,80);
+ saved.unshift({id:Date.now(),name:parlayName,wk,mode,stake:st,dec:D,legs:L,status:"open",amt:0});
+ if(!persist()){saved.shift();return;}legs=[];draw();renderSaved();$("msg").textContent=fewerLegs?`Saved ${L.length}-leg parlay (filter: ${N} legs).`:"Saved.";
+ // Keep the explanatory notice visible after the save completes.
+ if(legNotice){legNotice.hidden=true;}
+ if(fewerLegs)window.alert(`Parlay saved successfully!\n\nYou saved ${L.length} legs while your filter is set to ${N}.\n\nYour filter was not changed.`);
+};
 function setS(id,k,v){const s=saved.find(x=>x.id===id);if(!s)return;
  if(k==="status"){s.status=v;s.amt=v==="won"?+(s.stake*(s.dec-1)).toFixed(2):v==="lost"?s.stake:0}else s.amt=Math.abs(+v||0);
  persist();renderSaved()}
-$('deleteAllSaved').onclick=()=>{
- if(!saved.length){$('savedActionStatus').textContent='There are no saved parlays to delete.';return;}
- const count=saved.length;
- if(!confirm('Permanently delete ALL '+count+' saved parlays from this browser? This cannot be undone. Active draft slips will not be deleted.'))return;
- saved=[];lastSavedDeletion=null;editingSavedParlays.clear();persist();renderSaved();
- $('savedActionStatus').textContent='All '+count+' saved parlays deleted.';
- $('msg').textContent='All saved parlays deleted.';
-};
+// Delete All handler is installed beside the guarded cloud manager below.
 const editingSavedParlays=new Set();
 let lastSavedDeletion=null;
+// Persistent per-parlay deletion status survives card redraws.
+const phase3DeleteMessages=new Map();
+function phase3DeleteReport(id,message){
+ const key=String(id);phase3DeleteMessages.set(key,message);
+ const target=document.querySelectorAll('[data-phase3-delete-status]');
+ for(const el of target)if(el.getAttribute('data-phase3-delete-status')===key){el.textContent=message;el.style.display='block';el.hidden=false;}
+ const global=document.getElementById('savedActionStatus');if(global)global.textContent=message;
+}
+
 function savedById(id){return saved.find(x=>String(x.id)===String(id))}
 function editSavedParlay(id){
  const key=String(id);
@@ -567,19 +773,58 @@ function undoSavedDeletion(){
  lastSavedDeletion=null;persist();renderSaved();
  $('msg').textContent='Deletion undone.'; $('savedActionStatus').textContent='Deletion undone.';
 }
+// Capture-phase deletion handler: responds even when another saved-card handler
+// stops bubbling. Keep cloud deletion behind the existing guarded confirmations.
+$('saved').addEventListener('click',event=>{
+ const button=event.target.closest('button[data-saved-action="delete-parlay"]');
+ if(!button || !$('saved').contains(button))return;
+ event.preventDefault();event.stopImmediatePropagation();
+ const id=String(button.dataset.savedId||'');
+ if(!id){phase3DeleteReport('', 'Delete blocked: missing saved parlay ID. No changes made.');return;}
+ if(button.disabled)return;
+ button.disabled=true;
+ phase3DeleteReport(id,'Delete clicked — verifying your signed-in account…');
+ Promise.resolve().then(()=>{
+   if(typeof window.phase3GuardedDeleteSaved!=='function')throw Error('Guarded deletion controller unavailable');
+   return window.phase3GuardedDeleteSaved([id],null,id);
+ }).catch(error=>phase3DeleteReport(id,'Delete blocked: '+(error?.message||String(error))+'. No deletion confirmed.'))
+ .finally(()=>{if(button.isConnected)button.disabled=false;});
+},true);
 // Delegated click handling works even after saved cards are re-rendered.
 $('saved').addEventListener('click',event=>{
  const button=event.target.closest('button[data-saved-action]');
  if(!button)return;
  const action=button.dataset.savedAction,id=button.dataset.savedId;
  if(action==='remove-leg')removeSavedSelection(id,Number(button.dataset.legIndex));
- else if(action==='delete-parlay')del(id);
+ else if(action==='delete-parlay'){
+   if(button.disabled)return;
+   button.disabled=true;
+   phase3DeleteReport(id,'Starting guarded deletion for this parlay…');
+   // Invoke directly, rather than through a deferred microtask. Always restore
+   // the button, even when authentication or the controller throws.
+   (async()=>{
+     try{
+       if(typeof window.phase3GuardedDeleteSaved!=='function')throw Error('Guarded deletion controller unavailable');
+       await window.phase3GuardedDeleteSaved([String(id)],null,String(id));
+     }catch(e){phase3DeleteReport(id,'Deletion could not start: '+(e?.message||String(e)));}
+     finally{if(button.isConnected)button.disabled=false;}
+   })();
+ }
  else if(action==='edit')editSavedParlay(id);
  else if(action==='duplicate')duplicateSavedToDraft(id);
+ else if(action==='rename')renameSavedParlay(id);
  else if(action==='undo')undoSavedDeletion();
 });
 function stats(){const d=saved.filter(s=>s.status!=="open");const w=d.filter(s=>s.status==="won").length;const net=d.reduce((a,s)=>a+pl(s),0);const stk=d.reduce((a,s)=>a+s.stake,0);return{w,l:d.length-w,open:saved.length-d.length,net,stk,roi:stk?net/stk*100:0}}
-function savedCopyText(s){return `Saved parlay — Week ${s.wk} (${typ(s)})\n`+s.legs.map((l,i)=>`${i+1}. ${l.t} (${l.m}, ${l.o})`).join('\n')+`\nCombined estimated odds ${am(s.dec)} · Stake $${Number(s.stake).toFixed(2)} · Potential payout ${money(s.stake*s.dec)} · Status ${s.status.toUpperCase()}\nModel estimates only; verify sportsbook lines.`}
+function savedCopyText(s){return `${s.name||"Untitled Parlay"} — Week ${s.wk} (${typ(s)})\n`+s.legs.map((l,i)=>`${i+1}. ${l.t} (${l.m}, ${l.o})`).join('\n')+`\nCombined estimated odds ${am(s.dec)} · Stake $${Number(s.stake).toFixed(2)} · Potential payout ${money(s.stake*s.dec)} · Status ${s.status.toUpperCase()}\nModel estimates only; verify sportsbook lines.`}
+function renameSavedParlay(id){
+ const item=savedById(id);if(!item)return;
+ const value=prompt('Parlay name (up to 80 characters):',item.name||'');
+ if(value===null)return;
+ item.name=value.trim().slice(0,80);
+ persist();renderSaved();
+ $('savedActionStatus').textContent='Name saved on this device. Click Sync now to share it with your other device.';
+}
 function duplicateSavedToDraft(id){
  const original=savedById(id);if(!original)return;
  syncActiveSlip();
@@ -602,12 +847,12 @@ function renderSaved(){const t=stats();
  const previousSaved=saved.filter(s=>Number(s.wk)<currentWeek);
  const toggle=$("toggleSavedPrevious");toggle.textContent=showPreviousSavedWeeks?"Hide previous weeks saved parlays":"Show previous weeks saved parlays";toggle.setAttribute("aria-expanded",String(showPreviousSavedWeeks));
 
- $("sumry").innerHTML=`<div class="sm"><div><b>${t.w}-${t.l}</b><span class="mu">Record</span></div><div><b>${t.open}</b><span class="mu">Open</span></div><div><b class="${t.net>=0?"pos":"neg"}">${money(t.net)}</b><span class="mu">Net P/L</span></div><div><b>${f1(t.roi)}%</b><span class="mu">ROI</span></div></div>`;
- const savedCard=s=>`<div class="card sv ${s.status}"><div class="gh"><b>Wk ${s.wk} · ${s.legs.length}-leg ${s.mode==="same"?"same-game":"multi"} · ${am(s.dec)}</b><span class="tag ${s.status}">${s.status.toUpperCase()}</span></div>
+ $("sumry").innerHTML=`<div class="sm"><div><b>${t.open}</b><span class="mu">Open parlays</span></div><div><b>${t.w}-${t.l}</b><span class="mu">Overall record</span></div></div>`;
+ const savedCard=s=>`<div class="card sv ${s.status}"><div class="gh"><b>${esc(s.name||"Untitled Parlay")} · Wk ${s.wk} · ${s.legs.length}-leg ${s.mode==="same"?"same-game":"multi"} · ${am(s.dec)}</b><span class="tag ${s.status}">${s.status.toUpperCase()}</span></div>
 ${s.legs.map((l,i)=>`<div class="mu" style="display:flex;align-items:center;gap:8px;margin:5px 0"><span style="flex:1;min-width:0">• ${esc(l.t)} (${esc(l.m||"")}, ${esc(l.o||"")})</span>${editingSavedParlays.has(String(s.id))?`<button type="button" class="btn alt" style="padding:4px 8px;flex:none" title="Remove this selection" aria-label="Remove ${esc(l.t)}" data-saved-action="remove-leg" data-saved-id="${esc(s.id)}" data-leg-index="${i}">🗑️</button>`:""}</div>`).join("")}
 <div class="row" style="margin-top:8px"><div class="seg" style="flex:none">${["open","won","lost"].map(k=>`<button class="${s.status===k?"on":""}" onclick="setS(${s.id},'status','${k}')">${k[0].toUpperCase()+k.slice(1)}</button>`).join("")}</div>
 ${s.status==="open"?`<span class="mu">Stake $${s.stake} · pays ${money(s.stake*s.dec)}</span>`:`${s.status==="won"?"Won":"Lost"} $<input type="number" min="0" step="0.01" value="${s.amt}" onchange="setS(${s.id},'amt',this.value)">`}
-<button class="btn alt" data-saved-action="edit" data-saved-id="${esc(s.id)}">${editingSavedParlays.has(String(s.id))?"Done deleting":"Delete selections"}</button><button class="btn alt" data-saved-action="delete-parlay" data-saved-id="${esc(s.id)}" aria-label="Delete saved parlay">Delete Slip</button><button class="btn alt" data-saved-action="duplicate" data-saved-id="${esc(s.id)}">Duplicate Slip</button><button class="btn alt" onclick="copySaved(${s.id})">Copy slip</button></div></div>`;
+<button class="btn alt" data-saved-action="rename" data-saved-id="${esc(s.id)}">Rename</button><button class="btn alt" data-saved-action="edit" data-saved-id="${esc(s.id)}">${editingSavedParlays.has(String(s.id))?"Done deleting":"Delete selections"}</button><button class="btn alt" data-saved-action="delete-parlay" data-saved-id="${esc(s.id)}" aria-label="Delete saved parlay">Delete saved parlay…</button><button class="btn alt" data-saved-action="duplicate" data-saved-id="${esc(s.id)}">Duplicate Slip</button><button class="btn alt" onclick="copySaved(${s.id})">Copy slip</button></div><div class="mu phase3-card-delete-status" role="status" data-phase3-delete-status="${esc(s.id)}" style="padding:8px 10px;margin:6px 0;border:1px solid #8aa4c2;border-radius:8px;${phase3DeleteMessages.has(String(s.id))?'':'display:none;'}">${esc(phase3DeleteMessages.get(String(s.id))||'')}</div></div>`;
  const weekHeader=(number,caption)=>`<h3 style="font-size:19px;font-weight:800;margin:18px 0 8px;padding:10px 12px;border-left:5px solid var(--ac);background:var(--sel);border-radius:6px">Week ${number}${caption?` — ${caption}`:""}</h3>`;
  const priorWeeks=[...new Set(previousSaved.map(s=>Number(s.wk)))].sort((a,b)=>b-a);
  const previousMarkup=showPreviousSavedWeeks?`<div id="savedPreviousWeeks">${priorWeeks.length?priorWeeks.map(w=>weekHeader(w,"Previous week")+previousSaved.filter(s=>Number(s.wk)===w).map(savedCard).join("")).join(""):'<div class="mu">No previous-week saved parlays.</div>'}</div>`:"";
@@ -663,7 +908,7 @@ const ESPN_SUMMARY="https://site.api.espn.com/apis/site/v2/sports/football/nfl/s
 const BOX_KEY="nflp-team-box-v7";
 let includeTeamBoxPicks=false;
 let teamBoxes={};
-try{const raw=JSON.parse(localStorage.getItem(BOX_KEY)||'{}');if(raw&&typeof raw==='object'&&!Array.isArray(raw))teamBoxes=raw}catch(e){}
+try{const raw=JSON.parse(phase3LocalStorage.getItem(BOX_KEY)||'{}');if(raw&&typeof raw==='object'&&!Array.isArray(raw))teamBoxes=raw}catch(e){}
 function boxKey(week,a,h){return `${week}:${a}:${h}`}
 function findBox(g){return teamBoxes[boxKey(g.week,g.a,g.h)]||null}
 function updateBoxState(msg){const n=Object.keys(teamBoxes).length;$('boxState').textContent=(msg?msg+' • ':'')+`${n} completed matchup box scores cached (team passing, rushing, touchdowns where verified)`}
@@ -706,7 +951,7 @@ async function loadTeamBoxes(){if(boxLoading)return;boxLoading=true;const btn=$(
  for(let i=0;i<needed.length;i+=4){await Promise.all(needed.slice(i,i+4).map(async g=>{try{await fetchTeamBox(g);ok++}catch(e){fail++;console.warn('Box score unavailable',g.week,g.a,g.h,e.message)}}));
  updateBoxState(`${ok} loaded, ${fail} unavailable`);
  }
- try{localStorage.setItem(BOX_KEY,JSON.stringify(teamBoxes))}catch(e){updateBoxState('Browser storage full; cache not saved')}
+ try{phase3LocalStorage.setItem(BOX_KEY,JSON.stringify(teamBoxes))}catch(e){updateBoxState('Browser storage full; cache not saved')}
  draw();plays();renderAdvanced();renderPerformance();updateBoxState(`${ok} newly loaded, ${fail} unavailable, ${games.length-needed.length} already cached`);btn.disabled=false;boxLoading=false;
 }
 $('boxRefresh').addEventListener('click',loadTeamBoxes);
@@ -723,10 +968,40 @@ function parseESPN(data){if(!Array.isArray(data.events))throw Error("No schedule
  const sc=final&&Number.isFinite(hs)&&Number.isFinite(as)?[as,hs]:undefined;
  return ["espn"+String(e.id).replace(/[^0-9]/g,""),a,h,readableKickoff(e.date),null,sc];
  }).filter(Boolean)}
+// Phase 3: next NFL kickoff, sourced from actual ESPN event ISO timestamps.
+const PHASE3_KICKOFF_KEY='nflp-next-kickoff-'+SEASON;
+let phase3KickoffAt=null;
+let phase3KickoffWeek=null;
+let phase3KickoffRetry=false;
+function phase3SetNextKickoff(events){
+ const now=Date.now();const next=events.filter(e=>Number.isFinite(Number(e.start))&&Number(e.start)>now).sort((a,b)=>Number(a.start)-Number(b.start))[0];
+ phase3KickoffAt=next?Number(next.start):null;
+ phase3KickoffWeek=next&&Number.isInteger(Number(next.week))&&Number(next.week)>=1&&Number(next.week)<=18?Number(next.week):null;
+ try{if(phase3KickoffAt)phase3LocalStorage.setItem(PHASE3_KICKOFF_KEY,JSON.stringify({start:phase3KickoffAt,week:phase3KickoffWeek,checkedAt:now}));else phase3LocalStorage.removeItem(PHASE3_KICKOFF_KEY)}catch(e){}
+ phase3RenderKickoff();
+}
+function phase3RenderKickoff(){
+ const el=id=>document.getElementById(id);const status=el('kickoffStatus');if(!status)return;
+ const week=el('kickoffWeek');if(week)week.textContent=phase3KickoffWeek?'WEEK '+phase3KickoffWeek:'WEEK --';
+ const ms=phase3KickoffAt-Date.now();
+ if(!Number.isFinite(ms)||ms<=0){
+  for(const id of ['kickoffDays','kickoffHours','kickoffMinutes','kickoffSeconds'])el(id).textContent='--';
+  status.textContent='Next kickoff unavailable — refresh NFL schedule';
+  if(Number.isFinite(ms)&&ms<=0&&!phase3KickoffRetry){phase3KickoffRetry=true;setTimeout(()=>{phase3KickoffRetry=false;if(navigator.onLine&&!document.hidden)refreshNFL().catch(()=>{});},15000)}
+  return;
+ }
+ const sec=Math.max(0,Math.ceil(ms/1000));
+ const parts=[Math.floor(sec/86400),Math.floor(sec%86400/3600),Math.floor(sec%3600/60),sec%60];
+ ['kickoffDays','kickoffHours','kickoffMinutes','kickoffSeconds'].forEach((id,i)=>el(id).textContent=String(parts[i]).padStart(2,'0'));
+ status.textContent='Kickoff: '+new Intl.DateTimeFormat('en-US',{timeZone:'America/New_York',weekday:'short',month:'short',day:'numeric',hour:'numeric',minute:'2-digit',timeZoneName:'short'}).format(new Date(phase3KickoffAt));
+}
+try{const cached=JSON.parse(phase3LocalStorage.getItem(PHASE3_KICKOFF_KEY)||'null');if(cached&&Number(cached.start)>Date.now()&&Date.now()-Number(cached.checkedAt)<12*3600000){phase3KickoffAt=Number(cached.start);phase3KickoffWeek=Number.isInteger(Number(cached.week))&&Number(cached.week)>=1&&Number(cached.week)<=18?Number(cached.week):null}}catch(e){}
+phase3RenderKickoff();setInterval(phase3RenderKickoff,1000);
+document.addEventListener('visibilitychange',()=>{if(!document.hidden)phase3RenderKickoff()});
 const NFL_REFRESH_KEY="nflp-last-schedule-refresh-v1";
 function showLastScheduleRefresh(){
  const state=$("dataState");if(!state)return;
- try{const record=JSON.parse(localStorage.getItem(NFL_REFRESH_KEY+'-'+SEASON)||"null");
+ try{const record=JSON.parse(phase3LocalStorage.getItem(NFL_REFRESH_KEY+'-'+SEASON)||"null");
   if(record&&record.time){state.textContent=`Last refresh: ${new Date(record.time).toLocaleString()} • ${record.weeks} weeks updated${record.failures?` • ${record.failures} unavailable`:""}`;state.className="data-state good";}
  }catch(e){}
 }
@@ -750,21 +1025,23 @@ async function refreshNFL(){const btn=$("refresh"),state=$("dataState"),selected
    WKS[w]=merged;liveWeeks.add(w);successes++;
   }catch(e){console.warn("NFL schedule refresh week",w,e);failures++}
  }))}
+ if(successes)phase3SetNextKickoff(upcoming);
  const next=upcoming.sort((a,b)=>a.start-b.start)[0];
  const target=startupScheduleSelection&&!userSelectedWeek&&next?next.week:selected;
  startupScheduleSelection=false;
  populateWeeks();setWk(target);plays();renderPerformance();
  // Team box-score retrieval is opt-in for AI performance.
  state.className="data-state "+(successes?"good":"bad");
- if(successes){const time=new Date().toISOString();try{localStorage.setItem(NFL_REFRESH_KEY+'-'+SEASON,JSON.stringify({time,weeks:successes,failures}))}catch(e){}state.textContent=`Last refresh: ${new Date(time).toLocaleString()} • ${successes} weeks updated${failures?` • ${failures} unavailable`:""}`;}
- else{state.textContent="Refresh unavailable • bundled data retained";try{const prior=JSON.parse(localStorage.getItem(NFL_REFRESH_KEY+'-'+SEASON)||"null");if(prior?.time)state.textContent+=` • Last successful refresh: ${new Date(prior.time).toLocaleString()}`}catch(e){}}
+ if(successes){const time=new Date().toISOString();try{phase3LocalStorage.setItem(NFL_REFRESH_KEY+'-'+SEASON,JSON.stringify({time,weeks:successes,failures}))}catch(e){}state.textContent=`Last refresh: ${new Date(time).toLocaleString()} • ${successes} weeks updated${failures?` • ${failures} unavailable`:""}`;}
+ else{state.textContent="Refresh unavailable • bundled data retained";try{const prior=JSON.parse(phase3LocalStorage.getItem(NFL_REFRESH_KEY+'-'+SEASON)||"null");if(prior?.time)state.textContent+=` • Last successful refresh: ${new Date(prior.time).toLocaleString()}`}catch(e){}}
  btn.disabled=false;btn.textContent="↻ Refresh NFL schedule";
 }
 $("refresh").addEventListener("click",refreshNFL);
-$("gameSearch").addEventListener("input",e=>{gameQuery=e.target.value.trim().toLowerCase();draw()});
+$("gameSearch").value=gameQuery;
+$("gameSearch").addEventListener("input",e=>{gameQuery=e.target.value.trim().toLowerCase().slice(0,120);saveBuilderFilters();draw()});
 const THEME_KEY="nflp-theme-v2";
-try{const th=localStorage.getItem(THEME_KEY);if(th)document.documentElement.dataset.theme=th}catch(e){}
-$("theme").addEventListener("click",()=>{const next=document.documentElement.dataset.theme==="dark"?"light":"dark";document.documentElement.dataset.theme=next;try{localStorage.setItem(THEME_KEY,next)}catch(e){}});
+try{const th=phase3LocalStorage.getItem(THEME_KEY);if(th)document.documentElement.dataset.theme=th}catch(e){}
+$("theme").addEventListener("click",()=>{const next=document.documentElement.dataset.theme==="dark"?"light":"dark";document.documentElement.dataset.theme=next;try{phase3LocalStorage.setItem(THEME_KEY,next)}catch(e){}});
 // CSV import: RFC4180-style quoted cells, CRLF, escaped quotes.
 function parseCSV(text){text=String(text).replace(/^\uFEFF/,'');const first=text.split(/\r?\n/,1)[0]||'';const delimiter=(first.match(/\t/g)||[]).length>(first.match(/,/g)||[]).length?'\t':',';const out=[];let row=[],field='',quoted=false;for(let i=0;i<text.length;i++){const c=text[i];if(quoted){if(c==='"'&&text[i+1]==='"'){field+='"';i++}else if(c==='"')quoted=false;else field+=c}else if(c==='"')quoted=true;else if(c===delimiter){row.push(field);field=''}else if(c==='\n'||c==='\r'){if(c==='\r'&&text[i+1]==='\n')i++;row.push(field);if(row.some(x=>x.trim()))out.push(row);row=[];field=''}else field+=c}if(quoted)throw Error('Unclosed quoted CSV field');row.push(field);if(row.some(x=>x.trim()))out.push(row);return out}
 const aliases={player:['player','player_name','name','player_display_name','player_display','player_full_name'],team:['team','team_abbr','recent_team','team_abbreviation','team_code'],week:['week','week_number','game_week'],passing_yards:['passing_yards','pass_yards','pass_yds'],rushing_yards:['rushing_yards','rush_yards','rush_yds'],rushing_attempts:['rushing_attempts','carries','rush_attempts','rushing_att'],receiving_yards:['receiving_yards','rec_yards','receiving_yds'],receptions:['receptions','rec'],targets:['targets','tgt'],red_zone_targets:['red_zone_targets','rz_targets','rz_targets_20','redzone_targets'],red_zone_rush_attempts:['red_zone_rush_attempts','rz_rush_attempts','rz_rush_20','red_zone_carries'],snaps:['snaps','offense_snaps','offensive_snaps'],team_snaps:['team_snaps','team_offensive_snaps'],snap_share:['snap_share','snap_pct','offense_pct'],touchdowns:['touchdowns','total_tds','tds']};
@@ -794,9 +1071,9 @@ function loadCSV(text,{persist=true}={}){
  imported.splice(0,imported.length,...data);
  let stored=false;
  if(persist)try{
-  localStorage.setItem('nflp-import-v3',JSON.stringify(imported));
-  localStorage.setItem('nflp-import-file-v23',document.getElementById('csvUpload').files?.[0]?.name||'Imported CSV');
-  localStorage.setItem('nflp-import-upload-date-v1',new Date().toISOString());
+  phase3LocalStorage.setItem('nflp-import-v3',JSON.stringify(imported));
+  phase3LocalStorage.setItem('nflp-import-file-v23',document.getElementById('csvUpload').files?.[0]?.name||'Imported CSV');
+  phase3LocalStorage.setItem('nflp-import-upload-date-v1',new Date().toISOString());
   stored=true;
  }catch(err){console.warn('CSV persistence failed',err)}
  renderCSV();draw();plays();renderPerformance();
@@ -808,7 +1085,7 @@ function renderCSV(){
  const latest=completed.length?Math.max(...completed.map(r=>r.week)):'none';
  const currentWeek=imported.filter(r=>r.week===wk);
  const currentCompleted=currentWeek.filter(r=>r.game_status==='COMPLETED').length;
- $('csvLastUpload').textContent='Latest upload: '+(()=>{try{const raw=localStorage.getItem('nflp-import-upload-date-v1');return raw?new Date(raw).toLocaleString():'Never'}catch(e){return 'Unavailable'}})();
+ $('csvLastUpload').textContent='Latest upload: '+(()=>{try{const raw=phase3LocalStorage.getItem('nflp-import-upload-date-v1');return raw?new Date(raw).toLocaleString():'Never'}catch(e){return 'Unavailable'}})();
  $('csvState').textContent=imported.length?`${imported.length.toLocaleString()} player-week records • ${teams.size} teams • ${completed.length.toLocaleString()} completed • ${imported.filter(r=>r.game_status==='SCHEDULED').length.toLocaleString()} scheduled • latest completed Week ${latest} • selected Week ${wk}: ${currentCompleted} completed of ${currentWeek.length} records • onboard + uploaded data`:'Empty — no imported player statistics.';
 
 }
@@ -838,7 +1115,7 @@ function clearImportedStats(){
  $('csvUpload').value='';
  let error='';
  try{
-  for(const storage of [localStorage,sessionStorage]){
+  for(const storage of [phase3LocalStorage,phase3SessionStorage]){
    for(let i=storage.length-1;i>=0;i--){
     const key=storage.key(i);
     if(key&&/^nflp-import(?:-|$)/i.test(key))storage.removeItem(key);
@@ -851,10 +1128,10 @@ function clearImportedStats(){
 }
 $('clearCSV').onclick=clearImportedStats;
 try{
- const rows=JSON.parse(localStorage.getItem(CSV_STORAGE_KEY)||'[]');
+ const rows=JSON.parse(phase3LocalStorage.getItem(CSV_STORAGE_KEY)||'[]');
  if(Array.isArray(rows)&&rows.length){
   imported.splice(0,imported.length,...rows);
-  const filename=localStorage.getItem(CSV_FILE_KEY)||'Saved CSV';
+  const filename=phase3LocalStorage.getItem(CSV_FILE_KEY)||'Saved CSV';
   $('csvFileName').textContent='Restored: '+filename+' ('+rows.length.toLocaleString()+' records)';
  }else $('csvFileName').textContent='Empty';
 }catch(e){console.warn('CSV restore failed',e);$('csvFileName').textContent='Empty'}
@@ -1080,28 +1357,186 @@ updateBoxState();drawF();switchSlip(activeSlip);renderSaved();
 if(navigator.onLine){setTimeout(()=>{refreshNFL().catch(e=>console.warn('Automatic schedule refresh failed',e))},400)}
 </script>
 <script>
+// Surface authentication at the top without duplicating IDs or changing its handlers.
+// The existing form remains the single source of truth for sign-in and sign-out.
+(function mountTopAccount(){
+ const form=document.getElementById('sbAuthForm');
+ const mount=document.getElementById('topAuthMount');
+ if(form&&mount){
+  mount.appendChild(form);form.style.margin='4px 0';
+  const signOut=document.getElementById('sbSignOut');
+  const setup=document.createElement('button');
+  setup.id='openSetup';setup.className='btn alt';setup.type='button';
+  setup.textContent='⚙ Setup';setup.setAttribute('aria-haspopup','dialog');setup.setAttribute('aria-controls','setupDialog');
+  if(signOut)signOut.insertAdjacentElement('afterend',setup);
+ }
+ const indicator=document.getElementById('topAccountIndicator');
+ const status=document.getElementById('sbStatus');
+ if(indicator&&status){
+  const badge=document.getElementById('topConnectionBadge');
+  const update=()=>{if(!indicator.dataset.accountEmail){indicator.textContent='Not signed in';badge.textContent='Not connected';}};
+  document.addEventListener('phase3-account-verified',e=>{const email=e.detail?.email||'Account verified';indicator.dataset.accountEmail=email;indicator.textContent=email;badge.textContent='✓ Connected';});
+  document.addEventListener('phase3-account-signed-out',()=>{delete indicator.dataset.accountEmail;indicator.textContent='Not signed in';badge.textContent='Not connected';});
+  new MutationObserver(update).observe(status,{childList:true,subtree:true,characterData:true});
+  update();
+ }
+})();
 document.getElementById('openSetup').onclick=()=>document.getElementById('setupDialog').showModal();
 document.getElementById('closeSetup').onclick=()=>document.getElementById('setupDialog').close();
 document.getElementById('setupDialog').addEventListener('click',e=>{if(e.target===e.currentTarget)e.currentTarget.close()});
+
+(function organizeSetupOptions(){
+ const setup=document.getElementById('setupDialog'),advanced=document.getElementById('advancedSetupDialog');
+ const cloud=document.getElementById('cloudSyncPanel'),mount=document.getElementById('advancedSetupMount');
+ const button=document.createElement('button');button.type='button';button.className='btn alt';button.id='openAdvancedSetup';button.textContent='⚙ Advanced Options';
+ button.setAttribute('aria-haspopup','dialog');button.setAttribute('aria-controls','advancedSetupDialog');
+ cloud.appendChild(button);
+ const tools=document.createElement('section');tools.innerHTML='<h2>Cloud maintenance</h2><p class="mu">Use these controls only when cloud synchronization needs attention.</p>';
+ const toolRow=document.createElement('div');toolRow.className='tools';
+ for(const id of ['sbBackup']){const el=document.getElementById(id);if(el)toolRow.appendChild(el);}
+ tools.appendChild(toolRow);mount.appendChild(tools);
+ const csv=document.getElementById('csvSetup');if(csv)mount.appendChild(csv);
+ button.addEventListener('click',()=>{setup.close();advanced.showModal();});
+ document.getElementById('closeAdvancedSetup').addEventListener('click',()=>{advanced.close();setup.showModal();});
+ advanced.addEventListener('click',e=>{if(e.target===advanced)advanced.close();});
+})();
+
 /* Optional cloud synchronization: browser-first, single Supabase row per authenticated user.
    Existing browser storage remains intact; conflict prompts before initial remote restore.
-   Password is never stored. Access token lives in sessionStorage only. */
+   Password is never stored. Auth tokens persist in phase3LocalStorage until sign-out. */
 (()=>{
 "use strict";
 const $=id=>document.getElementById(id);
 // Only personal parlay data belongs in per-user cloud sync. Shared NFL data stays local/read-only.
-const keys=['nflp-saved-v1','nflp-draft-slips-v3'];
-const prefix='nflp-cloud-';
+const keys=['nflp-saved-v1','nflp-draft-slips-v3','nflp-deleted-saved-v1'];
+// Namespace authentication by deployment and Supabase project. Never adopt a TEST session automatically.
+const prefix='nflp-phase3-prod-auth-wpvuunwtyxycqfjwuzkn-';
+// Fail closed on cross-account browser data. Never silently merge personal data
+// from a previous account into a different authenticated Supabase user.
+const OWNER_KEY='nflp-phase3-prod-storage-owner-v1';
+const STAGE1_GUARDED_WRITES_APPROVED=true; // Prepared for reviewed live acceptance; deployment requires explicit user approval.
+function stage1WriteAllowed(){return STAGE1_GUARDED_WRITES_APPROVED && location.origin==='https://dlindeman333.github.io' && /^\/NFL_Parlays\/(?:index\.html)?$/.test(location.pathname);}
+window.phase3WriteGateStatus=()=>stage1WriteAllowed()?'Available — guarded account checks required':'Locked — outside production URL';
+$('topEnvironment').textContent=stage1WriteAllowed()?'PRODUCTION — GUARDED SYNC':'PREVIEW — CLOUD WRITES LOCKED';
+
+const ACCOUNT_PREFIX='nflp-phase3-prod-account-v2-';
+const LEGACY_PREFIX='nflp-phase3-prod-legacy-quarantine-v2-';
+// Phase 3 privacy gate: never display one account's local parlays to a signed-out
+// or different user. This is a conservative lock, NOT a data migration.
+function privacyGate(message){
+ document.body.classList.add('phase3-privacy-locked');
+ let notice=document.getElementById('phase3PrivacyNotice');
+ if(!notice){
+  notice=document.createElement('div');
+  notice.id='phase3PrivacyNotice';
+  notice.setAttribute('role','status');
+  const panel=document.getElementById('topAccountPanel');
+  if(!panel)throw new Error('Account panel missing');
+  panel.appendChild(notice);
+ }
+ notice.textContent=message+' Sign in above to unlock your personal parlays.';
+}
+function privacyUnlock(){
+ document.body.classList.remove('phase3-privacy-locked');
+ const notice=document.getElementById('phase3PrivacyNotice');
+ if(notice)notice.remove();
+}
+
+
+function personalDataPresent(){
+ try{
+  const saved=JSON.parse(phase3LocalStorage.getItem('nflp-saved-v1')||'[]');
+  if(Array.isArray(saved)&&saved.length)return true;
+  const drafts=JSON.parse(phase3LocalStorage.getItem('nflp-draft-slips-v3')||'null');
+  if(drafts&&Array.isArray(drafts.slips)&&drafts.slips.some(s=>Array.isArray(s.legs)&&s.legs.length))return true;
+  const deleted=JSON.parse(phase3LocalStorage.getItem('nflp-deleted-saved-v1')||'[]');
+  return Array.isArray(deleted)&&deleted.length>0;
+ }catch(e){return true} // Unknown data is not safe to merge.
+}
+function enforceStorageOwner(uid){
+ // Authentication must not depend on whether legacy browser data has an owner.
+ // Account data is activated only by activateAccount(), never by a cloud merge.
+ if(!uid)throw Error('Missing authenticated user ID.');
+}
+function activateAccount(uid){
+ if(typeof uid!=='string'||!uid.trim())throw Error('Missing authenticated user ID; account storage unchanged.');
+ const active=phase3LocalStorage.getItem(OWNER_KEY);
+ if(active===uid)return false;
+ // Fail closed: changing accounts must never discard newer active data.
+ // Explicit sign-out calls saveActiveAccount() before a different account can sign in.
+ if(active&&active!==uid){
+  const current=Object.fromEntries(keys.map(key=>[key,phase3LocalStorage.getItem(key)]));
+  const storedRaw=phase3LocalStorage.getItem(ACCOUNT_PREFIX+active);
+  let stored=null;
+  try{stored=storedRaw?JSON.parse(storedRaw):null;}catch(_){throw Error('Previous account partition is invalid. No account switch performed.');}
+  if(!stored||typeof stored!=='object'||Array.isArray(stored)||keys.some(key=>(stored[key]??null)!==current[key])){
+   throw Error('Previous account has uncommitted browser changes. Sign out from that account first; no data was replaced.');
+  }
+ }
+
+ // Preserve unverified browser data under a quarantine key; never assign it to a user.
+ // Preserve each previous user's browser data under their own user ID.
+ const values={};for(const key of keys)values[key]=phase3LocalStorage.getItem(key);
+ const target=active?ACCOUNT_PREFIX+active:LEGACY_PREFIX+'original';
+ if(!phase3LocalStorage.getItem(target))phase3LocalStorage.setItem(target,JSON.stringify(values));
+ const ownRaw=phase3LocalStorage.getItem(ACCOUNT_PREFIX+uid);
+ let own={};if(ownRaw){own=JSON.parse(ownRaw);if(!own||typeof own!=='object'||Array.isArray(own))throw Error('Invalid account storage; no data changed.');}
+ // Check storage can be restored before changing active keys.
+ const previous=Object.fromEntries(keys.map(k=>[k,phase3LocalStorage.getItem(k)]));
+ try{
+  for(const key of keys){if(typeof own[key]==='string')phase3LocalStorage.setItem(key,own[key]);else phase3LocalStorage.removeItem(key);}
+  phase3LocalStorage.setItem(OWNER_KEY,uid);
+ }catch(e){for(const key of keys){try{if(previous[key]===null)phase3LocalStorage.removeItem(key);else phase3LocalStorage.setItem(key,previous[key])}catch{}}throw e}
+ return true;
+}
+function saveActiveAccount(){
+ const uid=phase3LocalStorage.getItem(OWNER_KEY);if(!uid)return;
+ const values={};for(const key of keys)values[key]=phase3LocalStorage.getItem(key);
+ phase3LocalStorage.setItem(ACCOUNT_PREFIX+uid,JSON.stringify(values));
+}
+
 let config={},auth=null,remoteUpdated=0,lastPushed='',busy=false,started=false,lastPoll=0;
 const status=t=>{$('sbStatus').textContent=t;};
+// Keep sign-in controls visible only when authentication is actually needed.
+// The sign-out control remains accessible while signed in.
+function authControls(verified){
+ for(const id of ['sbEmail','sbPassword','sbSignIn','sbSignUp']){
+  const el=$(id);if(!el)continue;
+  const holder=el.closest('label')||el;
+  holder.hidden=!!verified;
+  holder.style.display=verified?'none':'';
+ }
+ $('sbSignOut').hidden=!verified;
+ $('sbSignOut').style.display=verified?'':'none';
+}
+
 // Public browser key only. Never embed a Supabase secret/service_role key.
 const CLOUD_URL='https://wpvuunwtyxycqfjwuzkn.supabase.co';
 const CLOUD_PUBLIC_KEY='sb_publishable_DK_yNahtv5ErUXtAzjTxCw_p4EowVj3';
-function authLoad(){try{return JSON.parse(sessionStorage.getItem(prefix+'auth')||'null')}catch{return null}}
-function storeAuth(a){auth=a;if(a)sessionStorage.setItem(prefix+'auth',JSON.stringify(a));else sessionStorage.removeItem(prefix+'auth')}
+function authLoad(){
+ try{
+  const saved=phase3LocalStorage.getItem(prefix+'auth')||phase3SessionStorage.getItem(prefix+'auth');
+  if(!saved)return null;
+  const value=JSON.parse(saved);
+  if(!value||!value.access_token||!value.refresh_token)return null;
+  // Migrate older sessions so the next browser launch can resume them.
+  if(!phase3LocalStorage.getItem(prefix+'auth'))phase3LocalStorage.setItem(prefix+'auth',saved);
+  phase3SessionStorage.removeItem(prefix+'auth');
+  return value;
+ }catch(e){console.warn('Cloud session could not be restored',e);return null}
+}
+function storeAuth(a){
+ auth=a;
+ try{
+  if(a)phase3LocalStorage.setItem(prefix+'auth',JSON.stringify(a));
+  else phase3LocalStorage.removeItem(prefix+'auth');
+  phase3SessionStorage.removeItem(prefix+'auth');
+ }catch(e){console.warn('Cloud session storage unavailable',e);status('Session storage unavailable; you may need to sign in again.')}
+}
 function settings(){config={url:CLOUD_URL,key:CLOUD_PUBLIC_KEY};}
 function headers(extra={}){return {'apikey':config.key,'Content-Type':'application/json',...extra}}
 async function api(path,options={}){
+ if((options.method||'GET').toUpperCase()!=='GET' && path.startsWith('/rest/') && !stage1WriteAllowed())throw Error('Release candidate transport lock: cloud writes disabled.');
  const response=await fetch(config.url+path,{...options,headers:headers(options.headers||{})});
  const raw=await response.text();let data;try{data=raw?JSON.parse(raw):null}catch{data=raw}
  if(!response.ok)throw Error((data&& (data.msg||data.error_description||data.message||data.error))||'Supabase request failed: '+response.status);
@@ -1118,18 +1553,20 @@ async function token(){
 async function userId(){
  const jwt=await token();
  const data=await api('/auth/v1/user',{headers:{Authorization:'Bearer '+jwt}});
+ enforceStorageOwner(data.id);
+ document.dispatchEvent(new CustomEvent('phase3-account-verified',{detail:{email:data.email||auth?.user?.email||''}}));
  return data.id;
 }
 function snapshot(){
  const values={};
- for(const key of keys){const value=localStorage.getItem(key);if(value!==null)values[key]=value;}
+ for(const key of keys){const value=phase3LocalStorage.getItem(key);if(value!==null)values[key]=value;}
  return values;
 }
 function fullLocalBackup(){
  const values={};
- for(let i=0;i<localStorage.length;i++){
-  const key=localStorage.key(i);
-  if(key&&key.startsWith('nflp-')&&!key.startsWith(prefix))values[key]=localStorage.getItem(key);
+ for(let i=0;i<phase3LocalStorage.length;i++){
+  const key=phase3LocalStorage.key(i);
+  if(key&&key.startsWith('nflp-')&&!/auth|token|password|secret/i.test(key))values[key]=phase3LocalStorage.getItem(key);
  }
  return values;
 }
@@ -1152,148 +1589,20 @@ function download(){
 }
 async function readRemote(uid){
  const jwt=await token();
- const rows=await api('/rest/v1/nfl_parlay_sync?select=payload,updated_at&user_id=eq.'+encodeURIComponent(uid),{headers:{Authorization:'Bearer '+jwt}});
+ const rows=await api('/rest/v1/nfl_parlay_sync?select=user_id,payload,updated_at&user_id=eq.'+encodeURIComponent(uid),{headers:{Authorization:'Bearer '+jwt}});
+ if(!Array.isArray(rows)||rows.length>1||rows.some(row=>row.user_id!==uid))throw Error('Cloud row ownership/shape mismatch');
  return rows[0]||null;
 }
-async function push(uid,values){
- const jwt=await token();
- await api('/rest/v1/nfl_parlay_sync?on_conflict=user_id',{method:'POST',headers:{Authorization:'Bearer '+jwt,Prefer:'resolution=merge-duplicates,return=minimal'},body:JSON.stringify({user_id:uid,payload:values,updated_at:new Date().toISOString()})});
- lastPushed=stable(values);remoteUpdated=Date.now();
- status('Synced to Supabase · '+new Date().toLocaleTimeString());
-}
-function restore(values){
- if(!values||typeof values!=='object'||Array.isArray(values))throw Error('Invalid cloud data.');
- const incoming=personalCloudValues(values);
- const local=snapshot();
- // Download a safety backup rather than duplicating data in quota-limited iPhone storage.
- // Do not remove local keys missing from the cloud copy.
- const backup=JSON.stringify({version:2,exported_at:new Date().toISOString(),storage:local},null,2);
- const blob=new Blob([backup],{type:'application/json'});
- const link=document.createElement('a');link.href=URL.createObjectURL(blob);
- link.download='nfl-parlay-pre-restore-'+new Date().toISOString().slice(0,10)+'.json';
- document.body.append(link);link.click();link.remove();setTimeout(()=>URL.revokeObjectURL(link.href),10000);
- try{
-  for(const [key,value] of Object.entries(incoming))localStorage.setItem(key,value);
- }catch(e){
-  // Best-effort rollback; the downloaded backup remains available for manual recovery.
-  for(const key of keys){try{if(key in local)localStorage.setItem(key,local[key]);else localStorage.removeItem(key)}catch{}}
-  throw Error('Not enough storage to restore personal parlays. A backup download was attempted; check your Downloads before clearing any data.');
- }
- lastPushed=stable(snapshot());
- status('Personal cloud data restored. Reloading application…');
- location.reload();
-}
-// Safe additive reconciliation: never remove a saved parlay merely because one
-// device lacks it. Conflicting edits to the same ID require manual resolution.
 function parseCollection(values,key){
- try {const x=JSON.parse(values[key]||'null');return x;}catch{return null;}
+ if(values[key]==null||values[key]==='')return null;
+ try{return JSON.parse(values[key])}catch{throw Error('Invalid JSON in '+key)}
 }
-function mergePersonal(local,cloud,base){
- const merged={...cloud,...local};
- const savedKey='nflp-saved-v1',draftKey='nflp-draft-slips-v3';
- const l=parseCollection(local,savedKey)||[],r=parseCollection(cloud,savedKey)||[];
- if(!Array.isArray(l)||!Array.isArray(r))throw Error('Saved parlay format is invalid. No changes made.');
- const prior=base?parseCollection(base,savedKey):null;
- const baseline=new Map((Array.isArray(prior)?prior:[]).map(x=>[String(x.id),x]));
- const result=new Map();
- for(const item of r){if(item&&item.id!=null)result.set(String(item.id),item)}
- for(const item of l){
-  if(!item||item.id==null)continue;
-  const id=String(item.id),other=result.get(id);
-  if(!other){result.set(id,item);continue;}
-  if(JSON.stringify(item)===JSON.stringify(other))continue;
-  const old=baseline.get(id);
-  if(old){
-   const localChanged=JSON.stringify(item)!==JSON.stringify(old);
-   const cloudChanged=JSON.stringify(other)!==JSON.stringify(old);
-   if(localChanged&&!cloudChanged){result.set(id,item);continue;}
-   if(cloudChanged&&!localChanged)continue;
-  }
-  throw Error('Saved parlay '+id+' was edited differently on both devices. No data overwritten; keep backups and resolve manually.');
- }
- merged[savedKey]=JSON.stringify([...result.values()].sort((x,y)=>(Number(y.id)||0)-(Number(x.id)||0)));
- // Draft IDs are allocated per browser. Preserve both when a collision occurs,
- // assigning the incoming draft a fresh ID. Empty draft placeholders are ignored.
- const ld=parseCollection(local,draftKey),rd=parseCollection(cloud,draftKey);
- const valid=x=>x&&typeof x==='object'&&Array.isArray(x.slips);
- if(valid(ld)||valid(rd)){
-  const ls=valid(ld)?ld.slips.filter(x=>x&&Array.isArray(x.legs)&&x.legs.length):[];
-  const rs=valid(rd)?rd.slips.filter(x=>x&&Array.isArray(x.legs)&&x.legs.length):[];
-  const drafts=new Map(rs.map(x=>[String(x.id),x]));
-  let next=Math.max(0,...rs.map(x=>Number(x.id)||0),...ls.map(x=>Number(x.id)||0));
-  const oldDraft=base?parseCollection(base,draftKey):null;
-  const oldMap=new Map((valid(oldDraft)?oldDraft.slips:[]).map(x=>[String(x.id),x]));
-  for(const d of ls){
-   const id=String(d.id),existing=drafts.get(id);
-   if(!existing){drafts.set(id,d);continue;}
-   if(JSON.stringify(existing)===JSON.stringify(d))continue;
-   const old=oldMap.get(id);
-   if(old){
-    const a=JSON.stringify(d)!==JSON.stringify(old),b=JSON.stringify(existing)!==JSON.stringify(old);
-    if(a&&!b){drafts.set(id,d);continue;}
-    if(b&&!a)continue;
-   }
-   // Collision or simultaneous edit: preserve both rather than silently replacing.
-   const same=[...drafts.values()].some(x=>JSON.stringify({...x,id:null})===JSON.stringify({...d,id:null}));
-   if(!same){next++;drafts.set(String(next),{...d,id:next,name:(d.name||'Draft')+' (from other device)'});}
-  }
-  const items=[...drafts.values()];
-  const preferred=valid(ld)&&items.some(x=>String(x.id)===String(ld.active))?ld.active:items[0]?.id||1;
-  merged[draftKey]=JSON.stringify({slips:items,active:preferred,seq:Math.max(next,Number(ld?.seq)||0,Number(rd?.seq)||0)});
- }
- return merged;
-}
-async function safePush(uid,values,remote){
- const jwt=await token();
- if(remote){
-  const path='/rest/v1/nfl_parlay_sync?user_id=eq.'+encodeURIComponent(uid)+'&updated_at=eq.'+encodeURIComponent(remote.updated_at)+'&select=updated_at';
-  const rows=await api(path,{method:'PATCH',headers:{Authorization:'Bearer '+jwt,Prefer:'return=representation'},body:JSON.stringify({payload:values,updated_at:new Date().toISOString()})});
-  if(!Array.isArray(rows)||rows.length!==1)throw Error('Cloud changed while syncing. Retry; nothing was overwritten.');
-  remoteUpdated=Date.parse(rows[0].updated_at)||Date.now();
- }else{
-  await api('/rest/v1/nfl_parlay_sync',{method:'POST',headers:{Authorization:'Bearer '+jwt,Prefer:'return=minimal'},body:JSON.stringify({user_id:uid,payload:values,updated_at:new Date().toISOString()})});
-  remoteUpdated=Date.now();
- }
- lastPushed=stable(values);
-}
-function applyMerged(values){
- // Never automatically reload here: Safari can enter a reload loop when
- // startup draft normalization changes storage after a merge.
- // Save a recoverable backup before updating local storage.
- downloadJSON({version:2,exported_at:new Date().toISOString(),source:'before-auto-merge',storage:fullLocalBackup()},'nfl-parlay-pre-merge-'+new Date().toISOString().slice(0,10)+'.json');
- for(const [key,value] of Object.entries(values))if(keys.includes(key))localStorage.setItem(key,value);
- lastPushed=stable(snapshot());
- status('Cloud and device data merged safely. Refresh this page ONCE to display the updated parlays. No automatic reload.');
-}
-async function sync(initial=false){
- if(!auth){status('Sign in first.');return;}
- if(busy){status('Sync already in progress. Please wait.');return;}
- if(!navigator.onLine){status('Offline: cannot sync.');return;}
- busy=true;status('Checking cloud and local parlays…');
- try{
-  const uid=await userId(),local=snapshot(),remote=await readRemote(uid);
-  if(!remote){await safePush(uid,local,null);started=true;status('Cloud and device are in sync.');return;}
-  const cloud=personalCloudValues(remote.payload);
-  if(stable(local)===stable(cloud)){
-   lastPushed=stable(local);remoteUpdated=Date.parse(remote.updated_at)||Date.now();started=true;
-   status('Cloud and device are in sync · '+new Date().toLocaleTimeString());return;
-  }
-  // Use the last synchronized snapshot only when it is known to be common.
-  const base=lastPushed?JSON.parse(lastPushed):null;
-  const merged=mergePersonal(local,cloud,base);
-  if(stable(merged)!==stable(cloud)){
-   await safePush(uid,merged,remote);
-   status('Merged and uploaded changes to Supabase.');
-  }else{
-   lastPushed=stable(cloud);remoteUpdated=Date.parse(remote.updated_at)||Date.now();
-  }
-  started=true;
-  if(stable(merged)!==stable(local)){
-   applyMerged(merged);return;
-  }
-  status('Cloud and device are in sync · '+new Date().toLocaleTimeString());
- }catch(e){started=false;status('Sync paused safely: '+e.message);console.warn('Cloud sync error',e)}
- finally{busy=false}
+function trialData(values){
+ const saved=parseCollection(values,'nflp-saved-v1')??[];
+ const deleted=parseCollection(values,'nflp-deleted-saved-v1')??[];
+ const drafts=parseCollection(values,'nflp-draft-slips-v3');
+ if(!Array.isArray(saved)||!Array.isArray(deleted))throw Error('Invalid personal collection');
+ return {saved,deleted,drafts};
 }
 async function sign(kind){
  try{
@@ -1305,81 +1614,581 @@ async function sign(kind){
   if(!data.access_token){status('Account created. Confirm your email using the Supabase message, then sign in.');return}
   storeAuth({...data,expiresAt:Date.now()+(data.expires_in||3600)*1000});
   $('sbPassword').value='';
-  started=false;await sync(true);
- }catch(e){status('Authentication error: '+e.message)}
+  // Authenticate first, then activate only this account's browser partition.
+  const uid=await userId();
+  const changed=activateAccount(uid);
+  // The builder's saved/slips arrays were initialized before authentication.
+  // Never unlock this document after changing partitions: reload first.
+  if(changed){location.reload();return;}
+  privacyUnlock();authControls(true);
+  status('Signed in to your account. Guarded parlay sync and deletion require their own account and cloud verification.');
+ }catch(e){status('Authentication error: '+e.message);if(phase3LocalStorage.getItem(OWNER_KEY))privacyGate('This browser is reserved for its original account. Sign in with that account or use a separate browser profile.')}
 }
-$('sbSignIn').onclick=()=>sign('signin');
+$('sbAuthForm').addEventListener('submit',e=>{e.preventDefault();sign('signin')});
 $('sbSignUp').onclick=()=>sign('signup');
-$('sbSignOut').onclick=()=>{storeAuth(null);started=false;status('Signed out. Local data preserved.');};
+$('sbSignOut').onclick=()=>{try{saveActiveAccount()}catch(e){status('Could not preserve account storage; sign-out stopped: '+e.message);return;}storeAuth(null);document.dispatchEvent(new Event('phase3-account-signed-out'));started=false;lastPushed='';status('Signed out. Personal data is locked on this device.');const dialog=document.getElementById('setupDialog');if(dialog.open)dialog.close();privacyGate('Signed out. Personal data is hidden. Sign in to access your account partition.');location.reload();};
 $('sbBackup').onclick=download;
-$('sbRestoreCloud').onclick=async()=>{
- if(!auth){status('Sign in first.');return;}
- if(busy){status('Sync is already running. Please wait.');return;}
- busy=true;
- try{
-  const uid=await userId();const remote=await readRemote(uid);
-  if(!remote){status('No cloud copy exists for this account. Nothing restored.');return;}
-  if(!confirm('Restore your saved cloud data to this device?\n\nA backup download of your local parlays will be attempted first. Verify it in Downloads. The cloud copy will NOT be overwritten.'))return;
-  restore(personalCloudValues(remote.payload));
- }catch(e){status('Restore failed: '+e.message)}finally{busy=false}
-};
-
+// Retired TEST-only recovery/upload implementation removed from production review.
 // Explicit recovery path when this PC has the desired saved parlays and cloud has an older copy.
 // Remote update uses an optimistic concurrency condition to avoid overwriting a concurrent edit.
-$('sbUploadLocal').onclick=async()=>{
- if(!auth){status('Sign in first.');return;}
- if(busy){status('Another sync operation is running. Please wait.');return;}
- if(!navigator.onLine){status('Offline: cannot upload.');return;}
+// Retired TEST-only recovery/upload implementation removed from production review.
+// Delete selected or all saved slips from this authenticated user's single cloud row.
+// Never delete the entire row: drafts and unrelated user data must be preserved.
+// Select exact saved parlay IDs in a modal; this function never writes data.
+function chooseSavedParlays(items){
+ return new Promise(resolve=>{
+  const old=document.getElementById('cloudParlayPicker');if(old){if(old.open)old.close();old.remove();}
+  const shade=document.createElement('dialog');shade.id='cloudParlayPicker';
+  // Native modal dialogs enter the browser top layer, above the already-open Setup dialog.
+  shade.setAttribute('aria-label','Manage cloud saved parlays');
+  shade.style.cssText='border:0;border-radius:14px;padding:14px;background:transparent;color:inherit;width:min(700px,96vw);max-width:96vw;max-height:92vh;overflow:auto';
+  const panel=document.createElement('div');panel.setAttribute('role','dialog');panel.setAttribute('aria-modal','true');panel.setAttribute('aria-label','Select saved parlays');
+  panel.style.cssText='background:#172436;color:#fff;border:1px solid #61748a;border-radius:12px;max-width:650px;width:100%;max-height:85vh;overflow:auto;padding:20px;font:15px system-ui,sans-serif';
+  const heading=document.createElement('h2');heading.textContent='Manage cloud saved parlays';panel.append(heading);
+  const hint=document.createElement('p');hint.textContent='Select saved parlays by name and picks. Nothing is deleted until you confirm. Only this signed-in account is affected.';panel.append(hint);
+  const checks=[];
+  for(const item of items){
+   const label=document.createElement('label');label.style.cssText='display:flex;gap:12px;align-items:flex-start;border:1px solid #53677d;border-radius:8px;padding:12px;margin:9px 0;cursor:pointer';
+   const cb=document.createElement('input');cb.type='checkbox';cb.style.marginTop='5px';
+   const details=document.createElement('div');
+   const name=document.createElement('strong');name.textContent=String(item.name||'Untitled Parlay');details.append(name);
+   const meta=document.createElement('div');meta.style.cssText='opacity:.8;font-size:13px;margin:4px 0';meta.textContent='Week '+String(item.wk??'?')+' · '+(Array.isArray(item.legs)?item.legs.length:0)+' legs · ID '+String(item.id);details.append(meta);
+   const picks=document.createElement('div');picks.style.cssText='font-size:13px;white-space:pre-wrap';picks.textContent=(Array.isArray(item.legs)?item.legs:[]).map(l=>String(l.t||l.m||'Pick')).join(' • ')||'No pick details available';details.append(picks);
+   label.append(cb,details);panel.append(label);checks.push({cb,id:String(item.id)});
+  }
+  const summary=document.createElement('p');summary.setAttribute('role','status');panel.append(summary);
+  const update=()=>summary.textContent=checks.filter(x=>x.cb.checked).length+' of '+checks.length+' selected';checks.forEach(x=>x.cb.addEventListener('change',update));update();
+  const controls=document.createElement('div');controls.style.cssText='display:flex;gap:8px;flex-wrap:wrap;margin-top:16px';
+  function button(label,fn){const b=document.createElement('button');b.type='button';b.textContent=label;b.style.cssText='border:1px solid #8293a5;border-radius:7px;padding:10px 12px;background:#304861;color:white;cursor:pointer';b.onclick=fn;controls.append(b);return b;}
+  let settled=false;const finish=value=>{if(settled)return;settled=true;if(shade.open)shade.close();shade.remove();resolve(value)};
+  shade.addEventListener('cancel',e=>{e.preventDefault();finish(null)});
+  button('Cancel',()=>finish(null));
+  button('Select all',()=>{checks.forEach(x=>x.cb.checked=true);update()});
+  button('Clear selection',()=>{checks.forEach(x=>x.cb.checked=false);update()});
+  button('Review selected for deletion',()=>finish(checks.filter(x=>x.cb.checked).map(x=>x.id)));
+  panel.append(controls);shade.append(panel);document.body.append(shade);
+  // showModal is essential: a fixed div cannot appear above a modal Setup dialog.
+  try{shade.showModal();}catch(e){shade.remove();resolve(null);return;}
+  const first=controls.querySelector('button');if(first)first.focus();
+ });
+}
+
+// Read-only account-specific cloud audit; does not merge, restore or upload.
+const auditButton=document.createElement('button');
+auditButton.type='button';auditButton.className='btn alt';
+auditButton.textContent='Inspect my cloud record (read only)';
+$('sbSyncNow').parentNode.insertBefore(auditButton,$('sbSyncNow'));
+auditButton.onclick=async()=>{
+ if(busy){status('Another cloud operation is running.');return;}
  busy=true;
  try{
-  status('Checking this device and the current cloud copy…');
   const uid=await userId();
-  const local=snapshot();
-  let count=0;
-  try{const parsed=JSON.parse(local['nflp-saved-v1']||'[]');count=Array.isArray(parsed)?parsed.length:0;}catch{}
-  if(!count){
-   status('Upload stopped: no saved parlays were found on this device. Check Saved parlay slips.');return;
-  }
+  if(phase3LocalStorage.getItem(OWNER_KEY)!==uid)throw Error('Account storage ownership is not verified.');
   const remote=await readRemote(uid);
-  const currentCloud=remote?personalCloudValues(remote.payload):{};
-  if(stable(currentCloud)===stable(local)){
-   lastPushed=stable(local);remoteUpdated=Date.parse(remote?.updated_at)||Date.now();started=true;
-   status('Cloud already matches this device ('+count+' saved parlays).');return;
-  }
-  // Download the existing remote copy before asking to overwrite it. The browser
-  // cannot verify that the user actually saved the download: require explicit confirmation.
-  downloadJSON({version:2,exported_at:new Date().toISOString(),source:'cloud-before-device-upload',storage:currentCloud},
-   'nfl-parlay-cloud-before-upload-'+new Date().toISOString().slice(0,10)+'.json');
-  status('Cloud backup download requested. Verify it is saved before continuing.');
-  if(!confirm('A backup download of the EXISTING CLOUD parlays was requested.\n\nSTOP and check your Downloads/Files folder.\n\nOnly continue if you verified the cloud backup is saved.\n\nPress OK after verification, or Cancel to leave the cloud unchanged.')){
-   status('Upload canceled. Cloud data unchanged.');return;
-  }
-  const typed=prompt('This will REPLACE the cloud saved parlays and draft slips with this device’s copy ('+count+' saved parlays).\n\nType UPLOAD to confirm.');
-  if(typed!=='UPLOAD'){status('Upload canceled. Cloud data unchanged.');return;}
-  status('Uploading this device’s parlays to Supabase…');
-  const jwt=await token();
-  if(remote){
-   // If another device changed the row after our read, abort rather than overwriting it.
-   const path='/rest/v1/nfl_parlay_sync?user_id=eq.'+encodeURIComponent(uid)+'&updated_at=eq.'+encodeURIComponent(remote.updated_at)+'&select=updated_at';
-   const updated=await api(path,{method:'PATCH',headers:{Authorization:'Bearer '+jwt,Prefer:'return=representation'},body:JSON.stringify({payload:local,updated_at:new Date().toISOString()})});
-   if(!Array.isArray(updated)||updated.length!==1)throw Error('Cloud changed during upload. Nothing was overwritten. Please retry after checking the cloud copy.');
-   remoteUpdated=Date.parse(updated[0].updated_at)||Date.now();
-  }else{
-   // Insert only if absent; a concurrent insert fails instead of replacing another device.
-   await api('/rest/v1/nfl_parlay_sync',{method:'POST',headers:{Authorization:'Bearer '+jwt,Prefer:'return=minimal'},body:JSON.stringify({user_id:uid,payload:local,updated_at:new Date().toISOString()})});
-   remoteUpdated=Date.now();
-  }
-  lastPushed=stable(local);started=true;
-  status('Upload successful: '+count+' saved parlays sent to Supabase. On iPhone choose “Use cloud data on this device”.');
- }catch(e){status('Upload failed: '+e.message);console.warn('Manual cloud upload failed',e);}
+  if(!remote){status('Cloud audit: no saved cloud row for this account. No changes made.');return;}
+  const values=personalCloudValues(remote.payload);
+  const saved=parseCollection(values,'nflp-saved-v1');
+  const deleted=parseCollection(values,'nflp-deleted-saved-v1');
+  const drafts=parseCollection(values,'nflp-draft-slips-v3');
+  if(saved!==null&&!Array.isArray(saved))throw Error('Unexpected saved-parlay format.');
+  if(deleted!==null&&!Array.isArray(deleted))throw Error('Unexpected deletion-ledger format.');
+  const draftCount=Array.isArray(drafts)?drafts.length:
+   (drafts&&Array.isArray(drafts.slips)?drafts.slips.length:0);
+  const count=Array.isArray(saved)?saved.length:0;
+  const hasLegacy=JSON.stringify(values).includes('RLS ACCOUNT A TEST');
+  status('Read-only cloud audit: '+count+' saved, '+draftCount+' drafts, '+
+   (Array.isArray(deleted)?deleted.length:0)+' deletion markers. '+
+   'Legacy duplicate test label: '+(hasLegacy?'PRESENT':'not found')+
+   '. No cloud or local data changed.');
+ }catch(e){status('Read-only cloud audit failed: '+e.message);}
  finally{busy=false;}
 };
-$('sbSyncNow').onclick=async()=>{if(!auth){status('Sign in first.');return}await sync(!started)};
-settings();auth=authLoad();
-if(auth&&config.url&&config.key){status('Resuming cloud sync…');setTimeout(()=>sync(true),900)}
-else status('Cloud connection ready. Sign in or create an account to enable sync.');
-setInterval(()=>{if(!started||!auth||busy)return;sync(false)},5000);
-window.addEventListener('online',()=>{if(auth)sync(!started)});
+// Phase 3 post-reset safety check: inspect both sides without merging or writing.
+const readinessButton=document.createElement('button');
+readinessButton.type='button';readinessButton.className='btn alt';
+readinessButton.textContent='Check sync readiness (read only)';
+$('sbSyncNow').parentNode.insertBefore(readinessButton,$('sbSyncNow'));
+readinessButton.onclick=async()=>{
+ if(busy){status('Another cloud operation is running.');return;}
+ busy=true;
+ try{
+  if(!auth)throw Error('Sign in before checking sync readiness.');
+  const uid=await userId();
+  if(phase3LocalStorage.getItem(OWNER_KEY)!==uid)throw Error('Account ownership mismatch. Cloud writes remain disabled.');
+  const remote=await readRemote(uid);
+  if(!remote)throw Error('No cloud record for this account. Cloud writes remain disabled.');
+  const cloud=personalCloudValues(remote.payload),local=snapshot();
+  const count=(v,key,source)=>{
+   if(!Object.prototype.hasOwnProperty.call(v,key))return 0;
+   const raw=v[key];
+   // A missing or explicitly empty entry represents an unused browser, not corrupt data.
+   if(raw===null||raw===undefined||raw==='')return 0;
+   let x;
+   try{x=JSON.parse(raw)}catch{throw Error(source+' '+key+' contains invalid JSON. Data left unchanged. [diagnostic v2]')}
+   if(x===null)return 0;
+   if(key==='nflp-draft-slips-v3'){
+    if(!x||typeof x!=='object'||!Array.isArray(x.slips))throw Error(source+' '+key+' has '+(Array.isArray(x)?'array':typeof x)+' instead of drafts.slips array. Data left unchanged. [diagnostic v2]');
+    return x.slips.filter(s=>s&&Array.isArray(s.legs)&&s.legs.length).length;
+   }
+   if(!Array.isArray(x))throw Error(source+' '+key+' has '+typeof x+' instead of array. Data left unchanged. [diagnostic v2]');
+   return x.length;
+  };
+  const cs=count(cloud,'nflp-saved-v1','Cloud'),ls=count(local,'nflp-saved-v1','Device');
+  const cd=count(cloud,'nflp-draft-slips-v3','Cloud'),ld=count(local,'nflp-draft-slips-v3','Device');
+  const ct=count(cloud,'nflp-deleted-saved-v1','Cloud');
+  const message='Sync readiness (read only): cloud '+cs+' saved / '+cd+' nonempty drafts / '+ct+' deletion markers; device '+ls+' saved / '+ld+' nonempty drafts. ';
+  if(cs===0&&cd===0&&(ls>0||ld>0)){
+   status(message+'WARNING: device has data absent from the reset cloud. Do not upload or enable automatic merging. No changes made.');
+  }else if(cs===0&&cd===0){
+   status(message+'Account ownership verified. Guarded synchronization requires its own preflight and explicit enablement. No changes made.');
+  }else{
+   status(message+'Cloud is no longer empty. Review before enabling sync. No changes made.');
+  }
+ }catch(e){status('Sync readiness check stopped: '+e.message+' [diagnostic v2]');}
+ finally{busy=false;}
+};
+// Retired TEST-only recovery/upload implementation removed from production review.
+// Phase 3 automatic-sync preflight (read-only). This does not enable automatic writes.
+const autoPreflightButton=document.createElement('button');
+autoPreflightButton.type='button';autoPreflightButton.className='btn alt';
+autoPreflightButton.textContent='Preview saved-parlay sync safety (drafts local) — v3';
+$('sbSyncNow').parentNode.insertBefore(autoPreflightButton,$('sbSyncNow'));
+autoPreflightButton.onclick=async()=>{
+ if(busy){status('Another cloud operation is running.');return;}busy=true;
+ try{
+  const uid=await userId();
+  if(phase3LocalStorage.getItem(OWNER_KEY)!==uid)throw Error('Signed-in account does not own active browser data.');
+  const remote=await readRemote(uid);if(!remote)throw Error('Cloud account record not found.');
+  const cloud=trialData(personalCloudValues(remote.payload));
+  const local=trialData(snapshot());
+  const rawPart=phase3LocalStorage.getItem(ACCOUNT_PREFIX+uid);
+  let partition=null;
+  if(rawPart!==null){
+   let part;
+   try{part=JSON.parse(rawPart);}catch(e){throw Error('Account partition contains invalid JSON.');}
+   if(!part||typeof part!=='object'||Array.isArray(part))throw Error('Account partition invalid.');
+   partition=trialData(part);
+  }
+  // A newly restored Safari session may have active account data without a persisted
+  // partition snapshot. Never fabricate or write a partition during a read-only audit.
+  const validate=(x,side)=>{
+   const ids=new Set();
+   for(const item of x.saved){if(!item||item.id==null)throw Error(side+' has a parlay without ID.');
+    const id=String(item.id);if(ids.has(id))throw Error(side+' has duplicate parlay IDs.');ids.add(id);}
+   if(x.deleted.some(id=>id==null))throw Error(side+' has invalid deletion markers.');
+   return ids;
+  };
+  const cids=validate(cloud,'Cloud'),lids=validate(local,'Device'),pids=partition?validate(partition,'Account partition'):null;
+  const deleted=new Set([...cloud.deleted,...local.deleted].map(String));
+  const collisions=[...cids].filter(id=>lids.has(id)&&JSON.stringify(cloud.saved.find(p=>String(p.id)===id))!==JSON.stringify(local.saved.find(p=>String(p.id)===id)));
+  const resurrection=[...new Set([...cids,...lids])].filter(id=>deleted.has(id));
+  const localOnly=[...lids].filter(id=>!cids.has(id)),cloudOnly=[...cids].filter(id=>!lids.has(id));
+  const partitionMismatch=partition!==null&&JSON.stringify(partition.saved)!==JSON.stringify(local.saved);
+  const draftsDiffer=JSON.stringify(cloud.drafts)!==JSON.stringify(local.drafts);
+  const blockers=[];
+  if(collisions.length)blockers.push(collisions.length+' same-ID content conflict(s)');
+  if(resurrection.length)blockers.push(resurrection.length+' deleted-ID resurrection risk(s)');
+  if(partitionMismatch)blockers.push('device/account partition mismatch');
+  // Phase 3 agreed policy: unfinished drafts stay device-local and are never automatically uploaded or replaced.
+  // Draft differences are informational, not a blocker for saved-parlay-only synchronization.
+  const markerDifference=local.deleted.filter(id=>!new Set(cloud.deleted.map(String)).has(String(id))).length;
+  if(markerDifference)blockers.push(markerDifference+' device-only deletion marker(s) require safe union before cloud writes');
+  const msg='AUTO-SYNC PREFLIGHT (READ ONLY): cloud '+cids.size+' saved; device '+lids.size+' saved; account partition '+(pids?pids.size+' saved':'not initialized')+'; cloud-only '+cloudOnly.length+'; device-only '+localOnly.length+'; changed same-ID '+collisions.length+'; deleted-ID risks '+resurrection.length+'; cloud markers '+cloud.deleted.length+'; device markers '+local.deleted.length+'; drafts '+(draftsDiffer?'different (device-local policy)':'same')+'. '+(blockers.length?'BLOCKED: '+blockers.join('; '):'Saved-parlay preflight READY under device-local draft policy. Automatic sync remains OFF.')+' No data changed.';
+  status(msg);
+ }catch(e){status('AUTO-SYNC PREFLIGHT STOPPED: '+(e&&e.message||String(e))+'. No data changed.');}
+ finally{busy=false;}
+};
+// Read-only read-only record discrepancy audit. No local or remote writes.
+const discrepancyAuditButton=document.createElement('button');
+discrepancyAuditButton.type='button';discrepancyAuditButton.className='btn alt';
+discrepancyAuditButton.textContent='Inspect conflicting parlay IDs (READ ONLY) — v1';
+$('sbSyncNow').parentNode.insertBefore(discrepancyAuditButton,$('sbSyncNow'));
+discrepancyAuditButton.onclick=async()=>{
+ if(busy){status('Another cloud operation is running.');return;}busy=true;
+ try{
+  const uid=await userId();
+  if(!auth||phase3LocalStorage.getItem(OWNER_KEY)!==uid)throw Error('Signed-in account does not own active browser data.');
+  const remote=await readRemote(uid);if(!remote)throw Error('Cloud account record missing.');
+  const cloud=trialData(personalCloudValues(remote.payload));
+  const device=trialData(snapshot());
+  const raw=phase3LocalStorage.getItem(ACCOUNT_PREFIX+uid);
+  let partition=null;
+  if(raw!==null){const obj=JSON.parse(raw);if(!obj||typeof obj!=='object'||Array.isArray(obj))throw Error('Invalid account partition.');partition=trialData(obj);}
+  const index=(items,side)=>{const map=new Map();for(const p of items){if(!p||p.id==null)throw Error(side+' has a parlay without an ID.');const id=String(p.id);if(map.has(id))throw Error(side+' contains duplicate ID '+id);map.set(id,p);}return map;};
+  const c=index(cloud.saved,'Cloud'),d=index(device.saved,'Device'),a=partition?index(partition.saved,'Account partition'):null;
+  const cm=new Set(cloud.deleted.map(String)),dm=new Set(device.deleted.map(String)),am=partition?new Set(partition.deleted.map(String)):null;
+  const all=[...new Set([...c.keys(),...d.keys(),...(a?[...a.keys()]:[]),...cm,...dm,...(am?[...am]:[])])].sort();
+  const rows=all.filter(id=>c.has(id)!==d.has(id)||(a&&a.has(id)!==d.has(id))||cm.has(id)!==dm.has(id)||(am&&am.has(id)!==dm.has(id))||((c.has(id)&&d.has(id))&&JSON.stringify(c.get(id))!==JSON.stringify(d.get(id)))||((a&&a.has(id)&&d.has(id))&&JSON.stringify(a.get(id))!==JSON.stringify(d.get(id)))||((c.has(id)||d.has(id))&&(cm.has(id)||dm.has(id))));
+  const fmt=(m,id)=>m===null?'N/A':m.has(id)?'YES':'no';
+  const lines=['PARLAY DISCREPANCY REPORT (READ ONLY)',
+   'Cloud saved '+c.size+'; device saved '+d.size+'; account partition '+(a?a.size:'not initialized')+'.',
+   'Cloud markers '+cm.size+'; device markers '+dm.size+'; partition markers '+(am?am.size:'not initialized')+'.',
+   'Conflicting IDs: '+rows.length+'. No data changed.',''];
+  for(const id of rows){
+   const contentMismatch=c.has(id)&&d.has(id)&&JSON.stringify(c.get(id))!==JSON.stringify(d.get(id));
+   const partMismatch=a&&a.has(id)&&d.has(id)&&JSON.stringify(a.get(id))!==JSON.stringify(d.get(id));
+   lines.push('ID '+id+' | saved cloud='+fmt(c,id)+', device='+fmt(d,id)+', partition='+fmt(a,id)+' | deleted marker cloud='+fmt(cm,id)+', device='+fmt(dm,id)+', partition='+fmt(am,id)+(contentMismatch?' | CLOUD/DEVICE CONTENT DIFF':'')+(partMismatch?' | DEVICE/PARTITION CONTENT DIFF':''));
+  }
+  if(!rows.length)lines.push('No per-ID discrepancy found; check ordering or other non-ID data differences.');
+  lines.push('','READ ONLY: no cloud, device, partition, or draft changes. Do not use Reconcile, Upload, Clear, or Enable Auto-Sync.');
+  const message=lines.join('\n');status(message);
+  const node=$('sbStatus');if(node)node.style.whiteSpace='pre-wrap';
+ }catch(e){status('READ-ONLY DISCREPANCY AUDIT STOPPED: '+(e&&e.message||String(e))+'. No data changed.');}
+ finally{busy=false;}
+};
+// Retired TEST-only recovery/upload implementation removed from production review.
+// Phase 3 opt-in saved-parlay synchronization v6. Legacy writers remain disabled.
+// Strict three-way baseline: never infer deletions from a missing ID without a baseline.
+const safe6Key=uid=>'nflp-phase3-prod-saved-sync-v1-'+uid;
+let safe6Running=false;
+const safe6Button=document.createElement('button');safe6Button.type='button';safe6Button.className='btn alt';
+safe6Button.textContent='Enable guarded automatic synchronization';
+$('sbSyncNow').parentNode.insertBefore(safe6Button,$('sbSyncNow'));
+const safe6Stop=document.createElement('button');safe6Stop.type='button';safe6Stop.className='btn alt';
+safe6Stop.textContent='Pause guarded automatic synchronization';
+$('sbSyncNow').parentNode.insertBefore(safe6Stop,$('sbSyncNow'));
+function safe6View(x,side){
+ const d=trialData(x),ids=new Set(),markers=new Set();
+ for(const p of d.saved){if(!p||p.id==null)throw Error(side+' invalid parlay');const id=String(p.id);if(ids.has(id))throw Error(side+' duplicate parlay ID');ids.add(id)}
+ for(const m of d.deleted){if(typeof m!=='string'&&typeof m!=='number')throw Error(side+' invalid deletion marker');markers.add(String(m))}
+ if([...ids].some(id=>markers.has(id)))throw Error(side+' saved parlay has deletion marker');
+ return {saved:d.saved,deleted:[...markers].sort()};
+}
+// Stable comparison only: preserve the original objects and storage payloads unchanged.
+// JSON object key order can differ between Supabase and Safari without a data change.
+function safe6StableValue(v){
+ if(Array.isArray(v))return v.map(safe6StableValue);
+ if(v&&typeof v==='object'){
+  const out={};for(const k of Object.keys(v).sort())out[k]=safe6StableValue(v[k]);return out;
+ }
+ return v;
+}
+function safe6Canonical(d){return JSON.stringify({saved:[...d.saved].sort((a,b)=>String(a.id).localeCompare(String(b.id))).map(safe6StableValue),deleted:[...d.deleted].map(String).sort()});}
+function safe6Active(uid){return phase3LocalStorage.getItem(OWNER_KEY)===uid&&!!auth;}
+function safe6LocalWrite(uid,d){
+ if(!safe6Active(uid))throw Error('Account ownership changed before local update');
+ safe6View({'nflp-saved-v1':JSON.stringify(d.saved),'nflp-deleted-saved-v1':JSON.stringify(d.deleted)},'Incoming');
+ const oldSaved=phase3LocalStorage.getItem('nflp-saved-v1'),oldMarkers=phase3LocalStorage.getItem('nflp-deleted-saved-v1'),oldPart=phase3LocalStorage.getItem(ACCOUNT_PREFIX+uid);
+ try{
+  phase3LocalStorage.setItem('nflp-saved-v1',JSON.stringify(d.saved));phase3LocalStorage.setItem('nflp-deleted-saved-v1',JSON.stringify(d.deleted));saveActiveAccount();
+  const actual=safe6View(snapshot(),'Device readback');
+  if(safe6Canonical(actual)!==safe6Canonical(d))throw Error('Device readback mismatch');
+  saved=actual.saved;renderSaved();
+ }catch(e){try{for(const [k,v] of [['nflp-saved-v1',oldSaved],['nflp-deleted-saved-v1',oldMarkers],[ACCOUNT_PREFIX+uid,oldPart]]){if(v===null)phase3LocalStorage.removeItem(k);else phase3LocalStorage.setItem(k,v)}}catch(_){}throw e}
+}
+async function safe6Cycle(){
+ if(!stage1WriteAllowed()){safe6Running=false;status('Guarded cloud writes are locked outside the production URL.');return;}
+ if(!safe6Running||busy||!auth||!navigator.onLine||document.hidden)return;
+ busy=true;
+ try{
+  const uid=await userId();if(!safe6Active(uid))throw Error('Account ownership changed');
+  const raw=phase3LocalStorage.getItem(safe6Key(uid));if(!raw){safe6Running=false;return;}
+  const base=JSON.parse(raw);if(!base||base.uid!==uid||typeof base.canonical!=='string')throw Error('Missing baseline');
+  const remote=await readRemote(uid);if(!remote||!remote.updated_at)throw Error('Cloud revision unavailable');
+  const cloud=safe6View(personalCloudValues(remote.payload),'Cloud');
+  const local=safe6View(snapshot(),'Device');
+  const c=safe6Canonical(cloud),l=safe6Canonical(local),b=base.canonical;
+  if(!safe6Active(uid))throw Error('Account changed during cloud read');
+  if(c===l){if(b!==c)phase3LocalStorage.setItem(safe6Key(uid),JSON.stringify({uid,canonical:c}));status('GUARDED SYNC v11 PASSED: Cloud and device saved parlays and deletion markers match. Drafts preserved.');return;}
+  if(c!==b&&l!==b)throw Error('Both cloud and device changed; manual review required');
+  if(l===b){
+   // Cloud changed, local did not. Do not discard local drafts or account ownership.
+   if(!safe6Active(uid)||safe6Canonical(safe6View(snapshot(),'Device'))!==l)throw Error('Device changed during cloud pull');
+   safe6LocalWrite(uid,cloud);
+   phase3LocalStorage.setItem(safe6Key(uid),JSON.stringify({uid,canonical:c}));
+   status('AUTO-SYNC v7: Cloud changes received on this device. Drafts preserved.');
+  }else{
+   // Device changed, cloud did not. A deleted parlay must have a matching tombstone.
+   const prior=JSON.parse(b),priorIds=new Set(prior.saved.map(p=>String(p.id))),nextIds=new Set(local.saved.map(p=>String(p.id))),marks=new Set(local.deleted);
+   for(const id of priorIds)if(!nextIds.has(id)&&!marks.has(id))throw Error('Parlay removed without deletion marker: '+id);
+   const fresh=await readRemote(uid);
+   if(!fresh||fresh.updated_at!==remote.updated_at||safe6Canonical(safe6View(personalCloudValues(fresh.payload),'Cloud'))!==c)throw Error('Cloud changed before write');
+   if(!safe6Active(uid)||safe6Canonical(safe6View(snapshot(),'Device'))!==l)throw Error('Device changed before write');
+   const jwt=await token();
+   if(!safe6Active(uid)||safe6Canonical(safe6View(snapshot(),'Device'))!==l)throw Error('Account/device changed during token verification');
+   const next={...fresh.payload,'nflp-saved-v1':JSON.stringify(local.saved),'nflp-deleted-saved-v1':JSON.stringify(local.deleted)};
+   const rows=await api('/rest/v1/nfl_parlay_sync?user_id=eq.'+encodeURIComponent(uid)+'&updated_at=eq.'+encodeURIComponent(fresh.updated_at)+'&select=payload,updated_at',{
+    method:'PATCH',headers:{Authorization:'Bearer '+jwt,Prefer:'return=representation'},body:JSON.stringify({payload:next,updated_at:new Date().toISOString()})
+   });
+   if(!Array.isArray(rows)||rows.length!==1)throw Error('Concurrent cloud update; write not confirmed');
+   const checked=await readRemote(uid);
+   if(!checked||safe6Canonical(safe6View(personalCloudValues(checked.payload),'Cloud'))!==l)throw Error('Cloud readback mismatch');
+   if(!safe6Active(uid)||safe6Canonical(safe6View(snapshot(),'Device'))!==l)throw Error('Cloud write verified; account/device changed before baseline commit. Inspect before retrying');
+   phase3LocalStorage.setItem(safe6Key(uid),JSON.stringify({uid,canonical:l}));
+   saveActiveAccount();status('AUTO-SYNC v7: Device changes verified in cloud. Drafts preserved.');
+  }
+ }catch(e){safe6Running=false;status('AUTO-SYNC v7 PAUSED: '+(e&&e.message||String(e))+'. No further automatic writes. Review before resuming.');}
+ finally{busy=false}
+}
+safe6Button.onclick=async()=>{
+ if(!stage1WriteAllowed()){status('Cloud writes are locked outside the production URL.');return;}
+ if(busy){status('Another cloud operation is running.');return;}busy=true;
+ try{
+  const uid=await userId();if(!safe6Active(uid))throw Error('Account ownership mismatch');
+  const remote=await readRemote(uid);if(!remote)throw Error('Cloud record missing');
+  const cloud=safe6View(personalCloudValues(remote.payload),'Cloud'),local=safe6View(snapshot(),'Device');
+  const c=safe6Canonical(cloud),l=safe6Canonical(local);
+  if(c!==l){
+   const cm=new Map(cloud.saved.map(p=>[String(p.id),p])),lm=new Map(local.saved.map(p=>[String(p.id),p]));
+   const cloudOnly=[...cm.keys()].filter(id=>!lm.has(id)),deviceOnly=[...lm.keys()].filter(id=>!cm.has(id));
+   const changed=[...cm.keys()].filter(id=>lm.has(id)&&JSON.stringify(safe6StableValue(cm.get(id)))!==JSON.stringify(safe6StableValue(lm.get(id))));
+   const cd=new Set(cloud.deleted.map(String)),ld=new Set(local.deleted.map(String));
+   const cloudMarkers=[...cd].filter(id=>!ld.has(id)),deviceMarkers=[...ld].filter(id=>!cd.has(id));
+   const orderingOnly=!cloudOnly.length&&!deviceOnly.length&&!changed.length&&!cloudMarkers.length&&!deviceMarkers.length;
+   throw Error('Cloud/device exact-match check failed: '+cloudOnly.length+' cloud-only saved, '+deviceOnly.length+' device-only saved, '+changed.length+' changed same-ID saved, '+cloudMarkers.length+' cloud-only markers, '+deviceMarkers.length+' device-only markers'+(orderingOnly?' (likely ordering or serialization difference)':'')+'. No sync enabled; no data changed.');
+  }
+  const raw=phase3LocalStorage.getItem(ACCOUNT_PREFIX+uid);
+  if(raw!==null){const p=JSON.parse(raw);if(safe6Canonical(safe6View(p,'Account partition'))!==l)throw Error('Account partition mismatch');}
+  if(!confirm('Enable guarded automatic saved-parlay sync on THIS device? Drafts remain local. Concurrent edits pause sync. Legacy sync remains disabled.'))return;
+  phase3LocalStorage.setItem(safe6Key(uid),JSON.stringify({uid,canonical:l}));safe6Running=true;
+  status('AUTO-SYNC v7 ENABLED for this device. Resumes after reload; checks approximately every 15 seconds while tab is active.');
+ }catch(e){status('AUTO-SYNC v7 NOT ENABLED: '+(e&&e.message||String(e)));}
+ finally{busy=false}
+};
+// Phase 3 consolidated cloud deletion controls: one, selected, or all.
+// Cloud-first CAS, readback, then device update. Drafts and unrelated payload keys are preserved.
+const safe8Delete=document.createElement('button');safe8Delete.type='button';safe8Delete.className='btn alt';
+safe8Delete.textContent='Select and delete saved parlays…';
+document.querySelector('#savedParlaySlips .tools:last-child').prepend(safe8Delete);
+function safe10DeletionFeedback(message,scroll=false){
+ const target=document.getElementById('savedActionStatus');
+ if(target){target.textContent=message;if(scroll)target.scrollIntoView({block:'nearest',behavior:'smooth'});}
+}
+// Read-only preflight timeout: prevent indefinite "checking account" UI hangs.
+// Timed-out requests can still finish in the background, but cannot trigger deletion.
+function phase3DeletionReadTimeout(promise,label,ms=18000){
+ let timer;
+ return Promise.race([
+  Promise.resolve(promise),
+  new Promise((_,reject)=>{timer=setTimeout(()=>reject(Error(label+' timed out after '+Math.round(ms/1000)+'s. No deletion attempted. Check connection, sign in, then retry.')),ms);})
+ ]).finally(()=>clearTimeout(timer));
+}
+// Nonblocking confirmation: nonblocking in-page confirmation avoids Safari's synchronous native
+// confirm() dialogs around a download and subsequent guarded Supabase GET.
+// A missing/dismissed dialog always resolves to Cancel, never to approval.
+function phase3V10Confirm(title,description,approveLabel){
+ return new Promise(resolve=>{
+  const overlay=document.createElement('div');
+  overlay.setAttribute('role','presentation');
+  overlay.style.cssText='position:fixed;inset:0;z-index:2147483000;background:rgba(8,19,35,.75);display:flex;align-items:center;justify-content:center;padding:16px';
+  const panel=document.createElement('div');
+  panel.setAttribute('role','alertdialog');panel.setAttribute('aria-modal','true');
+  panel.setAttribute('aria-label',title);
+  panel.style.cssText='background:#fff;color:#14263d;max-width:460px;width:100%;border-radius:12px;padding:22px;box-shadow:0 12px 35px #0006;font:16px/1.45 system-ui,sans-serif';
+  const heading=document.createElement('h3');heading.textContent=title;heading.style.cssText='margin:0 0 12px;font-size:19px';
+  const details=document.createElement('p');details.textContent=description;details.style.cssText='white-space:pre-line;margin:0 0 20px';
+  const actions=document.createElement('div');actions.style.cssText='display:flex;gap:12px;justify-content:flex-end;flex-wrap:wrap';
+  const cancel=document.createElement('button');cancel.type='button';cancel.textContent='Cancel';cancel.style.cssText='padding:12px 18px;min-width:100px;border-radius:8px;border:1px solid #667;background:#f4f6f9;color:#14263d';
+  const approve=document.createElement('button');approve.type='button';approve.textContent=approveLabel;approve.style.cssText='padding:12px 18px;min-width:120px;border-radius:8px;border:1px solid #174a85;background:#174a85;color:white;font-weight:700';
+  actions.append(cancel,approve);panel.append(heading,details,actions);overlay.append(panel);document.body.append(overlay);
+  const previous=document.activeElement;let finished=false;
+  const finish=answer=>{if(finished)return;finished=true;document.removeEventListener('keydown',onKey,true);overlay.remove();if(previous&&previous.isConnected&&previous.focus)previous.focus();resolve(answer)};
+  const onKey=e=>{if(e.key==='Escape'){e.preventDefault();finish(false)}else if(e.key==='Tab'){e.preventDefault();(document.activeElement===cancel?approve:cancel).focus()}};
+  document.addEventListener('keydown',onKey,true);
+  cancel.addEventListener('click',()=>finish(false));approve.addEventListener('click',()=>finish(true));
+  overlay.addEventListener('click',e=>{if(e.target===overlay)finish(false)});
+  cancel.focus();
+ });
+}
+async function safe9DeleteSaved(requestedIds=null,cardFeedback=null,cardId=null){
+ if(!stage1WriteAllowed()){safe10DeletionFeedback('Cloud deletion is disabled outside the production URL.');return;}
+ let deletionStage='initial safety checks';
+ const report=message=>{safe10DeletionFeedback(message,false);if(cardId!==null)phase3DeleteReport(cardId,message);if(cardFeedback&&cardFeedback.isConnected)cardFeedback.textContent=message;};
+ report('Checking signed-in account and cloud sync before deletion…');
+ if(busy){report('Another cloud operation is running. Wait for auto-sync to finish, then retry. No deletion attempted.');return;}
+ if(!navigator.onLine){report('Cloud deletion requires an online connection. No changes made.');return;}
+ busy=true;
+ const priorRunning=safe6Running;safe6Running=false;
+ let writeAttempted=false,deletionVerified=false;
+ try{
+  deletionStage='account verification';
+  report('Verifying signed-in account…');
+  const uid=await phase3DeletionReadTimeout(userId(),'Account verification');
+  report('Signed-in account verified. Checking device ownership…');
+  if(!safe6Active(uid))throw Error('Authenticated account ownership mismatch');
+  deletionStage='initial cloud record read';
+  report('Reading your cloud record…');
+  const remote=await phase3DeletionReadTimeout(readRemote(uid),'Cloud record read');if(!remote||!remote.updated_at)throw Error('Cloud revision unavailable');
+  const cloud=safe6View(personalCloudValues(remote.payload),'Cloud');
+  const local=safe6View(snapshot(),'Device');
+  const canonical=safe6Canonical(cloud);
+  deletionStage='cloud/device comparison';
+  report('Comparing cloud and device saved parlays…');
+  if(canonical!==safe6Canonical(local)){
+   const cloudIds=new Set(cloud.saved.map(p=>String(p.id))),deviceIds=new Set(local.saved.map(p=>String(p.id)));
+   const cloudOnly=[...cloudIds].filter(id=>!deviceIds.has(id)).length;
+   const deviceOnly=[...deviceIds].filter(id=>!cloudIds.has(id)).length;
+   const sameIds=cloudOnly===0&&deviceOnly===0;
+   throw Error('Cloud/device mismatch: '+cloud.saved.length+' cloud parlays, '+local.saved.length+' device parlays; '+cloudOnly+' cloud-only, '+deviceOnly+' device-only; '+(sameIds?'matching IDs but differing parlay details or deletion markers':'different saved-parlay IDs')+'. No deletion. Check auto-sync status or use guarded read-only preflight.');
+  }
+  deletionStage='guarded sync baseline check';
+  report('Checking the guarded sync baseline…');
+  const baselineRaw=phase3LocalStorage.getItem(safe6Key(uid));
+  if(!baselineRaw)throw Error('Guarded auto-sync must be enabled for this account first');
+  const baseline=JSON.parse(baselineRaw);
+  if(!baseline||baseline.uid!==uid||baseline.canonical!==canonical)throw Error('Guarded sync baseline differs from verified cloud/device data. No deletion. Allow a successful auto-sync cycle before retrying.');
+  if(!cloud.saved.length){report('No saved parlays to delete for this account.');return;}
+  deletionStage='deletion selection and backup';
+  report('Account, cloud/device data and sync baseline verified. Preparing deletion selection…');
+  const selected=requestedIds==='ALL'?cloud.saved.map(p=>String(p.id)):
+    Array.isArray(requestedIds)?requestedIds:await chooseSavedParlays(cloud.saved);
+  if(selected===null){report('Deletion canceled. No changes made.');return;}
+  const ids=[...new Set(selected.map(String))];if(!ids.length){report('No parlays selected. No changes made.');return;}
+  const existing=new Set(cloud.saved.map(p=>String(p.id)));
+  if(ids.some(id=>!existing.has(id)))throw Error('Selection contains an unknown parlay');
+  const all=ids.length===cloud.saved.length;
+  downloadJSON({version:8,source:'production-pre-delete',exported_at:new Date().toISOString(),cloud:personalCloudValues(remote.payload),device:snapshot()},'parlays-backup-'+new Date().toISOString().slice(0,10)+'.json');
+  if(!await phase3V10Confirm('Verify parlay backup',
+   'A JSON backup download was requested. Verify the file is saved in Downloads before continuing.\n\nCancel leaves everything unchanged.',
+   'Backup verified')){report('Deletion canceled at backup confirmation. No changes made.');return;}
+  const selectedNames=cloud.saved.filter(p=>ids.includes(String(p.id))).map(p=>(p.name&&String(p.name).trim())||'Untitled Parlay (ID '+p.id+')');
+  const targetList=selectedNames.length<=8?selectedNames.map(n=>'• '+n).join('\n'):selectedNames.slice(0,8).map(n=>'• '+n).join('\n')+'\n… and '+(selectedNames.length-8)+' more';
+  if(!await phase3V10Confirm('Final deletion confirmation',
+   'Delete exactly '+ids.length+' saved parlay(s) from your signed-in account?\n\n'+targetList+'\n\nThis deletion will synchronize to your other devices. Drafts, statistics, and prediction data are preserved.',
+   'Delete '+ids.length+' parlay'+(ids.length===1?'':'s'))){report('Deletion canceled at final confirmation. No changes made.');return;}
+  // Revalidate account and cloud revision after the potentially lengthy Safari download.
+  if(!safe6Active(uid)||safe6Canonical(safe6View(snapshot(),'Device'))!==canonical)throw Error('Account/device changed during confirmation; no deletion');
+  deletionStage='cloud revision recheck';
+  const fresh=await phase3DeletionReadTimeout(readRemote(uid),'Cloud revision recheck');
+  if(!fresh||fresh.updated_at!==remote.updated_at||safe6Canonical(safe6View(personalCloudValues(fresh.payload),'Cloud'))!==canonical)throw Error('Cloud changed during confirmation; no deletion');
+  const marks=[...new Set([...cloud.deleted,...ids])].sort();
+  const nextSaved=cloud.saved.filter(p=>!ids.includes(String(p.id)));
+  const nextData={saved:nextSaved,deleted:marks};
+  deletionStage='session token verification';
+  const jwt=await phase3DeletionReadTimeout(token(),'Session token verification');
+  if(!safe6Active(uid)||safe6Canonical(safe6View(snapshot(),'Device'))!==canonical)throw Error('Account/device changed during token verification; no deletion');
+  const nextPayload={...fresh.payload,'nflp-saved-v1':JSON.stringify(nextSaved),'nflp-deleted-saved-v1':JSON.stringify(marks)};
+  deletionStage='cloud write request';writeAttempted=true;
+  const rows=await api('/rest/v1/nfl_parlay_sync?user_id=eq.'+encodeURIComponent(uid)+'&updated_at=eq.'+encodeURIComponent(fresh.updated_at)+'&select=payload,updated_at',{
+   method:'PATCH',headers:{Authorization:'Bearer '+jwt,Prefer:'return=representation'},body:JSON.stringify({payload:nextPayload,updated_at:new Date().toISOString()})
+  });
+  if(!Array.isArray(rows)||rows.length!==1)throw Error('Concurrent cloud change; deletion not confirmed');
+  report('Cloud update returned; verifying deletion against account cloud readback…');
+  deletionStage='post-deletion cloud readback (write may have succeeded)';
+  const check=await phase3DeletionReadTimeout(readRemote(uid),'Post-deletion cloud readback');
+  if(!check||safe6Canonical(safe6View(personalCloudValues(check.payload),'Cloud'))!==safe6Canonical(nextData))throw Error('Cloud readback failed; inspect cloud before retrying');
+  deletionVerified=true;
+  // Cloud is verified; a local storage error cannot undo the cloud operation.
+  try{safe6LocalWrite(uid,nextData);phase3LocalStorage.setItem(safe6Key(uid),JSON.stringify({uid,canonical:safe6Canonical(nextData)}));}
+  catch(e){throw Error('Cloud deletion VERIFIED, but this device update failed: '+e.message+'. Do not retry deletion; inspect sync status.');}
+  for(const id of ids)phase3DeleteMessages.delete(String(id));
+  report('CLOUD DELETION VERIFIED: '+ids.length+' removed; '+nextSaved.length+' remain. Deletion markers '+marks.length+'. Other devices will pull while active.');
+ }catch(e){report('Cloud deletion stopped during '+deletionStage+': '+(e&&e.message||String(e))+'. '+(writeAttempted?'Cloud outcome may be uncertain; inspect Supabase before retrying.':'No deletion write was attempted at this stage.'));}
+ finally{busy=false;safe6Running=priorRunning&&(!writeAttempted||deletionVerified)&&!!phase3LocalStorage.getItem(safe6Key(phase3LocalStorage.getItem(OWNER_KEY)||''));}
+}
+window.phase3GuardedDeleteSaved=safe9DeleteSaved;
+safe8Delete.onclick=()=>{safe9DeleteSaved().catch(e=>safe10DeletionFeedback('Deletion manager could not start: '+(e&&e.message||String(e))));};
+// Bind directly after guarded manager initialization, with synchronous visible click feedback.
+const deleteAllSavedButton=document.getElementById('deleteAllSaved');
+if(deleteAllSavedButton){
+ deleteAllSavedButton.onclick=function(event){
+  event.preventDefault();
+  safe10DeletionFeedback('Delete All clicked — checking cloud account and saved parlays…');
+  try { Promise.resolve(safe9DeleteSaved('ALL')).catch(e=>safe10DeletionFeedback('Delete All blocked: '+(e?.message||String(e)))); }
+  catch(e){safe10DeletionFeedback('Delete All could not start: '+(e?.message||String(e)));}
+ };
+}
+
+safe6Stop.onclick=()=>{safe6Running=false;const uid=phase3LocalStorage.getItem(OWNER_KEY);if(uid)phase3LocalStorage.removeItem(safe6Key(uid));status('AUTO-SYNC v6 PAUSED on this device. No data deleted.');};
+setInterval(()=>{if(safe6Running)safe6Cycle()},15000);
+
+// Production review: route legacy Sync now to guarded synchronization only.
+// When guarded auto-sync is paused, perform a strictly read-only comparison;
+// never enable legacy sync or silently resume cloud writes.
+$('sbSyncNow').onclick=async()=>{
+ if(!auth){status('Sign in first. No changes made.');return;}
+ if(busy){status('Another guarded cloud operation is in progress. Wait and retry.');return;}
+ if(!navigator.onLine){status('GUARDED SYNC v11: Device reports offline. No changes made.');return;}
+ if(safe6Running){
+  status('GUARDED SYNC v11: Checking cloud/device state…');
+  await safe6Cycle();
+  return;
+ }
+ busy=true;
+ try{
+  status('GUARDED SYNC v11: Read-only safety check in progress…');
+  const uid=await phase3DeletionReadTimeout(userId(),'Account verification');
+  if(!safe6Active(uid))throw Error('Authenticated account does not match active device owner');
+  const raw=phase3LocalStorage.getItem(safe6Key(uid));
+  if(!raw){status('GUARDED SYNC v11: Auto-sync is not enabled for this account. No writes attempted. Use the guarded enable control only after reviewing account data.');return;}
+  const base=JSON.parse(raw);
+  if(!base||base.uid!==uid||typeof base.canonical!=='string')throw Error('Invalid guarded baseline');
+  const remote=await phase3DeletionReadTimeout(readRemote(uid),'Cloud record read');
+  if(!remote||!remote.updated_at)throw Error('Cloud revision unavailable');
+  const c=safe6Canonical(safe6View(personalCloudValues(remote.payload),'Cloud'));
+  const l=safe6Canonical(safe6View(snapshot(),'Device'));
+  if(c===l){status('GUARDED SYNC v11 READ-ONLY PASSED: Cloud and device match. Auto-sync remains paused; no writes attempted.');}
+  else{status('GUARDED SYNC v11 PAUSED: Cloud and device differ. No writes attempted. Review guarded synchronization status before proceeding.');}
+ }catch(e){status('GUARDED SYNC v11 READ-ONLY FAILED: '+(e&&e.message||String(e))+'. No writes attempted.');}
+ finally{busy=false;}
+};
+const recover=document.createElement('button');recover.type='button';recover.className='btn alt';recover.textContent='Recover this account from cloud';
+$('sbSyncNow').parentNode.insertBefore(recover,$('sbSyncNow'));
+recover.onclick=async()=>{
+ if(busy)return;busy=true;
+ try{
+  const uid=await userId();if(!safe6Active(uid))throw Error('Account ownership mismatch');
+  const before=safe6Canonical(safe6View(snapshot(),'Device'));
+  const remote=await readRemote(uid);if(!remote||!remote.updated_at)throw Error('Cloud revision unavailable');
+  const cloud=safe6View(personalCloudValues(remote.payload),'Cloud');
+  downloadJSON({uid,exported_at:new Date().toISOString(),device:snapshot(),cloud:remote},'parlay-recovery-backup.json');
+  if(!await phase3V10Confirm('Recover account data','Verify the backup download. Replace this account’s saved parlays and deletion markers with its verified cloud record? Local drafts stay on this device.','Backup verified — recover'))return;
+  const fresh=await readRemote(uid);
+  if(!safe6Active(uid)||safe6Canonical(safe6View(snapshot(),'Device'))!==before||!fresh||fresh.updated_at!==remote.updated_at||safe6Canonical(safe6View(personalCloudValues(fresh.payload),'Cloud'))!==safe6Canonical(cloud))throw Error('Account, device or cloud changed; recovery canceled');
+  safe6LocalWrite(uid,cloud);phase3LocalStorage.removeItem(safe6Key(uid));
+  status('Account recovery verified locally. Cloud unchanged; drafts preserved; automatic sync paused.');
+ }catch(e){status('Recovery stopped: '+e.message)}finally{busy=false}
+};
+window.addEventListener('storage',event=>{
+ const key=phase3LocalStorage.eventKey(event.key);
+ if(key===OWNER_KEY||key===prefix+'auth'||key===null){
+  safe6Running=false;auth=null;authControls(false);
+  document.dispatchEvent(new Event('phase3-account-signed-out'));
+  privacyGate('Account changed in another tab. Reload to verify the active account.');
+ }
+});
+window.phase3ReadOwnPredictionHistory=async()=>{
+ if(!auth)return null;
+ const uid=await userId();if(!safe6Active(uid))throw Error('Account ownership mismatch');
+ const jwt=await token();
+ const rows=await api('/rest/v1/nfl_user_prediction_tracking?select=user_id,tracking_id,payload,updated_at&user_id=eq.'+encodeURIComponent(uid)+'&order=updated_at.desc&limit=100',{headers:{Authorization:'Bearer '+jwt}});
+ if(!safe6Active(uid)||!Array.isArray(rows)||rows.some(r=>r.user_id!==uid))throw Error('History account mismatch');
+ return rows;
+};
+settings();auth=authLoad();authControls(false);
+privacyGate('Personal parlays are locked until account sign-in is verified.');
+if(auth&&config.url&&config.key){status('Restoring saved sign-in…');setTimeout(async()=>{try{const uid=await userId();const changed=activateAccount(uid);if(changed){location.reload();return;}privacyUnlock();authControls(true);
+ // Refresh the builder's in-memory list from the authenticated account's active storage.
+ const fresh=trialData(snapshot()).saved;
+ saved=fresh;renderSaved();
+ const checkRaw=phase3SessionStorage.getItem('nflp-phase3-test-pull-check-v1');
+ if(checkRaw){
+  phase3SessionStorage.removeItem('nflp-phase3-test-pull-check-v1');
+  const check=JSON.parse(checkRaw);
+  const part=JSON.parse(phase3LocalStorage.getItem(ACCOUNT_PREFIX+uid)||'null');
+  const partSaved=part?trialData(part).saved:[];
+  if(check.uid===uid&&fresh.some(p=>String(p.id)===check.id))status('POST-RELOAD RESTORE VERIFIED: 1 parlay loaded on this device. Cloud unchanged.');
+  else status('POST-RELOAD RESTORE CHECK FAILED: active '+fresh.length+' saved; account partition '+partSaved.length+' saved. No cloud changes.');
+ }else status('Signed in · guarded auto-sync available; legacy cloud sync disabled.');
+ // v7: Resume only a previously user-enabled, account-scoped guarded sync.
+ // The v6 in-memory flag was lost on every Safari reload/navigation.
+ const resumeRaw=phase3LocalStorage.getItem(safe6Key(uid));
+ if(resumeRaw && stage1WriteAllowed()){
+  try{
+   const resume=JSON.parse(resumeRaw);
+   if(!resume||resume.uid!==uid||typeof resume.canonical!=='string')throw Error('Invalid saved-sync baseline');
+   safe6Running=true;
+   status('AUTO-SYNC v7 RESUMED for this account. Checking cloud/device changes; drafts stay local.');
+   setTimeout(()=>{if(safe6Running)safe6Cycle()},1200);
+  }catch(e){safe6Running=false;status('AUTO-SYNC v7 NOT RESUMED: '+e.message+'. No writes.');}
+ }
+ }catch(e){authControls(false);status('Saved sign-in could not be verified: '+e.message+'. Sign in again if needed.');privacyGate('Sign in to unlock this browser. No cloud data changed.');}},900)}
+else status('No saved sign-in found in this browser installation. Sign in to restore your account; cloud data has not been changed.');
+
+// Do not snapshot on pagehide: a partition switch can occur before old in-memory
+// arrays are discarded, and pagehide would overwrite the new account partition.
+// Explicit sign-out saves; switching accounts snapshots active phase3LocalStorage.
+window.addEventListener('online',()=>{if(safe6Running)safe6Cycle()});
 })();
 </script>
 <script>
@@ -1402,7 +2211,7 @@ window.addEventListener('online',()=>{if(auth)sync(!started)});
    const row=rows[0];
    if(!row.csv_text||row.generated_at===lastStatsVersion)return;
    // Avoid replacing a newer manual upload with an older cloud export.
-   const manual=localStorage.getItem('nflp-import-upload-date-v1');
+   const manual=phase3LocalStorage.getItem('nflp-import-upload-date-v1');
    if(manual&&Date.parse(manual)>Date.parse(row.generated_at)){
     el.textContent='Cloud stats available ('+new Date(row.generated_at).toLocaleString()+'); newer manual stats retained.';return;
    }
@@ -1440,18 +2249,23 @@ window.addEventListener('online',()=>{if(auth)sync(!started)});
  }
  function renderSnapshots(){
   const el=$('archivedPerformance');if(!el)return;
-  if(!snapshots.length){el.innerHTML='<b>Archived pregame prediction accuracy</b><p class="mu">No pregame snapshots in Supabase yet. Scheduled snapshots will appear here after the GitHub workflow is configured.</p>';return}
+  if(!snapshots.length){el.innerHTML='<b>Archived pregame prediction accuracy</b><p class="mu">No eligible pregame snapshots found. Excluded snapshots: '+esc(el.dataset.excludedPregame||'0')+'. Scheduled publishing is not yet enabled.</p>';return}
   const week=Number(document.getElementById('performanceWeek')?.value||wk);
   const rows=snapshots.filter(s=>Number(s.season)===SEASON).flatMap(s=>(Array.isArray(s.picks)?s.picks:[]).map(p=>({...p,week:s.week,season:s.season,snapshot_at:s.created_at,game_id:s.game_id}))).filter(p=>p.week===week);
   const graded=rows.map(p=>({p,...gradeArchived(p)}));
   const hits=graded.filter(x=>x.result===true).length,misses=graded.filter(x=>x.result===false).length,unknown=graded.filter(x=>x.result===null).length;
   const rate=hits+misses?(100*hits/(hits+misses)).toFixed(1)+'%':'N/A';
-  el.innerHTML='<b>Archived pregame predictions · Week '+week+'</b><div class="performance-metrics"><div><span class="mu">Hit rate</span><strong>'+rate+'</strong></div><div><span class="mu">Hits / Misses</span><strong>'+hits+' / '+misses+'</strong></div><div><span class="mu">Ungraded</span><strong>'+unknown+'</strong></div><div><span class="mu">Archived picks</span><strong>'+rows.length+'</strong></div></div>'+
-   '<p class="mu">These picks use their original saved selection and line. Archived at the timestamp shown; only snapshots created before scheduled kickoff are included. This is distinct from the retrospective performance cards below.</p>'+
+  el.innerHTML='<b>Archived pregame predictions (browser estimates) · Week '+week+'</b><div class="performance-metrics"><div><span class="mu">Hit rate</span><strong>'+rate+'</strong></div><div><span class="mu">Hits / Misses</span><strong>'+hits+' / '+misses+'</strong></div><div><span class="mu">Ungraded</span><strong>'+unknown+'</strong></div><div><span class="mu">Archived picks</span><strong>'+rows.length+'</strong></div></div>'+
+   '<p class="mu">Browser-estimated results from imported CSV, NOT official cloud grades. Snapshots are included only if created at least 30 minutes before kickoff. Excluded snapshots: '+esc(el.dataset.excludedPregame||'0')+'. Historical missing predictions are not reconstructed.</p>'+
    (graded.length?'<div style="overflow-x:auto"><table class="performance-table"><thead><tr><th>Pick</th><th>Outcome</th><th>Detail</th><th>Saved</th></tr></thead><tbody>'+graded.map(x=>'<tr><td>'+esc(x.p.label||x.p.team+' '+x.p.market)+'</td><td>'+(x.result===true?'HIT':x.result===false?'MISS':'Ungraded')+'</td><td>'+esc(x.reason)+'</td><td>'+new Date(x.p.snapshot_at).toLocaleString()+'</td></tr>').join('')+'</tbody></table></div>':'<p class="mu">No archived picks for this week.</p>');
  }
  async function loadSnapshots(){
-  try{snapshots=await get('nfl_prediction_snapshots?select=season,week,game_id,created_at,picks&season=eq.'+SEASON+'&order=created_at.asc&limit=500');renderSnapshots()}
+  try{const raw=await get('nfl_prediction_snapshots?select=season,week,game_id,created_at,kickoff_at,picks&season=eq.'+SEASON+'&order=created_at.asc&limit=500');
+   const all=Array.isArray(raw)?raw:[];
+   snapshots=all.filter(r=>{const captured=Date.parse(r.created_at),kickoff=Date.parse(r.kickoff_at);return Number.isFinite(captured)&&Number.isFinite(kickoff)&&kickoff-captured>=30*60*1000});
+   const excluded=all.length-snapshots.length;
+   const banner=document.getElementById('archivedPerformance');if(banner)banner.dataset.excludedPregame=String(excluded);
+   renderSnapshots()}
   catch(e){$('archivedPerformance').innerHTML='<b>Archived pregame prediction accuracy</b><p class="mu">'+esc(e.message)+'</p>'}
  }
  // Existing app rerenders the performance section. Refresh archive view after those calls.
@@ -1469,8 +2283,8 @@ window.addEventListener('online',()=>{if(auth)sync(!started)});
  const $=id=>document.getElementById(id);
  const KEY='nflp-adv-prediction-tracking-v1';
  let history=[];
- try{const v=JSON.parse(localStorage.getItem(KEY)||'[]');if(Array.isArray(v))history=v}catch(e){}
- function save(){try{localStorage.setItem(KEY,JSON.stringify(history));return true}catch(e){$('advTrackingStatus').textContent='Could not save tracking history; export a backup.';return false}}
+ try{const v=JSON.parse(phase3LocalStorage.getItem(KEY)||'[]');if(Array.isArray(v))history=v}catch(e){}
+ function save(){try{phase3LocalStorage.setItem(KEY,JSON.stringify(history));return true}catch(e){$('advTrackingStatus').textContent='Could not save tracking history; export a backup.';return false}}
  function tab(which){
   const perf=which==='performance';
   $('advRecommendationPanel').hidden=perf;$('advPerformancePanel').hidden=!perf;
@@ -1546,8 +2360,8 @@ window.addEventListener('online',()=>{if(auth)sync(!started)});
   if(!picks.length){$('advTrackingStatus').textContent='No eligible predictions for the selected week.';return}
   const now=new Date();
   // Conservative: don't record snapshots for games already started or finalized.
-  const eligible=picks.filter(x=>!x.g.sc && (!x.g.date || Number.isNaN(Date.parse(x.g.date)) || Date.parse(x.g.date)>now.getTime()));
-  if(!eligible.length){$('advTrackingStatus').textContent='No upcoming unplayed picks to archive.';return}
+  const eligible=picks.filter(x=>{const kickoff=Date.parse(x.g.date||'');return !x.g.sc && Number.isFinite(kickoff) && kickoff-now.getTime()>=30*60*1000;});
+  if(!eligible.length){$('advTrackingStatus').textContent='No eligible picks at least 30 minutes before scheduled kickoff. Unknown, late, or past kickoffs are excluded.';return}
   const snapshot={id:now.toISOString()+'-'+Math.random().toString(36).slice(2),created:now.toISOString(),picks:eligible.map(x=>({season:SEASON,week:wk,away:x.g.a,home:x.g.h,player:x.p.n,team:x.p.tm,market:x.p.k,line:Number(x.line),prob:x.prob}))};
   history.push(snapshot);if(save())$('advTrackingStatus').textContent='Saved '+snapshot.picks.length+' prediction snapshots on this device. Export a backup for safekeeping.';
   render();
@@ -1565,6 +2379,115 @@ window.addEventListener('online',()=>{if(auth)sync(!started)});
   }catch(err){$('advTrackingStatus').textContent='Import failed: '+err.message}e.target.value='';
  };
  render();
+})();
+</script>
+
+<script>
+/* Phase 3 official grade display: public read only; never calculates or writes grades. */
+(()=>{
+ 'use strict';
+ const url='https://wpvuunwtyxycqfjwuzkn.supabase.co';
+ const key='sb_publishable_DK_yNahtv5ErUXtAzjTxCw_p4EowVj3';
+ const status=document.getElementById('cloudOfficialGradesStatus');
+ const results=document.getElementById('cloudOfficialGradesResults');
+ const refresh=document.getElementById('cloudOfficialGradesRefresh');
+ if(!status||!results||!refresh)return;
+ let inFlight=false;
+ const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+ async function load(){
+  if(inFlight)return;
+  inFlight=true;refresh.disabled=true;status.textContent='Loading official cloud grades…';
+  try{
+   const season=Number(document.getElementById('seasonSelect')?.value||2026);
+   if(!Number.isInteger(season)||season<2020||season>2100)throw new Error('Invalid selected season');
+   const res=await fetch(url+'/rest/v1/nfl_prediction_grades?select=season,week,game_id,pick_key,outcome,actual_value,grading_note,stats_source,graded_at&season=eq.'+season+'&order=week.desc,graded_at.desc&limit=1000',{
+    headers:{apikey:key,Authorization:'Bearer '+key,Accept:'application/json'},cache:'no-store'});
+   if(!res.ok)throw new Error('Cloud read failed (HTTP '+res.status+'). Check the grades table read policy.');
+   const rows=await res.json();
+   if(!Array.isArray(rows))throw new Error('Unexpected grade response');
+   const valid=rows.filter(r=>Number(r.season)===season&&Number.isInteger(Number(r.week))&&Number(r.week)>=1&&Number(r.week)<=22&&typeof r.pick_key==='string'&&/^v1:\d+:[a-f0-9]{64}$/.test(r.pick_key)&&['hit','miss','push','pending','ungraded','void'].includes(r.outcome));
+   const final=valid.filter(r=>['hit','miss','push'].includes(r.outcome));
+   const hits=final.filter(r=>r.outcome==='hit').length;
+   const misses=final.filter(r=>r.outcome==='miss').length;
+   const pushes=final.filter(r=>r.outcome==='push').length;
+   const pct=hits+misses?(100*hits/(hits+misses)).toFixed(1)+'%':'N/A';
+   status.textContent='Season '+season+' · Official v1 cloud records: '+final.length+' finalized; '+valid.length+' validated of '+rows.length+' returned. Accuracy excludes pushes and pending.';
+   results.innerHTML='<div class="performance-metrics"><div><span class="mu">Official hit rate</span><strong>'+pct+'</strong></div><div><span class="mu">Hits / Misses</span><strong>'+hits+' / '+misses+'</strong></div><div><span class="mu">Pushes</span><strong>'+pushes+'</strong></div></div>'+
+    (final.length?'<div style="overflow-x:auto"><table class="performance-table"><thead><tr><th>Week</th><th>Game</th><th>Pick key</th><th>Outcome</th><th>Actual</th></tr></thead><tbody>'+final.slice(0,50).map(r=>'<tr><td>'+esc(r.week)+'</td><td>'+esc(r.game_id)+'</td><td><code title="'+esc(r.pick_key)+'">'+esc(String(r.pick_key).slice(0,18))+'…</code></td><td>'+esc(r.outcome.toUpperCase())+'</td><td>'+esc(r.actual_value)+'</td></tr>').join('')+'</tbody></table></div>':'<p class="mu">No official finalized cloud grades yet. Browser estimates remain separate above.</p>');
+  }catch(e){status.textContent=e.message;results.textContent='';}
+  finally{inFlight=false;refresh.disabled=false;}
+ }
+ refresh.addEventListener('click',load);
+ document.getElementById('advTabPerformance')?.addEventListener('click',load);
+ document.getElementById('seasonSelect')?.addEventListener('change',load);
+})();
+</script>
+<script>
+/* Phase 3 authenticated, owner-scoped cloud prediction history preview.
+   No POST/PATCH/DELETE; does not merge local snapshots into cloud. */
+(()=>{
+ 'use strict';
+ const statusEl=document.getElementById('cloudUserPredictionHistoryStatus');
+ const resultsEl=document.getElementById('cloudUserPredictionHistoryResults');
+ const refresh=document.getElementById('cloudUserPredictionHistoryRefresh');
+ if(!statusEl||!resultsEl||!refresh)return;
+ let busy=false;
+ const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+ async function load(){
+  if(busy)return;
+  busy=true;refresh.disabled=true;resultsEl.replaceChildren();
+  try{
+   const rows=await window.phase3ReadOwnPredictionHistory();
+   if(rows===null){statusEl.textContent='Sign in to view your cloud prediction history.';return;}
+   if(!Array.isArray(rows))throw Error('Unexpected tracking response');
+
+   statusEl.textContent=rows.length+' cloud tracking record(s) for your signed-in account'+(rows.length===100?' (showing most recent 100)':'')+'.';
+   if(!rows.length){resultsEl.textContent='No cloud tracking records yet. Local prediction snapshots remain unchanged.';return;}
+   const table=document.createElement('table');table.className='performance-table';
+   table.innerHTML='<thead><tr><th>Last updated</th><th>Tracking ID</th><th>Status</th></tr></thead>';
+   const tbody=document.createElement('tbody');
+   for(const row of rows){
+    const tr=document.createElement('tr');
+    const payload=row.payload&&typeof row.payload==='object'&&!Array.isArray(row.payload)?row.payload:{};
+    const date=new Date(row.updated_at);
+    const dateText=Number.isFinite(date.getTime())?date.toLocaleString():'Unknown';
+    // Cloud storage alone is not proof of an authentic pregame capture.
+    const rawStatus=typeof payload.status==='string'?payload.status.toLowerCase():'';
+    const isVerified=rawStatus==='verified_pregame' && payload.capture_evidence && typeof payload.capture_evidence==='object';
+    const state=isVerified?'Verified pregame (evidence attached)':
+      rawStatus==='graded'?'Graded (verify pregame provenance separately)':
+      rawStatus==='unverified_pregame'||payload.kind==='local_snapshot'?'Unverified local snapshot':
+      rawStatus==='unavailable'?'Outcome unavailable':
+      rawStatus==='pending'?'Awaiting final results':'Stored — verification not established';
+    tr.innerHTML='<td>'+esc(dateText)+'</td><td>'+esc(row.tracking_id)+'</td><td>'+esc(state)+'</td>';
+    tbody.appendChild(tr);
+   }
+   table.appendChild(tbody);resultsEl.appendChild(table);
+  }catch(e){statusEl.textContent='Cloud history unavailable: '+e.message;resultsEl.replaceChildren();}
+  finally{busy=false;refresh.disabled=false;}
+ }
+ refresh.addEventListener('click',load);
+ document.getElementById('advTabPerformance')?.addEventListener('click',load);
+})();
+</script>
+<script>window.phase3SyncPredictionHistory=async()=>({status:'locked'});</script>
+<script id="phase3MobileSlipController">
+(()=>{
+ const dialog=document.getElementById('phase3MobileSlipDialog');
+ const toggle=document.getElementById('phase3MobileSlipToggle');
+ const close=document.getElementById('phase3MobileSlipClose');
+ const content=document.getElementById('phase3MobileSlipContents');
+ const slip=document.getElementById('slip');
+ const bar=slip.previousElementSibling;
+ const actions=slip.nextElementSibling;
+ if(!dialog||!toggle||!close||!content||!slip||!bar||!actions)return;
+ const original=[bar,slip,actions].map(node=>({node,parent:node.parentNode,next:node.nextSibling}));
+ function restore(){for(const {node,parent,next} of original){parent.insertBefore(node,next&&next.parentNode===parent?next:null)}toggle.setAttribute('aria-expanded','false');}
+ toggle.addEventListener('click',()=>{if(dialog.open)return;for(const {node} of original)content.appendChild(node);dialog.showModal();toggle.setAttribute('aria-expanded','true');close.focus();});
+ close.addEventListener('click',()=>dialog.close());
+ dialog.addEventListener('close',()=>{restore();toggle.focus();});
+ dialog.addEventListener('click',e=>{if(e.target===dialog)dialog.close();});
+ window.matchMedia('(min-width:701px)').addEventListener('change',e=>{if(e.matches&&dialog.open)dialog.close();});
 })();
 </script>
 </body></html>
