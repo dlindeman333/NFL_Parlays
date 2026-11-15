@@ -328,6 +328,33 @@ gameQuery=rememberedBuilderFilters.query||"";
 function tog(id){openG=openG===id?null:id;draw()}
 function addp(id,m,s){if(games.find(g=>g.id===id)?.sc)return;if(mode==="same"&&focus!==id)setFocus(id);pick(id,m,s)}
 const propBtns=(g,k,b)=>["a","h"].map(t=>{const p=g.pp[t][k+"p"],sub=q=>am(dec(q))+" · "+Math.round(q*100)+"%";return`<div class="m">${t==="a"?g.a:g.h} ${PN[k][0]} · line ${PN[k][1]}</div>`+b(k+t,"o","Over",sub(p))+b(k+t,"u","Under",sub(1-p))}).join("");
+// Expanded game-card choices use existing supported markets and selection safeguards.
+const expandedGamePicks=new Set();
+const gamePicksKey=id=>[SEASON,wk,id].join('|');
+function toggleGamePicks(id){
+ const key=gamePicksKey(id);expandedGamePicks.has(key)?expandedGamePicks.delete(key):expandedGamePicks.add(key);
+ draw();document.getElementById('more-picks-button-'+id)?.focus({preventScroll:true});
+}
+function gameMainMarkets(g,b){
+ return '<div class="m">Moneyline</div>'+b('ml','a',g.a,am(dec(1-g.p))+' · '+Math.round((1-g.p)*100)+'%')+b('ml','h',g.h,am(dec(g.p))+' · '+Math.round(g.p*100)+'%')+
+ '<div class="m">Spread (ref line)</div>'+b('sp','a',g.a+' '+sg(g.sp),'-110')+b('sp','h',g.h+' '+sg(-g.sp),'-110')+
+ '<div class="m">Total (ref line)</div>'+b('tot','o','Over '+g.tot,'-110')+b('tot','u','Under '+g.tot,'-110');
+}
+function moreGamePicks(g,b){
+ if(SEASON!==MODEL_SEASON)return '';
+ const expanded=expandedGamePicks.has(gamePicksKey(g.id));
+ const button='<button type="button" class="btn alt" id="more-picks-button-'+g.id+'" aria-expanded="'+expanded+'" aria-controls="more-picks-'+g.id+'" onclick="toggleGamePicks(\''+g.id+'\')">'+(expanded?'Show fewer':'More picks')+'</button>';
+ if(!expanded)return '<div class="tools" style="margin-top:10px">'+button+'</div>';
+ const categories=['td','ps','ru'].filter(k=>pf==='all'||k!==pf);
+ const labels={td:'touchdowns',ps:'passing yards',ru:'rushing yards'};
+ let body=pf==='all'?'':'<h4>Moneyline, spread and total</h4><div class="grid">'+gameMainMarkets(g,b)+'</div>';
+ for(const k of categories){
+  body+='<h4>Team '+labels[k]+'</h4><div class="grid">'+propBtns(g,k,b)+'</div>';
+  const players=plBtns(g,k,b);
+  body+='<h4>Player '+(k==='td'?'anytime touchdowns':labels[k])+'</h4>'+(players?'<div class="grid">'+players+'</div>':'<p class="mu">No supported player picks available for this matchup.</p>');
+ }
+ return '<div class="tools" style="margin-top:10px">'+button+'</div><section id="more-picks-'+g.id+'" class="more-game-picks" aria-label="More picks for '+g.a+' at '+g.h+'" style="margin-top:10px;padding-top:8px;border-top:1px solid var(--bd)"><p class="mu">Model reference lines and estimated odds. Verify current sportsbook prices.</p>'+body+'<button type="button" class="btn alt" onclick="toggleGamePicks(\''+g.id+'\')">Show fewer</button></section>';
+}
 function det(g){if(SEASON!==MODEL_SEASON)return "";if(openG!==g.id)return"";
  const P=Math.round,it=[],cat=pf==="all"?["td","ps","ru"]:[pf];
  if(pf==="all"){const h=g.p>=.5;it.push({mk:"ml",sd:h?"h":"a",p:h?g.p:1-g.p,txt:(h?g.h:g.a)+" moneyline",why:"Model margin "+f1(Math.abs(g.m))+" pts"+(g.fp!=null?", schedule feed "+P((h?g.fp:1-g.fp)*100)+"%":"")})}
@@ -462,12 +489,7 @@ function draw(){
     const ph=g.p,pa=1-g.p;
     return`<div class="card g"><div class="gh" style="cursor:pointer" onclick="tog('${g.id}')"><b>${openG===g.id?"▾":"▸"} <img class="logo" loading="lazy" alt="" src="https://a.espncdn.com/i/teamlogos/nfl/500/${g.a.toLowerCase()}.png" onerror="this.style.display='none'"> ${g.a} @ <img class="logo" loading="lazy" alt="" src="https://a.espncdn.com/i/teamlogos/nfl/500/${g.h.toLowerCase()}.png" onerror="this.style.display='none'"> ${g.h}</b><span class="row"><button type="button" class="pill" onclick="event.stopPropagation();openGameInjuries('${g.a}','${g.h}',${Number(g.week||wk)})">Injuries</button><span class="mu">${g.sc?`Final ${g.a} ${g.sc[0]}, ${g.h} ${g.sc[1]}`:g.tm}</span>${mode==="same"?`<button class="pill ${focus===g.id?"on":""}" onclick="event.stopPropagation();setFocus('${g.id}')">Build here</button>`:""}</span></div>
     <div class="mu">${g.a} ${T[g.a][1]}-${T[g.a][2]} · ${g.h} ${T[g.h][1]}-${T[g.h][2]} · <span class="game-meta">${g.sc?"Completed":"Upcoming"}</span></div>
-    <div class="grid">${pf!=="all"?propBtns(g,pf,b)+plBtns(g,pf,b):`<div class="m">Moneyline</div>
-    ${b("ml","a",g.a,am(dec(pa))+" · "+Math.round(pa*100)+"%")}${b("ml","h",g.h,am(dec(ph))+" · "+Math.round(ph*100)+"%")}
-    <div class="m">Spread (ref line)</div>
-    ${b("sp","a",g.a+" "+sg(g.sp),"-110")}${b("sp","h",g.h+" "+sg(-g.sp),"-110")}
-    <div class="m">Total (ref line)</div>
-    ${b("tot","o","Over "+g.tot,"-110")}${b("tot","u","Under "+g.tot,"-110")}`}</div>${det(g)}</div>`}).join("")||`<div class="card mu">No games match this kickoff window.</div>`;
+    <div class="grid">${pf!=="all"?propBtns(g,pf,b)+plBtns(g,pf,b):gameMainMarkets(g,b)}</div>${moreGamePicks(g,b)}${det(g)}</div>`}).join("")||`<div class="card mu">No games match this kickoff window.</div>`;
   $("gameCount").textContent=games.filter(vis).length+" of "+games.length+" games · Week "+wk;
   renderPreviousGames();
   // slip
