@@ -349,12 +349,18 @@ function legOf(L){
 let mode="multi",N=3,legs=[],focus=null;
 const $=id=>document.getElementById(id);
 function pick(gid,mkt,side){
-  if(games.find(g=>g.id===gid)?.sc){$("hint").textContent="Completed games cannot be added to new parlays.";return}
-  const i=legs.findIndex(l=>l.gid===gid&&l.mkt===mkt&&l.side===side);
-  if(i>-1){legs.splice(i,1);return draw()}
-  if(mode==="same"){legs=legs.filter(l=>!(l.gid===gid&&l.mkt===mkt))}
-  if(legs.length>=N){$("hint").textContent="Slip is full: remove a leg or raise the leg count.";$("msg").textContent="Selection not added: increase Target legs in Active parlay first.";return draw()}
-  legs.push({gid,mkt,side});draw()}
+  const game=games.find(g=>String(g.id)===String(gid));
+  if(!game||game.sc){aiSelectionFeedback('Selection not added: game unavailable or completed.');return false;}
+  if(mode==='same'&&focus&&String(focus)!==String(game.id)){aiSelectionFeedback('Selection not added: this same-game slip is for a different matchup.');return false;}
+  const matches=l=>String(l.gid)===String(game.id)&&l.mkt===mkt;
+  const i=legs.findIndex(l=>matches(l)&&l.side===side);
+  if(i>-1){legs.splice(i,1);draw();aiSelectionFeedback('Selection removed from Active parlay: '+legs.length+' legs remain.');return true;}
+  const next=mode==='same'?legs.filter(l=>!matches(l)):legs.slice();
+  if(!makeSelectionRoom(next.length))return false;
+  if(mode==='same'&&!focus)focus=game.id;
+  legs=[...next,{gid:game.id,mkt,side}];draw();
+  aiSelectionFeedback('Added to Active parlay: '+legs.length+' of '+N+' legs. Save the parlay when finished.');return true;
+}
 const SLIPS_KEY="nflp-draft-slips-v3";let slips=[],activeSlip=0,slipSeq=1;
 try{const obj=JSON.parse(phase3LocalStorage.getItem(SLIPS_KEY)||"null");if(obj&&Array.isArray(obj.slips)&&obj.slips.length){slips=obj.slips;activeSlip=obj.active||0;slipSeq=obj.seq||1}}catch(e){}
 // Only drafts containing selections are considered in progress. Old empty drafts
@@ -520,13 +526,13 @@ $("mode").onclick=e=>{const m=e.target.dataset.m;if(!m)return;mode=m;legs=[];foc
 $("lm").onclick=()=>{N=Math.max(2,N-1);draw();plays();if(legs.length>N)$("msg").textContent="Choose which "+(legs.length-N)+" leg(s) to remove using the ✕ or trash buttons. Your selections have been preserved.";};
 $("lp").onclick=()=>{N=Math.min(8,N+1);draw();plays()};
 $("stake").oninput=draw;
-// AI additions extend the target, preserving selections across market filters.
+// Individual additions from AI and game cards share the same capacity policy.
 function aiSelectionFeedback(message){
  for(const id of ['advStatus','recommendationActionStatus','msg']){const el=$(id);if(el)el.textContent=message;}
 }
-function aiMakeRoom(){
- if(legs.length>=8){aiSelectionFeedback('Selection not added: maximum 8 legs. Remove a leg from Active parlay first.');return false;}
- if(legs.length>=N)N=legs.length+1;
+function makeSelectionRoom(count=legs.length){
+ if(count>=8){aiSelectionFeedback('Selection not added: maximum 8 legs. Remove a leg from Active parlay first.');return false;}
+ if(count>=N)N=count+1;
  return true;
 }
 // recommendations
@@ -536,8 +542,8 @@ function quickAddRecommended(gid,mkt,side){
  if(!game||game.sc){feedback('Game unavailable or completed.');return}
  if(mode==='same'&&focus!==game.id){feedback('Select this game with Build here, or switch to multi-game.');return}
  if(legs.some(l=>String(l.gid)===String(gid)&&l.mkt===mkt&&l.side===side)){feedback('Already in active slip.');return}
- if(!aiMakeRoom())return;
- pick(game.id,mkt,side);
+ if(!makeSelectionRoom())return;
+ if(!pick(game.id,mkt,side))return;
  feedback('Pick added to active slip. Verify current sportsbook lines and odds.');
 }
 function plays(){if(SEASON!==MODEL_SEASON){$("plays").innerHTML=`<div class="card warn">Predictions are disabled for ${SEASON}: the model still uses 2026 team baselines. Schedule, final scores, and season-specific cloud statistics remain available. Update the model inputs before enabling forecasts for this season.</div>`;window._arr=[];return;}
@@ -628,7 +634,7 @@ function advAdd(index){
  if(legs.some(l=>(String(l.gid)===String(game.id)&&l.mkt==='p'+x.p.i)||l.custom&&l.m===game.a+' @ '+game.h&&l.t===text)){
   aiSelectionFeedback('Selection not added: this player market is already in Active parlay.');return;
  }
- if(!aiMakeRoom())return;
+ if(!makeSelectionRoom())return;
  if(mode==='same'&&!focus)focus=game.id;
  if(x.manual){
   legs.push({custom:true,gid:game.id,mkt:'p'+x.p.i,side:'o',t:text,m:game.a+' @ '+game.h,o:String(x.odds)});
