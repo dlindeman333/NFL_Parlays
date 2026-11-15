@@ -353,7 +353,7 @@ function pick(gid,mkt,side){
   const i=legs.findIndex(l=>l.gid===gid&&l.mkt===mkt&&l.side===side);
   if(i>-1){legs.splice(i,1);return draw()}
   if(mode==="same"){legs=legs.filter(l=>!(l.gid===gid&&l.mkt===mkt))}
-  if(legs.length>=N){$("hint").textContent="Slip is full: remove a leg or raise the leg count.";return draw()}
+  if(legs.length>=N){$("hint").textContent="Slip is full: remove a leg or raise the leg count.";$("msg").textContent="Selection not added: increase Target legs in Active parlay first.";return draw()}
   legs.push({gid,mkt,side});draw()}
 const SLIPS_KEY="nflp-draft-slips-v3";let slips=[],activeSlip=0,slipSeq=1;
 try{const obj=JSON.parse(phase3LocalStorage.getItem(SLIPS_KEY)||"null");if(obj&&Array.isArray(obj.slips)&&obj.slips.length){slips=obj.slips;activeSlip=obj.active||0;slipSeq=obj.seq||1}}catch(e){}
@@ -419,12 +419,23 @@ function deleteDraftSlip(id){
  $('msg').textContent=target.name+' deleted.';
 }
 let initializedSlips=false;function switchSlip(id){if(initializedSlips)syncActiveSlip();initializedSlips=true;const s=slips.find(s=>s.id===id);if(!s)return;activeSlip=id;wk=(SEASON===MODEL_SEASON?s.wk:estimatedNFLWeek());games=WKS[wk]||[];mode=s.mode;N=s.N;legs=s.legs.map(l=>({...l}));focus=s.focus;$('stake').value=s.stake;$('wk').value=wk;$('wkTop').value=wk;draw();plays();renderPerformance();renderSaved();renderAdvanced()}
+function beginSavedParlayEdit(id){
+ const original=savedById(id);if(!original)return;
+ if(original.status!=='open'){$('savedActionStatus').textContent='Reopen this parlay before editing selections.';return;}
+ duplicateSavedToDraft(id);
+ const draft=slips.find(s=>s.id===activeSlip);draft.editSavedId=original.id;draft.editSavedBase=JSON.stringify(original);draft.name='Editing '+(original.name||'parlay');
+ legs=original.legs.map((l,i)=>({...((original.draftLegs?.length===original.legs.length?original.draftLegs[i]:null)||{}),custom:true,t:l.t,m:l.m,o:l.o}));
+ N=Math.min(8,Math.max(N,legs.length+2));draft.N=N;draw();persistDraftSlips();
+ $('save').textContent='Save parlay changes';$('msg').textContent='Editing '+(original.name||'saved parlay')+'. Add selections, then Save parlay changes.';
+ const section=document.getElementById('uiActiveParlay');if(section){section.open=true;section.scrollIntoView({behavior:'smooth',block:'start'});}
+}
 function newSlip(){syncActiveSlip();const id=Math.max(slipSeq,...slips.map(s=>Number(s.id)||0))+1;slipSeq=id;slips.push({id,name:'Slip '+id,wk,mode:'multi',N:3,stake:10,legs:[],focus:null});switchSlip(id)}
 function clearSlip(){clearDraftSlip(activeSlip)}
 function deleteSlip(){deleteDraftSlip(activeSlip)}
 function clearAllSlips(){if(!confirm('Delete ALL draft slips? Saved parlays will not be deleted.'))return;const n=1;slipSeq=1;slips=[{id:n,name:'Slip '+n,wk,mode:'multi',N:3,stake:10,legs:[],focus:null}];initializedSlips=false;switchSlip(n)}
 $('newSlip').onclick=newSlip;$('clearAllSlips').onclick=clearAllSlips;
 function draw(){
+ const currentDraft=slips.find(s=>s.id===activeSlip);$('save').textContent=currentDraft?.editSavedId!=null?'Save parlay changes':'Save parlay';if($('activeLegTarget'))$('activeLegTarget').textContent=String(N);
   if(mode==="multi")$("hint").textContent=legs.length>N?"Remove "+(legs.length-N)+" selected leg(s) to match the new target.":legs.length===N?"Slip is full.":"Multi-game: choose "+N+" picks across games (multiple picks per game allowed).";
   else $("hint").textContent=focus?"Same game: pick up to "+N+" legs (one per market) in the highlighted game.":"Same game: tap a game’s “Build here” tag, then pick its markets.";
   $("ln").textContent=N;
@@ -507,7 +518,7 @@ function renderPreviousGames(){
 function setFocus(id){if(focus!==id){focus=id;legs=legs.filter(l=>l.gid===id)}draw()}
 $("mode").onclick=e=>{const m=e.target.dataset.m;if(!m)return;mode=m;legs=[];focus=null;N=m==="same"?Math.min(N,3):N;draw()};
 $("lm").onclick=()=>{N=Math.max(2,N-1);draw();plays();if(legs.length>N)$("msg").textContent="Choose which "+(legs.length-N)+" leg(s) to remove using the ✕ or trash buttons. Your selections have been preserved.";};
-$("lp").onclick=()=>{N=Math.min(mode==="same"?3:8,N+1);draw();plays()};
+$("lp").onclick=()=>{N=Math.min(8,N+1);draw();plays()};
 $("stake").oninput=draw;
 // recommendations
 function quickAddRecommended(gid,mkt,side){
@@ -600,7 +611,7 @@ function advSaveOdds(key){
 }
 function advAdd(index){
  const x=window._advPicks?.[index];if(!x)return;
- if(legs.length>=N){$('advStatus').textContent='Slip is full. Increase its leg count or remove a selection first.';return;}
+ if(legs.length>=N){$('advStatus').textContent='Selection not added: increase Target legs in Active parlay first.';$('msg').textContent=$('advStatus').textContent;return;}
  if(mode==='same'&&focus&&focus!==x.g.id){$('advStatus').textContent='This is a same-game slip for a different matchup. Switch to multi-game mode first.';return;}
  const label=x.p.k==='td'?'Anytime touchdown':(x.p.k==='ps'?'passing yards':'rushing yards');
  if(x.manual){
@@ -686,13 +697,31 @@ const money=n=>(n<0?"-$":"$")+Math.abs(n).toFixed(2);
 const pl=s=>s.status==="won"?(+s.amt||0):s.status==="lost"?-(+s.amt||0):0;
 const typ=s=>s.mode==="same"?"Same game":"Multi-game";
 $("save").onclick=()=>{
+ const draft=slips.find(s=>s.id===activeSlip);
+ const editId=draft?.editSavedId;
+ const editIndex=editId==null?-1:saved.findIndex(p=>String(p.id)===String(editId));
+ if(editId!=null&&(editIndex<0||JSON.stringify(saved[editIndex])!==draft.editSavedBase)){$("msg").textContent="Saved parlay changed or was deleted. Your draft is preserved. Reopen the current saved record before updating.";return;}
+
  if(!legs.length){$("msg").textContent="Add at least one valid selection before saving.";return}
  if(legs.length>N){$("msg").textContent="Remove "+(legs.length-N)+" leg(s) of your choice before saving.";return}
  // The leg-count target is a filter, not a minimum required to save.
  // Reject invalid selections, completed games, duplicate legs, and opposing markets.
  const currentGames=new Map(games.map(g=>[String(g.id),g]));
  const seenSelections=new Set(),marketSides=new Map(),selectedGameIds=new Set();
+ const semanticSides=new Map();for(const leg of legs){const x=legOf(leg),label=x.txt.trim().toLowerCase();const direction=/\bover\b/.test(label)?'over':/\bunder\b/.test(label)?'under':null;const semantic=x.g.a+' @ '+x.g.h+'|'+label.replace(/\b(over|under)\b/g,'line');if(direction&&semanticSides.has(semantic)&&semanticSides.get(semantic)!==direction){$('msg').textContent='Cannot save opposing selections.';return;}if(direction)semanticSides.set(semantic,direction);const ml=x.g.a+' @ '+x.g.h+'|moneyline';if(/moneyline$/.test(label)){if(semanticSides.has(ml)&&semanticSides.get(ml)!==label){$('msg').textContent='Cannot save opposing moneylines.';return;}semanticSides.set(ml,label);}}
+ const labels=new Set();for(const leg of legs){const x=legOf(leg),key=x.g.a+' @ '+x.g.h+'|'+x.txt.trim().toLowerCase();if(labels.has(key)){$("msg").textContent="Cannot save duplicate selections.";return;}labels.add(key);}
+
  for(const leg of legs){
+   if(leg.custom){
+     const parts=String(leg.m||'').split(/\s+@\s+/);
+     const game=games.find(g=>g.a===parts[0]&&g.h===parts[1]);
+     const odds=Number(leg.o);
+     if(!game||game.sc||!String(leg.t||'').trim()||!Number.isFinite(odds)||Math.abs(odds)<100){$("msg").textContent="Cannot save: a retained or manual selection has an unavailable/completed game, missing label, or invalid American odds.";return;}
+     const value=legOf(leg);const key=String(leg.m)+'|'+String(leg.t).trim().toLowerCase();
+     if(seenSelections.has(key)){$("msg").textContent="Cannot save duplicate selections.";return;}
+     if(leg.mkt&&leg.side){const market=String(game.id)+'|'+leg.mkt;if(marketSides.has(market)&&marketSides.get(market)!==leg.side){$('msg').textContent='Cannot save opposing selections.';return;}marketSides.set(market,leg.side);}
+     seenSelections.add(key);selectedGameIds.add(String(game.id));continue;
+   }
    const game=currentGames.get(String(leg.gid));
    if(!game||game.sc){$("msg").textContent="Cannot save: a selection is unavailable or its game is completed.";return}
    if(!leg.mkt||!leg.side){$("msg").textContent="Cannot save: a selection is incomplete.";return}
@@ -719,11 +748,16 @@ $("save").onclick=()=>{
  if(fewerLegs)legNotice.textContent=`Info: ${legs.length} selected vs ${N}-leg filter. You can save this parlay without changing the filter.`;
  const st=Math.max(0,+$("stake").value||0);let D=1;
  const L=legs.map(l=>{const x=legOf(l);D*=x.d;return{t:x.txt,m:x.g.a+" @ "+x.g.h,o:am(x.d)}});
- const proposedName=prompt('Optional parlay name (up to 80 characters). Leave blank for Untitled Parlay:','');
+ const proposedName=prompt(editId!=null?'Save changes to this parlay. Name:':'Optional parlay name (up to 80 characters). Leave blank for Untitled Parlay:',editId!=null?saved[editIndex].name||'':'');
  if(proposedName===null)return;
  const parlayName=proposedName.trim().slice(0,80);
- saved.unshift({id:Date.now(),name:parlayName,wk,mode,stake:st,dec:D,legs:L,status:"open",amt:0});
- if(!persist()){saved.shift();return;}legs=[];draw();renderSaved();$("msg").textContent=fewerLegs?`Saved ${L.length}-leg parlay (filter: ${N} legs).`:"Saved.";
+ const original=editIndex>=0?saved[editIndex]:null;
+ const record={...(original||{}),id:original?original.id:Date.now(),name:parlayName,wk,mode,stake:st,dec:D,legs:L,draftLegs:legs.map(l=>({...l})),status:original?original.status:'open',amt:original?original.amt:0};
+ if(original)saved[editIndex]=record;else saved.unshift(record);
+ if(!persist()){if(original)saved[editIndex]=original;else saved.shift();return;}
+ if(draft){delete draft.editSavedId;delete draft.editSavedBase;}
+ legs=[];draw();renderSaved();$("save").textContent='Save parlay';
+ $("msg").textContent=original?'Updated saved parlay with '+L.length+' legs.':'Saved '+L.length+' legs. The active draft is now empty. Use Edit / add legs on the saved card to extend it.';
  // Keep the explanatory notice visible after the save completes.
  if(legNotice){legNotice.hidden=true;}
  if(fewerLegs)window.alert(`Parlay saved successfully!\n\nYou saved ${L.length} legs while your filter is set to ${N}.\n\nYour filter was not changed.`);
@@ -815,6 +849,7 @@ $('saved').addEventListener('click',event=>{
  }
  else if(action==='edit')editSavedParlay(id);
  else if(action==='duplicate')duplicateSavedToDraft(id);
+ else if(action==='edit-add')beginSavedParlayEdit(id);
  else if(action==='rename')renameSavedParlay(id);
  else if(action==='undo')undoSavedDeletion();
 });
@@ -855,7 +890,7 @@ function renderSaved(){const t=stats();
 ${s.legs.map((l,i)=>`<div class="mu" style="display:flex;align-items:center;gap:8px;margin:5px 0"><span style="flex:1;min-width:0">• ${esc(l.t)} (${esc(l.m||"")}, ${esc(l.o||"")})</span>${editingSavedParlays.has(String(s.id))?`<button type="button" class="btn alt" style="padding:4px 8px;flex:none" title="Remove this selection" aria-label="Remove ${esc(l.t)}" data-saved-action="remove-leg" data-saved-id="${esc(s.id)}" data-leg-index="${i}">🗑️</button>`:""}</div>`).join("")}
 <div class="row" style="margin-top:8px"><div class="seg" style="flex:none">${["open","won","lost"].map(k=>`<button class="${s.status===k?"on":""}" onclick="setS(${s.id},'status','${k}')">${k[0].toUpperCase()+k.slice(1)}</button>`).join("")}</div>
 ${s.status==="open"?`<span class="mu">Stake $${s.stake} · pays ${money(s.stake*s.dec)}</span>`:`${s.status==="won"?"Won":"Lost"} $<input type="number" min="0" step="0.01" value="${s.amt}" onchange="setS(${s.id},'amt',this.value)">`}
-<button class="btn alt" data-saved-action="rename" data-saved-id="${esc(s.id)}">Rename</button><button class="btn alt" data-saved-action="edit" data-saved-id="${esc(s.id)}">${editingSavedParlays.has(String(s.id))?"Done deleting":"Delete selections"}</button><button class="btn alt" data-saved-action="delete-parlay" data-saved-id="${esc(s.id)}" aria-label="Delete saved parlay">Delete saved parlay…</button><button class="btn alt" data-saved-action="duplicate" data-saved-id="${esc(s.id)}">Duplicate Slip</button><button class="btn alt" onclick="copySaved(${s.id})">Copy slip</button></div><div class="mu phase3-card-delete-status" role="status" data-phase3-delete-status="${esc(s.id)}" style="padding:8px 10px;margin:6px 0;border:1px solid #8aa4c2;border-radius:8px;${phase3DeleteMessages.has(String(s.id))?'':'display:none;'}">${esc(phase3DeleteMessages.get(String(s.id))||'')}</div></div>`;
+<button class="btn alt" data-saved-action="edit-add" data-saved-id="${esc(s.id)}">Edit / add legs</button><button class="btn alt" data-saved-action="rename" data-saved-id="${esc(s.id)}">Rename</button><button class="btn alt" data-saved-action="edit" data-saved-id="${esc(s.id)}">${editingSavedParlays.has(String(s.id))?"Done deleting":"Delete selections"}</button><button class="btn alt" data-saved-action="delete-parlay" data-saved-id="${esc(s.id)}" aria-label="Delete saved parlay">Delete saved parlay…</button><button class="btn alt" data-saved-action="duplicate" data-saved-id="${esc(s.id)}">Duplicate Slip</button><button class="btn alt" onclick="copySaved(${s.id})">Copy slip</button></div><div class="mu phase3-card-delete-status" role="status" data-phase3-delete-status="${esc(s.id)}" style="padding:8px 10px;margin:6px 0;border:1px solid #8aa4c2;border-radius:8px;${phase3DeleteMessages.has(String(s.id))?'':'display:none;'}">${esc(phase3DeleteMessages.get(String(s.id))||'')}</div></div>`;
  const weekHeader=(number,caption)=>`<h3 style="font-size:19px;font-weight:800;margin:18px 0 8px;padding:10px 12px;border-left:5px solid var(--ac);background:var(--sel);border-radius:6px">Week ${number}${caption?` — ${caption}`:""}</h3>`;
  const priorWeeks=[...new Set(previousSaved.map(s=>Number(s.wk)))].sort((a,b)=>b-a);
  const previousMarkup=showPreviousSavedWeeks?`<div id="savedPreviousWeeks">${priorWeeks.length?priorWeeks.map(w=>weekHeader(w,"Previous week")+previousSaved.filter(s=>Number(s.wk)===w).map(savedCard).join("")).join(""):'<div class="mu">No previous-week saved parlays.</div>'}</div>`:"";
@@ -1971,28 +2006,23 @@ function phase3DeletionReadTimeout(promise,label,ms=18000){
 // A missing/dismissed dialog always resolves to Cancel, never to approval.
 function phase3V10Confirm(title,description,approveLabel){
  return new Promise(resolve=>{
-  const overlay=document.createElement('div');
-  overlay.setAttribute('role','presentation');
-  overlay.style.cssText='position:fixed;inset:0;z-index:2147483000;background:rgba(8,19,35,.75);display:flex;align-items:center;justify-content:center;padding:16px';
-  const panel=document.createElement('div');
-  panel.setAttribute('role','alertdialog');panel.setAttribute('aria-modal','true');
-  panel.setAttribute('aria-label',title);
-  panel.style.cssText='background:#fff;color:#14263d;max-width:460px;width:100%;border-radius:12px;padding:22px;box-shadow:0 12px 35px #0006;font:16px/1.45 system-ui,sans-serif';
-  const heading=document.createElement('h3');heading.textContent=title;heading.style.cssText='margin:0 0 12px;font-size:19px';
-  const details=document.createElement('p');details.textContent=description;details.style.cssText='white-space:pre-line;margin:0 0 20px';
-  const actions=document.createElement('div');actions.style.cssText='display:flex;gap:12px;justify-content:flex-end;flex-wrap:wrap';
-  const cancel=document.createElement('button');cancel.type='button';cancel.textContent='Cancel';cancel.style.cssText='padding:12px 18px;min-width:100px;border-radius:8px;border:1px solid #667;background:#f4f6f9;color:#14263d';
-  const approve=document.createElement('button');approve.type='button';approve.textContent=approveLabel;approve.style.cssText='padding:12px 18px;min-width:120px;border-radius:8px;border:1px solid #174a85;background:#174a85;color:white;font-weight:700';
-  actions.append(cancel,approve);panel.append(heading,details,actions);overlay.append(panel);document.body.append(overlay);
+  const dialog=document.createElement('dialog');dialog.setAttribute('aria-label',title);dialog.setAttribute('aria-modal','true');
+  dialog.style.cssText='background:var(--card,#fff);color:var(--tx,#14263d);border:2px solid var(--bd,#667);border-radius:12px;padding:22px;width:min(460px,92vw);max-height:85dvh;overflow:auto;box-shadow:0 12px 35px #0006';
+  const heading=document.createElement('h3');heading.textContent=title;
+  const details=document.createElement('p');details.textContent=description;details.style.whiteSpace='pre-line';
+  const actions=document.createElement('div');actions.className='tools';
+  const cancel=document.createElement('button');cancel.type='button';cancel.className='btn alt';cancel.textContent='Cancel';
+  const approve=document.createElement('button');approve.type='button';approve.className='btn';approve.textContent=approveLabel;
+  actions.append(cancel,approve);dialog.append(heading,details,actions);document.body.append(dialog);
   const previous=document.activeElement;let finished=false;
-  const finish=answer=>{if(finished)return;finished=true;document.removeEventListener('keydown',onKey,true);overlay.remove();if(previous&&previous.isConnected&&previous.focus)previous.focus();resolve(answer)};
-  const onKey=e=>{if(e.key==='Escape'){e.preventDefault();finish(false)}else if(e.key==='Tab'){e.preventDefault();(document.activeElement===cancel?approve:cancel).focus()}};
-  document.addEventListener('keydown',onKey,true);
-  cancel.addEventListener('click',()=>finish(false));approve.addEventListener('click',()=>finish(true));
-  overlay.addEventListener('click',e=>{if(e.target===overlay)finish(false)});
-  cancel.focus();
+  const finish=answer=>{if(finished)return;finished=true;if(dialog.open)dialog.close();dialog.remove();if(previous?.isConnected)previous.focus();resolve(answer);};
+  cancel.onclick=()=>finish(false);approve.onclick=()=>finish(true);
+  dialog.addEventListener('cancel',event=>{event.preventDefault();finish(false)});
+  dialog.addEventListener('close',()=>finish(false));dialog.addEventListener('click',event=>{if(event.target===dialog)finish(false)});
+  try{dialog.showModal();cancel.focus();}catch(e){finish(false);}
  });
 }
+
 async function safe9DeleteSaved(requestedIds=null,cardFeedback=null,cardId=null){
  if(!stage1WriteAllowed()){safe10DeletionFeedback('Cloud deletion is disabled outside the production URL.');return;}
  let deletionStage='initial safety checks';
@@ -2546,6 +2576,7 @@ const privacy=document.createElement('style');privacy.textContent='body.phase3-p
 wrapRange($('myParlays'),$('sumry'),'My parlays','uiParlaySummary');
 convert($('savedParlaySlips'),'Saved parlay slips');
 wrapRange($('slip').previousElementSibling,$('slip').nextElementSibling,'Active parlay','uiActiveParlay');
+const targetControls=document.createElement('div');targetControls.className='tools';targetControls.innerHTML='<b>Target legs</b> <button type="button" class="btn alt" id="activeLegMinus" aria-label="Reduce target legs">−</button><strong id="activeLegTarget">'+N+'</strong><button type="button" class="btn alt" id="activeLegPlus" aria-label="Increase target legs">+</button>';targetControls.querySelector('#activeLegMinus').onclick=()=>$('lm').click();targetControls.querySelector('#activeLegPlus').onclick=()=>$('lp').click();$('uiActiveParlay').insertBefore(targetControls,$('slip').previousElementSibling);
 wrapRange($('builderSettingsTitle'),$('builderControls'),'Week and pick filters','uiBuilderSection');
 convert($('draftManagement'),'Active parlay slips');
 wrapRange($('gameSection'),$('previousGames'),'Games','uiGamesSection');
