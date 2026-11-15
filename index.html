@@ -520,14 +520,23 @@ $("mode").onclick=e=>{const m=e.target.dataset.m;if(!m)return;mode=m;legs=[];foc
 $("lm").onclick=()=>{N=Math.max(2,N-1);draw();plays();if(legs.length>N)$("msg").textContent="Choose which "+(legs.length-N)+" leg(s) to remove using the ✕ or trash buttons. Your selections have been preserved.";};
 $("lp").onclick=()=>{N=Math.min(8,N+1);draw();plays()};
 $("stake").oninput=draw;
+// AI additions extend the target, preserving selections across market filters.
+function aiSelectionFeedback(message){
+ for(const id of ['advStatus','recommendationActionStatus','msg']){const el=$(id);if(el)el.textContent=message;}
+}
+function aiMakeRoom(){
+ if(legs.length>=8){aiSelectionFeedback('Selection not added: maximum 8 legs. Remove a leg from Active parlay first.');return false;}
+ if(legs.length>=N)N=legs.length+1;
+ return true;
+}
 // recommendations
 function quickAddRecommended(gid,mkt,side){
- const feedback=(message)=>{const el=document.getElementById('recommendationActionStatus');if(el)el.textContent=message;$('msg').textContent=message;};
+ const feedback=aiSelectionFeedback;
  const game=games.find(g=>String(g.id)===String(gid));
  if(!game||game.sc){feedback('Game unavailable or completed.');return}
  if(mode==='same'&&focus!==game.id){feedback('Select this game with Build here, or switch to multi-game.');return}
  if(legs.some(l=>String(l.gid)===String(gid)&&l.mkt===mkt&&l.side===side)){feedback('Already in active slip.');return}
- if(legs.length>=N){feedback('Slip full. Increase leg target or remove a pick.');return}
+ if(!aiMakeRoom())return;
  pick(game.id,mkt,side);
  feedback('Pick added to active slip. Verify current sportsbook lines and odds.');
 }
@@ -611,19 +620,20 @@ function advSaveOdds(key){
 }
 function advAdd(index){
  const x=window._advPicks?.[index];if(!x)return;
- if(legs.length>=N){$('advStatus').textContent='Selection not added: increase Target legs in Active parlay first.';$('msg').textContent=$('advStatus').textContent;return;}
- if(mode==='same'&&focus&&focus!==x.g.id){$('advStatus').textContent='This is a same-game slip for a different matchup. Switch to multi-game mode first.';return;}
- const label=x.p.k==='td'?'Anytime touchdown':(x.p.k==='ps'?'passing yards':'rushing yards');
- if(x.manual){
-  const text=x.p.n+' Over '+x.line+' '+label;
-  if(legs.some(l=>l.custom&&l.t===text)){ $('advStatus').textContent='This pick is already in your slip.';return;}
-  legs.push({custom:true,t:text,m:x.g.a+' @ '+x.g.h,o:String(x.odds)});
- }else{
-  const side=x.p.k==='td'?'o':x.prob>=.5?'o':'u';
-  if(legs.some(l=>l.gid===x.g.id&&l.mkt==='p'+x.p.i&&l.side===side)){$('advStatus').textContent='This pick is already in your slip.';return;}
-  legs.push({gid:x.g.id,mkt:'p'+x.p.i,side});
+ const game=games.find(g=>String(g.id)===String(x.g.id));
+ if(!game||game.sc){aiSelectionFeedback('Selection not added: game unavailable or completed.');return;}
+ if(mode==='same'&&focus&&String(focus)!==String(game.id)){aiSelectionFeedback('Selection not added: this same-game slip is for a different matchup. Use a multi-game slip to combine games.');return;}
+ const side=x.p.k==='td'?'o':x.prob>=.5?'o':'u';
+ const text=x.p.k==='td'?x.p.n+' anytime TD':x.p.n+' Over '+x.line+' '+(x.p.k==='ps'?'passing yards':'rushing yards');
+ if(legs.some(l=>(String(l.gid)===String(game.id)&&l.mkt==='p'+x.p.i)||l.custom&&l.m===game.a+' @ '+game.h&&l.t===text)){
+  aiSelectionFeedback('Selection not added: this player market is already in Active parlay.');return;
  }
- draw();$('advStatus').textContent='Selection added to active slip. Review all lines and odds before saving.';
+ if(!aiMakeRoom())return;
+ if(mode==='same'&&!focus)focus=game.id;
+ if(x.manual){
+  legs.push({custom:true,gid:game.id,mkt:'p'+x.p.i,side:'o',t:text,m:game.a+' @ '+game.h,o:String(x.odds)});
+ }else legs.push({gid:game.id,mkt:'p'+x.p.i,side});
+ draw();aiSelectionFeedback('Added to Active parlay: '+legs.length+' of '+N+' legs. Other market selections are preserved. Save the parlay when finished.');
 }
 function advCard(x,i){
  const prop=x.p.k==='td'?'anytime TD':x.p.k==='ps'?'passing yards':'rushing yards';
