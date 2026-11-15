@@ -1973,11 +1973,12 @@ async function safe6Cycle(){
   const local=safe6View(snapshot(),'Device');
   const c=safe6Canonical(cloud),l=safe6Canonical(local),b=base.canonical;
   if(!safe6Active(uid))throw Error('Account changed during cloud read');
-  if(c===l){if(b!==c)phase3LocalStorage.setItem(safe6Key(uid),JSON.stringify({uid,canonical:c}));status('GUARDED SYNC v11 PASSED: Cloud and device saved parlays and deletion markers match. Drafts preserved.');return;}
+  if(c===l){if(b!==c)phase3LocalStorage.setItem(safe6Key(uid),JSON.stringify({uid,canonical:c}));saveActiveAccount();status('GUARDED SYNC v11 PASSED: Cloud and device saved parlays and deletion markers match. Drafts preserved.');return;}
   if(c!==b&&l!==b)throw Error('Both cloud and device changed; manual review required');
   if(l===b){
    // Cloud changed, local did not. Do not discard local drafts or account ownership.
    if(!safe6Active(uid)||safe6Canonical(safe6View(snapshot(),'Device'))!==l)throw Error('Device changed during cloud pull');
+   guardSavedCloudPull(local,cloud);preserveSavedRecovery(uid,remote,'Before guarded cloud pull');
    safe6LocalWrite(uid,cloud);
    phase3LocalStorage.setItem(safe6Key(uid),JSON.stringify({uid,canonical:c}));
    status('AUTO-SYNC v7: Cloud changes received on this device. Drafts preserved.');
@@ -2068,6 +2069,81 @@ function phase3V10Confirm(title,description,approveLabel){
   try{dialog.showModal();cancel.focus();}catch(e){finish(false);}
  });
 }
+
+// Explicit reconciliation is the only path that merges divergent saved lists.
+// Existing deletion markers win; conflicting edits require separate review.
+function planSavedReconciliation(deviceValues,cloudValues,partitionValues){
+ const device=safe6View(deviceValues,'Device'),cloud=safe6View(cloudValues,'Cloud');
+ const partition=partitionValues===null?null:safe6View(partitionValues,'Account partition');
+ const marks=new Set([...device.deleted,...cloud.deleted]);
+ const localIds=new Set(device.saved.map(p=>String(p.id))),cloudIds=new Set(cloud.saved.map(p=>String(p.id)));
+ if(partition&&partition.deleted.some(id=>!marks.has(String(id))))throw Error('Account copy has additional deletion markers. Review them before reconciliation.');
+ if(partition)for(const p of partition.saved){const id=String(p.id);if(!localIds.has(id)&&!cloudIds.has(id)&&!marks.has(id))throw Error('Account copy has an additional undeleted parlay: '+String(p.name||id)+'. Review it before reconciliation.');}
+ const kept=new Map(),removed=new Map();
+ for(const p of [...device.saved,...cloud.saved]){
+  const id=String(p.id);
+  if(marks.has(id)){removed.set(id,p);continue;}
+  if(kept.has(id)&&JSON.stringify(safe6StableValue(kept.get(id)))!==JSON.stringify(safe6StableValue(p)))throw Error('Different edits share saved ID '+id+'. No reconciliation performed.');
+  if(!Array.isArray(p.legs)||!p.legs.length)throw Error('Saved parlay '+id+' has no valid leg list.');
+  kept.set(id,p);
+ }
+ if(device.saved.length&&!kept.size)throw Error('No saved parlays would remain. Review deletion markers before proceeding.');
+ return {next:{saved:[...kept.values()],deleted:[...marks].sort()},removed:[...removed.values()]};
+}
+function guardSavedCloudPull(local,cloud){
+ const nextIds=new Set(cloud.saved.map(p=>String(p.id))),markers=new Set(cloud.deleted.map(String));
+ for(const p of local.saved)if(!nextIds.has(String(p.id))&&!markers.has(String(p.id)))throw Error('Cloud is missing a device parlay without a deletion marker. Device preserved; review reconciliation.');
+ for(const m of local.deleted)if(!markers.has(String(m)))throw Error('Cloud is missing a device deletion marker. Device preserved; review reconciliation.');
+}
+function preserveSavedRecovery(uid,remote,reason){
+ if(!safe6Active(uid))throw Error('Account changed before recovery backup');
+ const key='nflp-phase3-prod-recovery-journal-v1-'+uid;
+ const raw=phase3LocalStorage.getItem(key);let journal=raw?JSON.parse(raw):[];
+ if(!Array.isArray(journal))throw Error('Recovery journal is invalid; export a backup before repair.');
+ journal.push({uid,exported_at:new Date().toISOString(),reason,local:snapshot(),partition:phase3LocalStorage.getItem(ACCOUNT_PREFIX+uid),cloud:{updated_at:remote.updated_at,payload:personalCloudValues(remote.payload)}});
+ const value=JSON.stringify(journal.slice(-5));phase3LocalStorage.setItem(key,value);
+ if(phase3LocalStorage.getItem(key)!==value)throw Error('Recovery backup could not be verified.');
+}
+const reconcileSavedButton=document.createElement('button');reconcileSavedButton.id='reviewSavedReconciliation';reconcileSavedButton.type='button';reconcileSavedButton.className='btn alt';reconcileSavedButton.textContent='Review saved-parlay reconciliation';
+$('sbSyncNow').parentNode.insertBefore(reconcileSavedButton,$('sbSyncNow'));
+async function reconcileSavedParlays(){
+ if(!stage1WriteAllowed()){status('Reconciliation is locked outside the production URL.');return;}
+ if(busy){status('Another cloud operation is running.');return;}
+ busy=true;safe6Running=false;let cloudWritten=false,uid=null;
+ try{
+  uid=await userId();if(!safe6Active(uid))throw Error('Account ownership mismatch');
+  phase3LocalStorage.removeItem(safe6Key(uid));
+  const remote=await readRemote(uid);if(!remote||!remote.updated_at)throw Error('Cloud row or revision missing. No new row will be created.');
+  const before=safe6Canonical(safe6View(snapshot(),'Device'));
+  const partRaw=phase3LocalStorage.getItem(ACCOUNT_PREFIX+uid),part=partRaw===null?null:JSON.parse(partRaw);
+  if(part!==null&&(!part||typeof part!=='object'||Array.isArray(part)))throw Error('Account copy is invalid.');
+  const cloudBefore=safe6Canonical(safe6View(personalCloudValues(remote.payload),'Cloud'));
+  const plan=planSavedReconciliation(snapshot(),personalCloudValues(remote.payload),part),expected=safe6Canonical(plan.next);
+  const unchanged=()=>{
+   if(!safe6Active(uid)||safe6Canonical(safe6View(snapshot(),'Device'))!==before||phase3LocalStorage.getItem(ACCOUNT_PREFIX+uid)!==partRaw)throw Error('Account or device changed during review. Backup retained; retry after inspection.');
+  };
+  unchanged();preserveSavedRecovery(uid,remote,'Before explicit saved-parlay reconciliation');
+  downloadJSON({format:'nfl-saved-reconciliation-backup-v1',uid,exported_at:new Date().toISOString(),storage:fullLocalBackup(),cloud:{updated_at:remote.updated_at,payload:personalCloudValues(remote.payload)}},'nfl-parlay-reconciliation-backup-'+new Date().toISOString().slice(0,10)+'.json');
+  const label=p=>String(p.name||'Untitled')+' · '+p.legs.length+' legs · ID '+String(p.id);
+  const text='Verify the backup download before approving.\n\nKEEP / MERGE ('+plan.next.saved.length+'):\n'+(plan.next.saved.map(label).join('\n')||'None')+'\n\nREMOVE FROM THIS DEVICE because already marked deleted ('+plan.removed.length+'):\n'+(plan.removed.map(label).join('\n')||'None')+'\n\nKeep '+plan.next.deleted.length+' deletion markers. This writes the reviewed saved list to your signed-in cloud row and refreshes this device account copy. Drafts stay local and cloud draft data is preserved. Automatic sync remains paused.';
+  if(!await phase3V10Confirm('Review saved-parlay reconciliation',text,'Backup verified — apply reviewed list')){status('Reconciliation canceled. Saved records unchanged; auto-sync paused.');return;}
+  unchanged();const fresh=await readRemote(uid);
+  if(!fresh||fresh.updated_at!==remote.updated_at||safe6Canonical(safe6View(personalCloudValues(fresh.payload),'Cloud'))!==cloudBefore)throw Error('Cloud changed during review. No reconciliation write attempted.');
+  unchanged();const jwt=await token();unchanged();
+  const payload={...fresh.payload,'nflp-saved-v1':JSON.stringify(plan.next.saved),'nflp-deleted-saved-v1':JSON.stringify(plan.next.deleted)};
+  const rows=await api('/rest/v1/nfl_parlay_sync?user_id=eq.'+encodeURIComponent(uid)+'&updated_at=eq.'+encodeURIComponent(fresh.updated_at)+'&select=payload,updated_at',{
+   method:'PATCH',headers:{Authorization:'Bearer '+jwt,Prefer:'return=representation'},body:JSON.stringify({payload,updated_at:new Date().toISOString()})
+  });
+  if(!Array.isArray(rows)||rows.length!==1)throw Error('Concurrent cloud update or write not confirmed. Inspect cloud before retrying.');
+  cloudWritten=true;const checked=await readRemote(uid);
+  if(!checked||safe6Canonical(safe6View(personalCloudValues(checked.payload),'Cloud'))!==expected)throw Error('Cloud readback did not match. Device left unchanged.');
+  unchanged();safe6LocalWrite(uid,plan.next);
+  if(safe6Canonical(safe6View(JSON.parse(phase3LocalStorage.getItem(ACCOUNT_PREFIX+uid)),'Account copy readback'))!==expected)throw Error('Account copy readback did not match.');
+  status('RECONCILIATION VERIFIED: cloud, device and account copy '+plan.next.saved.length+' saved; '+plan.next.deleted.length+' deletion markers. '+plan.removed.length+' already-deleted records removed locally. Drafts preserved. Auto-sync remains OFF. Run read-only preflight before enabling it.');
+ }catch(e){status('Reconciliation stopped: '+e.message+(cloudWritten?' Cloud write occurred; keep sync paused and inspect before retrying.':' No verified cloud write; device saved list was not replaced.'));}
+ finally{safe6Running=false;busy=false;}
+}
+reconcileSavedButton.onclick=reconcileSavedParlays;
 
 async function safe9DeleteSaved(requestedIds=null,cardFeedback=null,cardId=null){
  if(!stage1WriteAllowed()){safe10DeletionFeedback('Cloud deletion is disabled outside the production URL.');return;}
@@ -2210,6 +2286,8 @@ recover.onclick=async()=>{
   const before=safe6Canonical(safe6View(snapshot(),'Device'));
   const remote=await readRemote(uid);if(!remote||!remote.updated_at)throw Error('Cloud revision unavailable');
   const cloud=safe6View(personalCloudValues(remote.payload),'Cloud');
+  guardSavedCloudPull(safe6View(snapshot(),'Device'),cloud);
+  preserveSavedRecovery(uid,remote,'Before explicit cloud recovery');
   downloadJSON({uid,exported_at:new Date().toISOString(),device:snapshot(),cloud:remote},'parlay-recovery-backup.json');
   if(!await phase3V10Confirm('Recover account data','Verify the backup download. Replace this account’s saved parlays and deletion markers with its verified cloud record? Local drafts stay on this device.','Backup verified — recover'))return;
   const fresh=await readRemote(uid);
