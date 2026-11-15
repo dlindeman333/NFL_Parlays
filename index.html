@@ -2,6 +2,8 @@
 <!-- Phase 3 final production candidate RC3; writes restricted to production URL; deployment approval pending -->
 <html lang="en"><head><meta charset="utf-8"><title>NFL Parlay Builder</title>
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<link rel="apple-touch-icon" sizes="180x180" href="./apple-touch-icon.png">
+<link rel="icon" type="image/png" sizes="512x512" href="./nfl-parlay-icon-512.png">
 <style>
 :root{box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px);color-scheme:light;--bg:#f4f5f7;--card:#fff;--tx:#14181f;--mu:#667085;--bd:#dde1e8;--ac:#0b5fff;--acx:#fff;--ok:#0a8a4a;--wa:#b45309;--sel:#e6efff}
 @media(prefers-color-scheme:dark){:root:not([data-theme="light"]){color-scheme:dark;--bg:#0f1218;--card:#1a1f29;--tx:#eef1f6;--mu:#98a2b3;--bd:#2c3340;--ac:#5b92ff;--acx:#0b0f18;--ok:#3ddc84;--wa:#f5a524;--sel:#1f2e4d}}
@@ -127,8 +129,14 @@ body.phase3-privacy-locked > :not(.hd):not(#topAccountPanel):not(#phase3KickoffC
 #phase3KickoffCountdown .kickoff-note{font-size:12px;color:var(--mu)}
 @media(max-width:400px){#phase3KickoffCountdown .kickoff-clock{gap:5px}#phase3KickoffCountdown .kickoff-unit{min-width:0}}
 </style>
+
+<style id="phase3BrandingOnly">
+.phase3-brand-title{display:flex;align-items:center;gap:10px;min-width:0}
+.phase3-brand-title img{width:50px;height:50px;object-fit:cover;border-radius:10px;flex:none}
+@media(max-width:560px){.phase3-brand-title img{width:46px;height:46px}.phase3-brand-title h1{font-size:19px}}
+</style>
 </head><body class="phase3-privacy-locked">
-<div class="hd"><div class="row" style="justify-content:space-between"><h1>NFL Parlay Builder</h1><button id="theme" class="btn alt" type="button" aria-label="Toggle dark mode">◐ Theme</button></div><div class="mu" id="sub"></div></div>
+<div class="hd"><div class="row" style="justify-content:space-between"><div class="phase3-brand-title"><img src="./nfl-parlay-icon-512.png" width="50" height="50" alt="NFL Parlay Builder logo"><h1>NFL Parlay Builder</h1></div><button id="theme" class="btn alt" type="button" aria-label="Toggle dark mode">◐ Theme</button></div><div class="mu" id="sub"></div></div>
 <section id="phase3KickoffCountdown" aria-label="Countdown to next NFL kickoff" aria-live="off">
  <div class="kickoff-heading"><div class="kickoff-title">🏈 NEXT NFL KICKOFF</div><strong id="kickoffWeek" class="kickoff-week" aria-label="NFL week">WEEK --</strong></div>
  <div class="kickoff-clock" role="timer" aria-label="Time remaining to next kickoff">
