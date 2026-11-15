@@ -270,12 +270,12 @@ const lg=1/(1+Math.exp(0)); const sig=x=>1/(1+Math.exp(-x));
 const f1=x=>x.toFixed(1);
 const nc=z=>1/(1+Math.exp(-1.702*z)),pois3=l=>1-Math.exp(-l)*(1+l+l*l/2);
 const pr=(pts,mg,oo)=>{const td=pts*.1,psy=230-2*mg+(oo-22.5)*2.5,ruy=115+2.5*mg;return{pts,td,tdp:pois3(td),psy,psp:nc((psy-225.5)/55),ruy,rup:nc((ruy-110.5)/35)}};
-const build=L=>L.map(([id,a,h,tm,fp,sc])=>{
+const build=L=>L.map(([id,a,h,tm,fp,sc,date])=>{
   const m=S[h].rt-S[a].rt+2;               // projected home margin
   const pm=sig(m/5.5);                       // model home win prob
   const p=fp==null?pm:(pm+fp)/2;             // blended
   const tot=((S[h].ppg+S[a].opp)/2)+((S[a].ppg+S[h].opp)/2);
-  return{id,a,h,tm,fp,pm,p,m,tot:Math.round(tot*2)/2,sp:Math.round(m*2)/2||.5,pp:{a:pr(tot/2-m/2,-m,S[h].opp),h:pr(tot/2+m/2,m,S[a].opp)},sc}
+  return{id,a,h,tm,date,fp,pm,p,m,tot:Math.round(tot*2)/2,sp:Math.round(m*2)/2||.5,pp:{a:pr(tot/2-m/2,-m,S[h].opp),h:pr(tot/2+m/2,m,S[a].opp)},sc}
 });
 const G9=[["k1","CAR","GB","Thu 8:15 PM",null,[19,27]],["k2","IND","JAC","Sun 1:00 PM",null,[7,42]],["k3","TEN","CIN","Sun 1:00 PM",null,[36,43]],["k4","CLE","PIT","Sun 1:00 PM",null,[6,27]],["k5","MIN","DET","Sun 1:00 PM",null,[15,19]],["k6","ATL","TB","Sun 1:00 PM",null,[0,16]],["k7","ARI","DAL","Sun 1:00 PM",null,[33,30]],["k8","LV","NYJ","Sun 1:00 PM",null,[38,33]],["k9","BAL","BUF","Sun 1:00 PM",null,[10,36]],["k10","LAC","LA","Sun 4:05 PM",null,[9,24]],["k11","NE","MIA","Sun 4:25 PM",null,[24,19]],["k12","KC","DEN","Sun 4:25 PM",null,[24,28]],["k13","PHI","WAS","Sun 8:20 PM",null,[10,27]],["k14","CHI","SEA","Mon 8:15 PM",null,[34,17]]];
 const PN={td:["TDs",2.5],ps:["pass yds",225.5],ru:["rush yds",110.5]},PL={td:"TD",ps:"passing",ru:"rushing"};
@@ -1028,7 +1028,7 @@ function parseESPN(data){if(!Array.isArray(data.events))throw Error("No schedule
  if(!T[h]||!T[a])return null;
  const final=!!(e.status?.type?.completed||comp.status?.type?.completed),hs=Number(home.score),as=Number(away.score);
  const sc=final&&Number.isFinite(hs)&&Number.isFinite(as)?[as,hs]:undefined;
- return ["espn"+String(e.id).replace(/[^0-9]/g,""),a,h,readableKickoff(e.date),null,sc];
+ return ["espn"+String(e.id).replace(/[^0-9]/g,""),a,h,readableKickoff(e.date),null,sc,e.date];
  }).filter(Boolean)}
 // Phase 3: next NFL kickoff, sourced from actual ESPN event ISO timestamps.
 const PHASE3_KICKOFF_KEY='nflp-next-kickoff-'+SEASON;
@@ -2443,14 +2443,21 @@ window.addEventListener('online',()=>{if(safe6Running)safe6Cycle()});
  }
 
  $('advTrackSnapshot').onclick=()=>{
-  const picks=(window._advPicks||[]).slice(0,12).filter(x=>x.line!==null&&x.line!==undefined&&x.p);
-  if(!picks.length){$('advTrackingStatus').textContent='No eligible predictions for the selected week.';return}
+  const picks=(window._advPicks||[]).filter(x=>x.p&&x.g&&(x.p.k==='td'||x.line!==null&&x.line!==undefined&&Number.isFinite(Number(x.line))));
+  if(!picks.length){$('advTrackingStatus').textContent='No eligible predictions for the selected week and market filter.';return}
   const now=new Date();
-  // Conservative: don't record snapshots for games already started or finalized.
-  const eligible=picks.filter(x=>{const kickoff=Date.parse(x.g.date||'');return !x.g.sc && Number.isFinite(kickoff) && kickoff-now.getTime()>=30*60*1000;});
-  if(!eligible.length){$('advTrackingStatus').textContent='No eligible picks at least 30 minutes before scheduled kickoff. Unknown, late, or past kickoffs are excluded.';return}
-  const snapshot={id:now.toISOString()+'-'+Math.random().toString(36).slice(2),created:now.toISOString(),picks:eligible.map(x=>({season:SEASON,week:wk,away:x.g.a,home:x.g.h,player:x.p.n,team:x.p.tm,market:x.p.k,line:Number(x.line),prob:x.prob}))};
-  history.push(snapshot);if(save())$('advTrackingStatus').textContent='Saved '+snapshot.picks.length+' prediction snapshots on this device. Export a backup for safekeeping.';
+  const counts={unknown:0,late:0,final:0};
+  const eligible=picks.filter(x=>{
+   if(x.g.sc){counts.final++;return false;}
+   const kickoff=Date.parse(x.g.date||'');
+   if(!Number.isFinite(kickoff)){counts.unknown++;return false;}
+   if(kickoff-now.getTime()<30*60*1000){counts.late++;return false;}
+   return true;
+  }).slice(0,12);
+  const excluded='Excluded: '+counts.unknown+' missing kickoff, '+counts.late+' within 30 minutes or started, '+counts.final+' final.';
+  if(!eligible.length){$('advTrackingStatus').textContent='No eligible predictions for Week '+wk+'. '+excluded+' Refresh NFL schedule if kickoff times are missing.';return}
+  const snapshot={id:now.toISOString()+'-'+Math.random().toString(36).slice(2),created:now.toISOString(),picks:eligible.map(x=>({season:SEASON,week:wk,away:x.g.a,home:x.g.h,player:x.p.n,team:x.p.tm,market:x.p.k,line:x.p.k==='td'?0.5:Number(x.line),prob:x.prob,kickoff_at:x.g.date}))};
+  history.push(snapshot);if(save())$('advTrackingStatus').textContent='Saved '+snapshot.picks.length+' prediction snapshots on this device. '+excluded+' Export a backup for safekeeping.';
   render();
  };
  $('advExportTracking').onclick=()=>{
