@@ -480,7 +480,7 @@ function gameMainMarkets(g,b){
  group('Spread (ref line)',b('sp','a',g.a+' '+sg(g.sp),'-110')+b('sp','h',g.h+' '+sg(-g.sp),'-110'))+
  group('Total (ref line)',b('tot','o','Over '+g.tot,'-110')+b('tot','u','Under '+g.tot,'-110'));
 }
-const PICK_PAGE_SIZE=25,morePickPages=new Map();
+const MORE_PICKS_INITIAL=50,MORE_PICKS_INCREMENT=25,morePickPages=new Map();
 const POSITION_ORDER={QB:0,RB:1,WR:2,TE:3,FB:4,K:5,Other:6,Team:7};
 function pickPosition(p){
  const pos=String(p?.position||'').toUpperCase();
@@ -513,29 +513,40 @@ function gamePickCandidates(g,includeManual=false){
  return rows;
 }
 function sortedMorePicks(g){
- return gamePickCandidates(g).filter(x=>allPickTypes()?x.family!=='game':filterHas(pf,x.family)&&!!x.player)
+ return gamePickCandidates(g).filter(x=>filterHas(pf,x.family))
  .sort((a,b)=>POSITION_ORDER[a.position]-POSITION_ORDER[b.position]||a.decimal-b.decimal||a.text.localeCompare(b.text)||a.key.localeCompare(b.key));
 }
-function changeMorePicksPage(id,delta){
- if(!Number.isInteger(delta)||Math.abs(delta)!==1)return;
+function visibleMorePicks(all,limit){
+ // Distribute the visible budget across available positions so team/receiver
+ // choices do not disappear behind a long QB/RB list. Existing rows remain.
+ const groups=new Map();for(const x of all){if(!groups.has(x.position))groups.set(x.position,[]);groups.get(x.position).push(x);}
+ const selected=new Set();let depth=0;
+ while(selected.size<Math.min(limit,all.length)){
+  for(const rows of groups.values()){if(rows[depth])selected.add(rows[depth].key);if(selected.size>=Math.min(limit,all.length))break;}depth++;
+ }
+ return all.filter(x=>selected.has(x.key));
+}
+function loadMoreGamePicks(id){
  const key=gamePicksKey(id),state=morePickPages.get(key);if(!state)return;
- morePickPages.set(key,{...state,page:state.page+delta});draw();
- const status=document.getElementById('more-page-status-'+id);status?.focus({preventScroll:true});status?.scrollIntoView({block:'nearest',behavior:'smooth'});
+ morePickPages.set(key,{...state,limit:state.limit+MORE_PICKS_INCREMENT});draw();
+ const button=document.getElementById('load-more-picks-'+id),status=document.getElementById('more-page-status-'+id);
+ (button||status)?.focus({preventScroll:true});
 }
 function moreGamePicks(g,b){
  if(SEASON!==MODEL_SEASON)return '';
  const expanded=expandedGamePicks.has(gamePicksKey(g.id));
  const button='<button type="button" class="btn alt" id="more-picks-button-'+g.id+'" aria-expanded="'+expanded+'" aria-controls="more-picks-'+g.id+'" onclick="toggleGamePicks(\''+g.id+'\')">'+(expanded?'Show fewer':'More picks')+'</button>';
  if(!expanded)return '<div class="tools" style="margin-top:10px">'+button+'</div>';
- const all=sortedMorePicks(g),signature=JSON.stringify(pf),key=gamePicksKey(g.id),old=morePickPages.get(key),pages=Math.max(1,Math.ceil(all.length/PICK_PAGE_SIZE));
- const page=Math.max(0,Math.min(pages-1,old?.signature===signature?old.page:0));morePickPages.set(key,{page,signature});
- const visible=all.slice(page*PICK_PAGE_SIZE,(page+1)*PICK_PAGE_SIZE);
- const nav=top=>'<div class="tools" style="margin:10px 0"><button type="button" class="btn alt" aria-label="Previous 25 picks for '+g.a+' at '+g.h+'" '+(page===0?'disabled':'')+' onclick="changeMorePicksPage(\''+g.id+'\',-1)">Previous</button><span '+(top?'id="more-page-status-'+g.id+'" tabindex="-1" role="status" aria-live="polite"':'')+'>Page '+(page+1)+' of '+pages+' · '+(all.length?page*PICK_PAGE_SIZE+1:0)+'–'+Math.min((page+1)*PICK_PAGE_SIZE,all.length)+' of '+all.length+' picks</span><button type="button" class="btn alt" aria-label="Next 25 picks for '+g.a+' at '+g.h+'" '+(page===pages-1?'disabled':'')+' onclick="changeMorePicksPage(\''+g.id+'\',1)">Next</button></div>';
+ const all=sortedMorePicks(g),signature=JSON.stringify(pf),key=gamePicksKey(g.id),old=morePickPages.get(key),limit=old?.signature===signature?old.limit:MORE_PICKS_INITIAL;
+ morePickPages.set(key,{limit,signature});const visible=visibleMorePicks(all,limit),remaining=all.length-visible.length;
  let previous='';const body=visible.map(x=>{
   const heading=x.position===previous?'':'<h4 style="margin:12px 0 6px">'+x.position+'</h4>';previous=x.position;
   return heading+'<div class="more-pick-row" data-position="'+x.position+'" data-odds="'+x.odds+'" data-pick-key="'+esc(x.key)+'" style="display:grid;grid-template-columns:minmax(0,1fr);gap:4px;margin:7px 0"><div class="mu">'+x.position+' · '+esc(x.matchup)+(x.player?' '+injuryTag(x.player):'')+'</div>'+b(x.mkt,x.side,esc(x.text),String(x.odds)+' · '+Math.round(x.probability*100)+'%')+'</div>';
  }).join('');
- return '<div class="tools" style="margin-top:10px">'+button+'</div><section id="more-picks-'+g.id+'" class="more-game-picks" aria-label="More picks for '+g.a+' at '+g.h+'" style="margin-top:10px;padding-top:8px;border-top:1px solid var(--bd)"><p class="mu">25 selections per page. Position order: QB, RB, WR, TE, FB, K, Other, Team; odds low to high within each position. Model estimates; verify sportsbook prices.</p>'+nav(true)+(body||'<p class="mu">No additional player picks match the current filters and loaded data.</p>')+(visible.length?nav(false):'')+'<button type="button" class="btn alt" onclick="toggleGamePicks(\''+g.id+'\')">Show fewer</button></section>';
+ const positions=['QB','RB','WR','Team'].map(position=>position+': '+visible.filter(x=>x.position===position).length+' / '+all.filter(x=>x.position===position).length).join(' · ');
+ const status='<p class="mu" id="more-page-status-'+g.id+'" tabindex="-1" role="status" aria-live="polite">Showing '+visible.length+' of '+all.length+' picks · '+positions+'</p>';
+ const load=remaining?'<button type="button" class="btn alt" id="load-more-picks-'+g.id+'" onclick="loadMoreGamePicks(\''+g.id+'\')">Load 25 more</button>':'<span class="mu">All matching picks are displayed.</span>';
+ return '<div class="tools" style="margin-top:10px">'+button+'</div><section id="more-picks-'+g.id+'" class="more-game-picks" aria-label="More picks for '+g.a+' at '+g.h+'" style="margin-top:10px;padding-top:8px;border-top:1px solid var(--bd)"><p class="mu">50 picks initially, then up to 25 more per press. Available positions share the display so QB, RB, WR and Team choices are represented. Position and odds order are retained; filters and loaded data determine availability. Model estimates; verify sportsbook prices.</p>'+status+(body||'<p class="mu">No picks match the current filters and loaded data.</p>')+'<div class="tools" style="margin-top:12px">'+load+'<button type="button" class="btn alt" onclick="toggleGamePicks(\''+g.id+'\')">Show fewer</button></div></section>';
 }
 let filteredParlayPlans={};
 function filteredParlayContext(){return JSON.stringify([SEASON,wk,mode,N,focus,tf,pf,gameQuery,oddsFrom,oddsThrough,regularOnly,playerDataRevision]);}
