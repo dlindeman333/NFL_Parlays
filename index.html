@@ -135,6 +135,15 @@ body.phase3-privacy-locked > :not(.hd):not(#topAccountPanel):not(#phase3KickoffC
 .phase3-brand-title img{width:50px;height:50px;object-fit:cover;border-radius:10px;flex:none}
 @media(max-width:560px){.phase3-brand-title img{width:46px;height:46px}.phase3-brand-title h1{font-size:19px}}
 </style>
+<style id="floatingTopAndGreenNavigationStyles">
+/* Navigation-only enhancement; no account, parlay or cloud behavior changed. */
+.navlinks a{background:#16803d;color:#fff;border-color:#126b34}
+.navlinks a:hover,.navlinks a:focus-visible{background:#11652f;color:#fff}
+#floatingBackToTop{position:fixed;left:12px;bottom:calc(12px + env(safe-area-inset-bottom, 0px));z-index:30;width:48px;height:48px;border-radius:50%;border:2px solid #fff;background:#0a4fd6;color:#fff;font-size:25px;font-weight:800;box-shadow:0 5px 18px #0005;display:none;align-items:center;justify-content:center;cursor:pointer}
+#floatingBackToTop.is-visible{display:flex}
+@media(min-width:701px){#floatingBackToTop{left:20px;bottom:20px}}
+@media(prefers-reduced-motion:reduce){html{scroll-behavior:auto}}
+</style>
 </head><body class="phase3-privacy-locked">
 <div class="hd"><div class="row" style="justify-content:space-between"><div class="phase3-brand-title"><img src="./nfl-parlay-icon-512.png" width="50" height="50" alt="NFL Parlay Builder logo"><h1>NFL Parlay Builder</h1></div><button id="theme" class="btn alt" type="button" aria-label="Toggle dark mode">◐ Theme</button></div><div class="mu" id="sub"></div></div>
 <section id="phase3KickoffCountdown" aria-label="Countdown to next NFL kickoff" aria-live="off">
@@ -3119,6 +3128,18 @@ recovery.onclick=async()=>{recovery.disabled=true;recoveryStatus.textContent='Ve
  dialog.addEventListener('close',()=>{restore();toggle.focus();});
  dialog.addEventListener('click',e=>{if(e.target===dialog)dialog.close();});
  window.matchMedia('(min-width:701px)').addEventListener('change',e=>{if(e.matches&&dialog.open)dialog.close();});
+})();
+</script>
+<button type="button" id="floatingBackToTop" aria-label="Back to top" title="Back to top">↑</button>
+<script id="floatingBackToTopBehavior">
+(function(){
+ const button=document.getElementById('floatingBackToTop');
+ if(!button)return;
+ const update=()=>{const visible=window.scrollY>260;button.classList.toggle('is-visible',visible);button.setAttribute('aria-hidden',String(!visible));button.tabIndex=visible?0:-1;};
+ button.addEventListener('click',()=>window.scrollTo({top:0,behavior:window.matchMedia('(prefers-reduced-motion: reduce)').matches?'auto':'smooth'}));
+ window.addEventListener('scroll',update,{passive:true});
+ window.addEventListener('resize',update);
+ update();
 })();
 </script>
 </body></html>
