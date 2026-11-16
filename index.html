@@ -530,7 +530,7 @@ function loadMoreGamePicks(id){
  const key=gamePicksKey(id),state=morePickPages.get(key);if(!state)return;
  morePickPages.set(key,{...state,limit:state.limit+MORE_PICKS_INCREMENT});draw();
  const button=document.getElementById('load-more-picks-'+id),status=document.getElementById('more-page-status-'+id);
- (button||status)?.focus({preventScroll:true});
+ (button&&!button.disabled?button:status)?.focus({preventScroll:true});
 }
 function moreGamePicks(g,b){
  if(SEASON!==MODEL_SEASON)return '';
@@ -545,7 +545,8 @@ function moreGamePicks(g,b){
  }).join('');
  const positions=['QB','RB','WR','Team'].map(position=>position+': '+visible.filter(x=>x.position===position).length+' / '+all.filter(x=>x.position===position).length).join(' · ');
  const status='<p class="mu" id="more-page-status-'+g.id+'" tabindex="-1" role="status" aria-live="polite">Showing '+visible.length+' of '+all.length+' picks · '+positions+'</p>';
- const load=remaining?'<button type="button" class="btn alt" id="load-more-picks-'+g.id+'" onclick="loadMoreGamePicks(\''+g.id+'\')">Load 25 more</button>':'<span class="mu">All matching picks are displayed.</span>';
+ const load='<span class="mu">Showing '+visible.length+' of '+all.length+' picks</span><button type="button" class="btn alt" id="load-more-picks-'+g.id+'" '+(!remaining?'disabled aria-disabled="true"':'')+' onclick="loadMoreGamePicks(\''+g.id+'\')">Load 25 more</button>'+(!remaining?'<span class="mu">All matching picks are displayed. Broaden pick filters or turn off Regular contributors only to check for additional choices.</span>':'<span class="mu">'+remaining+' more available</span>');
+
  return '<div class="tools" style="margin-top:10px">'+button+'</div><section id="more-picks-'+g.id+'" class="more-game-picks" aria-label="More picks for '+g.a+' at '+g.h+'" style="margin-top:10px;padding-top:8px;border-top:1px solid var(--bd)"><p class="mu">50 picks initially, then up to 25 more per press. Available positions share the display so QB, RB, WR and Team choices are represented. Position and odds order are retained; filters and loaded data determine availability. Model estimates; verify sportsbook prices.</p>'+status+(body||'<p class="mu">No picks match the current filters and loaded data.</p>')+'<div class="tools" style="margin-top:12px">'+load+'<button type="button" class="btn alt" onclick="toggleGamePicks(\''+g.id+'\')">Show fewer</button></div></section>';
 }
 let filteredParlayPlans={};
