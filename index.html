@@ -428,6 +428,7 @@ function applyOddsRange(){
  return true;
 }
 function quickViewFilteredParlays(){
+ if(mode==='same'&&!focus){showSameGameReminder();return;}
  if(!applyOddsRange()){ $('oddsFrom').focus();return; }
  const target=$('filteredParlaySuggestions')||$('plays');if(!target)return;
  for(let n=target;n;n=n.parentElement)if(n.tagName==='DETAILS')n.open=true;
@@ -845,8 +846,14 @@ function renderPreviousGames(){
   return `<h3 class="week-group-heading">Week ${w} — Previous Week</h3><div class="card"><div class="mu">${rows.length} game${rows.length===1?'':'s'}</div>${rows.map(g=>`<div class="pl"><button type="button" class="pill" onclick="openGameInjuries('${g.a}','${g.h}',${Number(w)})">Injuries</button> <b>${esc(g.a)} @ ${esc(g.h)}</b> · ${g.sc?`Final ${esc(g.a)} ${g.sc[0]} – ${esc(g.h)} ${g.sc[1]}`:esc(g.tm||'Scheduled')}</div>`).join('')||'<div class="mu">No games match the search.</div>'}</div>`
  }).join('');
 }
+function goToGames(){const target=document.getElementById('uiGamesSection')||document.getElementById('gameSection');if(!target)return;for(let n=target;n;n=n.parentElement)if(n.tagName==='DETAILS')n.open=true;target.scrollIntoView({behavior:'smooth',block:'start'});}
+function showSameGameReminder(){
+ let dialog=document.getElementById('sameGameReminder');
+ if(!dialog){dialog=document.createElement('dialog');dialog.id='sameGameReminder';dialog.setAttribute('aria-labelledby','sameGameReminderTitle');dialog.style.cssText='max-width:480px;width:90%;padding:22px;border:2px solid var(--ac);border-radius:14px;background:var(--card);color:var(--tx)';dialog.innerHTML='<h2 id="sameGameReminderTitle">Choose your same-game matchup</h2><p>Select <b>Build here</b> on the game card before choosing picks or requesting X-leg recommendations. The highlighted button identifies the selected matchup. After a schedule refresh, verify your matchup is still selected.</p><div class="row"><button type="button" class="btn" id="sameGameGo">Go to games</button><button type="button" class="btn alt" id="sameGameDismiss">Got it</button></div>';document.body.append(dialog);dialog.querySelector('#sameGameGo').onclick=()=>{dialog.close();goToGames()};dialog.querySelector('#sameGameDismiss').onclick=()=>dialog.close();}
+ if(!dialog.open)dialog.showModal();
+}
 function setFocus(id){if(focus!==id){focus=id;legs=legs.filter(l=>l.gid===id)}draw();plays()}
-$("mode").onclick=e=>{const m=e.target.dataset.m;if(!m)return;mode=m;legs=[];focus=null;N=m==="same"?Math.min(N,3):N;draw();plays()};
+$("mode").onclick=e=>{const m=e.target.dataset.m;if(!m)return;mode=m;legs=[];focus=null;draw();plays();if(m==="same")showSameGameReminder()};
 $("lm").onclick=()=>{N=Math.max(2,N-1);draw();plays();if(legs.length>N)$("msg").textContent="Choose which "+(legs.length-N)+" leg(s) to remove using the ✕ or trash buttons. Your selections have been preserved.";};
 $("lp").onclick=()=>{N=Math.min(8,N+1);draw();plays()};
 $("stake").oninput=draw;
@@ -1382,7 +1389,7 @@ function showLastScheduleRefresh(){
  }catch(e){}
 }
 showLastScheduleRefresh();
-async function refreshNFL(){const btn=$("refresh"),state=$("dataState"),selected=wk;
+async function refreshNFL(){const btn=$("refresh"),state=$("dataState"),selected=wk;if(btn.disabled)return;
  btn.disabled=true;btn.textContent="Refreshing…";state.className="data-state";state.textContent=`Loading ${SEASON} weeks 1–18…`;
  const weeks=Array.from({length:18},(_,i)=>i+1);let successes=0,failures=0;const upcoming=[];
  // Fetch all regular-season weeks so previous-week cards are available.
@@ -1403,9 +1410,13 @@ async function refreshNFL(){const btn=$("refresh"),state=$("dataState"),selected
  }))}
  if(successes)phase3SetNextKickoff(upcoming);
  const next=upcoming.sort((a,b)=>a.start-b.start)[0];
- const target=startupScheduleSelection&&!userSelectedWeek&&next?next.week:selected;
+ const target=wk!==selected||legs.length?wk:startupScheduleSelection&&!userSelectedWeek&&next?next.week:selected;
  startupScheduleSelection=false;
- populateWeeks();setWk(target);plays();renderPerformance();
+ populateWeeks();
+ // A schedule refresh updates game data, not the active draft's selections.
+ if(target===wk){games=WKS[wk]||[];if(focus&&!games.some(g=>String(g.id)===String(focus)))focus=null;draw();plays();renderAdvanced();}
+ else setWk(target);
+ plays();renderPerformance();
  // Team box-score retrieval is opt-in for AI performance.
  state.className="data-state "+(successes?"good":"bad");
  if(successes){const time=new Date().toISOString();try{phase3LocalStorage.setItem(NFL_REFRESH_KEY+'-'+SEASON,JSON.stringify({time,weeks:successes,failures}))}catch(e){}state.textContent=`Last refresh: ${new Date(time).toLocaleString()} • ${successes} weeks updated${failures?` • ${failures} unavailable`:""}`;}
@@ -1730,7 +1741,15 @@ function renderPerformance(){if(SEASON!==MODEL_SEASON){$("performance").innerHTM
 updateBoxState();drawF();switchSlip(activeSlip);renderSaved();
 // Startup refresh keeps bundled results visible while fetching additional completed games.
 // Browser network/CORS failures leave existing grading intact.
-if(navigator.onLine){setTimeout(()=>{refreshNFL().catch(e=>console.warn('Automatic schedule refresh failed',e))},400)}
+let lastAutomaticScheduleRefresh=0;
+function refreshScheduleOnOpen(){
+ if(!navigator.onLine||document.hidden||Date.now()-lastAutomaticScheduleRefresh<60000)return;
+ lastAutomaticScheduleRefresh=Date.now();return refreshNFL().catch(e=>console.warn('Automatic schedule refresh failed',e));
+}
+setTimeout(refreshScheduleOnOpen,400);
+window.addEventListener('pageshow',refreshScheduleOnOpen);
+window.addEventListener('online',()=>{lastAutomaticScheduleRefresh=0;refreshScheduleOnOpen()});
+document.addEventListener('visibilitychange',()=>{if(!document.hidden)refreshScheduleOnOpen()});
 </script>
 <script>
 // Surface authentication at the top without duplicating IDs or changing its handlers.
@@ -2999,6 +3018,8 @@ const privacy=document.createElement('style');privacy.textContent='body.phase3-p
 wrapRange($('myParlays'),$('sumry'),'My parlays','uiParlaySummary');
 convert($('savedParlaySlips'),'Saved parlay slips');
 wrapRange($('slip').previousElementSibling,$('slip').nextElementSibling,'Active parlay','uiActiveParlay');
+$('topAccountPanel').after($('uiActiveParlay'));
+const gamesButton=document.createElement('button');gamesButton.type='button';gamesButton.id='activeGoToGames';gamesButton.className='btn alt';gamesButton.textContent='Go to games';gamesButton.onclick=goToGames;$('uiActiveParlay').insertBefore(gamesButton,$('uiActiveParlay').children[1]);
 const targetControls=document.createElement('div');targetControls.className='tools';targetControls.innerHTML='<b>Target legs</b> <button type="button" class="btn alt" id="activeLegMinus" aria-label="Reduce target legs">−</button><strong id="activeLegTarget">'+N+'</strong><button type="button" class="btn alt" id="activeLegPlus" aria-label="Increase target legs">+</button>';targetControls.querySelector('#activeLegMinus').onclick=()=>$('lm').click();targetControls.querySelector('#activeLegPlus').onclick=()=>$('lp').click();$('uiActiveParlay').insertBefore(targetControls,$('slip').previousElementSibling);
 wrapRange($('builderSettingsTitle'),$('builderControls'),'Week and pick filters','uiBuilderSection');
 convert($('draftManagement'),'Active parlay slips');
