@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- Production release candidate: manual roster scenarios and injury OUT exclusion. REVIEW BEFORE DEPLOYMENT. -->
+<!-- Consolidated release candidate: compact UI, quick start, roster overrides, OUT exclusions, startup cloud recovery. REVIEW BEFORE DEPLOYMENT. -->
 <html lang="en"><head><meta charset="utf-8"><title>NFL Parlay Builder</title>
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <link rel="apple-touch-icon" sizes="180x180" href="./apple-touch-icon.png">
@@ -148,7 +148,7 @@ body.phase3-privacy-locked > :not(.hd):not(#topAccountPanel):not(#phase3KickoffC
 @media(prefers-reduced-motion:reduce){html{scroll-behavior:auto}}
 </style>
 </head><body class="phase3-privacy-locked">
-<div class="hd"><div class="row" style="justify-content:space-between"><div class="phase3-brand-title"><img src="./nfl-parlay-icon-512.png" width="50" height="50" alt="NFL Parlay Builder logo"><h1>NFL Parlay Builder</h1></div><button id="theme" class="btn alt" type="button" aria-label="Toggle dark mode">◐ Theme</button></div><div class="mu" id="sub"></div></div>
+<div class="hd"><div class="row" style="justify-content:space-between"><div class="phase3-brand-title"><img src="./nfl-parlay-icon-512.png" onerror="this.onerror=null;this.src='data:image/png;base64,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'" width="50" height="50" alt="NFL Parlay Builder logo"><h1>NFL Parlay Builder</h1></div><button id="theme" class="btn alt" type="button" aria-label="Toggle dark mode">◐ Theme</button></div><div class="mu" id="sub"></div></div>
 <section id="phase3KickoffCountdown" aria-label="Countdown to next NFL kickoff" aria-live="off">
  <div class="kickoff-heading"><div class="kickoff-title">🏈 NEXT NFL KICKOFF</div><strong id="kickoffWeek" class="kickoff-week" aria-label="NFL week">WEEK --</strong></div>
  <div class="kickoff-clock" role="timer" aria-label="Time remaining to next kickoff">
@@ -160,7 +160,7 @@ body.phase3-privacy-locked > :not(.hd):not(#topAccountPanel):not(#phase3KickoffC
  <div class="kickoff-note" id="kickoffStatus" role="status" aria-live="polite">Checking NFL schedule…</div>
 </section>
 <div class="toolbar"><label for="seasonSelect" style="font-weight:700">Season</label><select id="seasonSelect" aria-label="NFL season"></select><label for="wkTop" style="font-weight:700">Week</label><select id="wkTop" aria-label="NFL week (top selector)"></select><button id="refresh" class="btn" type="button">↻ Refresh NFL schedule</button><button id="boxRefresh" class="btn alt" type="button" hidden>↻ Load completed team box scores</button></div><div class="refresh-status-line"><span class="data-state" id="dataState" role="status" aria-live="polite">Offline snapshot • 2026 weeks 9–10</span></div>
-<section id="topAccountPanel" class="card" aria-label="NFL Parlay Builder account" style="margin:10px 0 12px;border:1px solid var(--bd)"><div class="tools" style="justify-content:space-between;align-items:center;margin:0 0 6px"><strong>🔐 NFL Parlay Builder · Your Account</strong><a id="userGuideHelpLink" class="btn alt" href="./NFL_Parlay_Builder_User_Guide.pdf" target="_blank" rel="noopener noreferrer" aria-label="Open NFL Parlay Builder user guide PDF in a new tab" style="text-decoration:none;font-size:14px">Help / User Guide</a><span class="mu" style="font-weight:700;color:#047857" id="topEnvironment">PRODUCTION · PHASE 3</span></div><div id="accountIdentityCard" role="status" aria-live="polite" style="border:1px solid var(--bd);border-radius:10px;padding:12px;margin:8px 0;display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap"><div><div class="mu">Signed in as</div><strong id="topAccountIndicator">Checking sign-in…</strong></div><span id="topConnectionBadge" class="mu">Not connected</span></div><div id="topAuthMount"></div></section>
+<section id="topAccountPanel" class="card" aria-label="NFL Parlay Builder account" style="margin:10px 0 12px;border:1px solid var(--bd)"><div class="tools" style="justify-content:space-between;align-items:center;margin:0 0 6px"><strong>🔐 NFL Parlay Builder · Your Account</strong><a id="quickStartGuideLink" class="btn alt" href="./NFL_Parlay_Builder_Quick_Start_Guide.pdf" target="_blank" rel="noopener noreferrer" aria-label="Open NFL Parlay Builder quick-start guide PDF in a new tab" style="text-decoration:none;font-size:14px">Quick-start Guide</a><a id="userGuideHelpLink" class="btn alt" href="./NFL_Parlay_Builder_User_Guide.pdf" target="_blank" rel="noopener noreferrer" aria-label="Open NFL Parlay Builder user guide PDF in a new tab" style="text-decoration:none;font-size:14px">Help / User Guide</a><span class="mu" style="font-weight:700;color:#047857" id="topEnvironment">PRODUCTION · PHASE 3</span></div><div id="accountIdentityCard" role="status" aria-live="polite" style="border:1px solid var(--bd);border-radius:10px;padding:12px;margin:8px 0;display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap"><div><div class="mu">Signed in as</div><strong id="topAccountIndicator">Checking sign-in…</strong></div><span id="topConnectionBadge" class="mu">Not connected</span></div><div id="topAuthMount"></div></section>
 
 
 <div class="navlinks"><a href="#myParlays">My parlays</a><a href="#uiBuilderSection">Filters</a><a href="#gameSection">Games</a><a href="#recommendations">Potential plays</a><a href="#advancedPredictions">AI Matchups</a></div>
@@ -572,6 +572,7 @@ if(!validateOddsRange(rememberedBuilderFilters.oddsFrom||'',rememberedBuilderFil
 document.getElementById('oddsFrom').value=oddsFrom;document.getElementById('oddsThrough').value=oddsThrough;
 document.getElementById('oddsFilterStatus').textContent=oddsFrom||oddsThrough?'Saved combined-odds range active: '+(oddsFrom||'unbounded')+' through '+(oddsThrough||'unbounded')+'.':'Combined odds target: unrestricted. Individual picks are unchanged.';
 function tog(id){openG=openG===id?null:id;draw()}
+function toggleBestGamePicks(id){tog(id)}
 function addp(id,m,s){if(games.find(g=>g.id===id)?.sc)return;if(mode==="same"&&focus!==id)setFocus(id);pick(id,m,s)}
 const propBtns=(g,k,b)=>['a','h'].map(t=>{const p=g.pp[t][k+'p'],sub=q=>am(dec(q))+' · '+Math.round(q*100)+'%';const buttons=b(k+t,'o','Over',sub(p))+b(k+t,'u','Under',sub(1-p));return buttons?'<div class="m">'+(t==='a'?g.a:g.h)+' '+PN[k][0]+' · line '+PN[k][1]+'</div>'+buttons:'';}).join('');
 // Expanded game-card choices use existing supported markets and selection safeguards.
@@ -643,7 +644,7 @@ function moreGamePicks(g,b){
  if(SEASON!==MODEL_SEASON)return '';
  const expanded=expandedGamePicks.has(gamePicksKey(g.id));
  const button='<button type="button" class="btn alt" id="more-picks-button-'+g.id+'" aria-expanded="'+expanded+'" aria-controls="more-picks-'+g.id+'" onclick="toggleGamePicks(\''+g.id+'\')">'+(expanded?'Show fewer':'More picks')+'</button>';
- if(!expanded)return '<div class="tools" style="margin-top:10px">'+button+'</div>';
+ if(!expanded)return '';
  const all=sortedMorePicks(g).filter(x=>!x.player||!phase3PlayerOut(x.player)),signature=JSON.stringify(pf),key=gamePicksKey(g.id),old=morePickPages.get(key),limit=old?.signature===signature?old.limit:MORE_PICKS_INITIAL;
  morePickPages.set(key,{limit,signature});const visible=visibleMorePicks(all,limit),remaining=all.length-visible.length;
  let previous='';const body=visible.map(x=>{
@@ -654,7 +655,7 @@ function moreGamePicks(g,b){
  const status='<p class="mu" id="more-page-status-'+g.id+'" tabindex="-1" role="status" aria-live="polite">Showing '+visible.length+' of '+all.length+' picks · '+positions+'</p>';
  const load='<span class="mu">Showing '+visible.length+' of '+all.length+' picks</span><button type="button" class="btn alt" id="load-more-picks-'+g.id+'" '+(!remaining?'disabled aria-disabled="true"':'')+' onclick="loadMoreGamePicks(\''+g.id+'\')">Load 25 more</button>'+(!remaining?'<span class="mu">All matching picks are displayed. Broaden pick filters or turn off Regular contributors only to check for additional choices.</span>':'<span class="mu">'+remaining+' more available</span>');
 
- return '<div class="tools" style="margin-top:10px">'+button+'</div>'+manualScenarioHTML(g)+'<section id="more-picks-'+g.id+'" class="more-game-picks" aria-label="More picks for '+g.a+' at '+g.h+'" style="margin-top:10px;padding-top:8px;border-top:1px solid var(--bd)"><p class="mu">50 picks initially, then up to 25 more per press. Available positions share the display so QB, RB, WR and Team choices are represented. Position and odds order are retained; filters and loaded data determine availability. Model estimates; verify sportsbook prices.</p>'+status+(body||'<p class="mu">No picks match the current filters and loaded data.</p>')+'<div class="tools" style="margin-top:12px">'+load+'<button type="button" class="btn alt" onclick="toggleGamePicks(\''+g.id+'\')">Show fewer</button></div></section>';
+ return manualScenarioHTML(g)+'<section id="more-picks-'+g.id+'" class="more-game-picks" aria-label="More picks for '+g.a+' at '+g.h+'" style="margin-top:10px;padding-top:8px;border-top:1px solid var(--bd)"><p class="mu">50 picks initially, then up to 25 more per press. Available positions share the display so QB, RB, WR and Team choices are represented. Position and odds order are retained; filters and loaded data determine availability. Model estimates; verify sportsbook prices.</p>'+status+(body||'<p class="mu">No picks match the current filters and loaded data.</p>')+'<div class="tools" style="margin-top:12px">'+load+'<button type="button" class="btn alt" onclick="toggleGamePicks(\''+g.id+'\')">Show fewer</button></div></section>';
 }
 let filteredParlayPlans={};
 function filteredParlayContext(){return JSON.stringify([SEASON,wk,mode,N,focus,tf,pf,gameQuery,oddsFrom,oddsThrough,regularOnly,playerDataRevision]);}
@@ -755,7 +756,7 @@ function renderFilteredParlays(){
  if(!pool.length)return intro+'<p role="status">'+esc(filteredParlayEmptyReason())+'</p></section>';
  const result=searchCombinedParlays(pool);
  if(!result.best)return intro+'<p>No complete '+N+'-leg match found within the combined-odds range'+(result.truncated?' in the bounded search':'')+'. '+(result.groupCount<N?'Too few compatible games or markets. ':'')+'Adjust the combined range or Legs.</p></section>';
- const titles={best:'Best model-ranked match found',lower:'Lower combined odds',higher:'Higher combined odds'};
+ const titles={lower:'Lower Range Value',higher:'Higher Range Value'};
  return intro+Object.entries(titles).map(([kind,title])=>{
   const plan=result[kind];if(!plan)return '';
   const rows=plan.rows;filteredParlayPlans[kind]={context,rows,combined:plan.price};
@@ -779,10 +780,10 @@ function loadFilteredParlay(kind){
 
 function det(g){if(SEASON!==MODEL_SEASON)return "";if(openG!==g.id)return"";
  const P=Math.round,it=[],cat=pickTypes();
- if(allPickTypes()){const h=g.p>=.5;it.push({mk:"ml",sd:h?"h":"a",p:h?g.p:1-g.p,txt:(h?g.h:g.a)+" moneyline",why:"Model margin "+f1(Math.abs(g.m))+" pts"+(g.fp!=null?", schedule feed "+P((h?g.fp:1-g.fp)*100)+"%":"")})}
+ if(allPickTypes()){const h=g.p>=.5;it.push({mk:"ml",sd:h?"h":"a",p:h?g.p:1-g.p,txt:(h?g.h:g.a)+" moneyline",why:"Reference spread: "+(h?g.h:g.a)+" "+sg(h?-g.sp:g.sp)+" · Model margin "+f1(Math.abs(g.m))+" pts"+(g.fp!=null?", schedule feed "+P((h?g.fp:1-g.fp)*100)+"%":"")})}
 
  if(filterHas(pf,'td'))['a','h'].forEach(t=>{const p=g.pp[t].tdp,o=p>=.5;it.push({mk:'td'+t,sd:o?'o':'u',p:o?p:1-p,txt:(t==='a'?g.a:g.h)+' '+(o?'Over ':'Under ')+PN.td[1]+' team TDs',why:'Model team touchdown estimate'})});
- PLY.filter(p=>playerSuggested(p)&&(filterHas(pf,p.k))&&(p.tm===g.a||p.tm===g.h)).forEach(p=>{const s=pstat(p,g);if(!s)return;const o=p.k==="td"||s.p>=.5;it.push({mk:"p"+p.i,sd:o?"o":"u",p:o?s.p:1-s.p,txt:p.k==="td"?p.n+" anytime TD":p.n+" "+(o?"Over ":"Under ")+s.line+(p.k==="ps"?" pass yds":" rush yds"),why:p.k==="td"?f1(p.v)+" TDs per game this season, projects "+f1(s.proj)+" here":"Averages "+Math.round(p.v)+" yds per game, projects about "+Math.round(s.proj)+" here"})});
+ PLY.filter(p=>playerSuggested(p)&&(filterHas(pf,p.k))&&(p.tm===g.a||p.tm===g.h)).forEach(p=>{const s=pstat(p,g);if(!s)return;const o=p.k==="td"||s.p>=.5;it.push({mk:"p"+p.i,sd:o?"o":"u",p:o?s.p:1-s.p,txt:p.k==="td"?p.n+" anytime TD":p.n+" "+(o?"Over ":"Under ")+s.line+(p.k==="ps"?" pass yds":" rush yds"),why:p.k==="td"?"YTD TDs/game: "+f1(p.v)+" · Last-game TDs: "+(Number.isFinite(p.lastGameTD)?p.lastGameTD:"not available")+" · projects "+f1(s.proj)+" here":"Avg yards/game: "+Math.round(p.v)+" · projects about "+Math.round(s.proj)+" here"})});
  it.sort((a,b)=>b.p-a.p);
  const pa=g.pp.a,ph=g.pp.h,sa=S[g.a],sh=S[g.h];
  return`<div class="det"><div class="mu"><b>Projected score:</b> ${g.a} ${P(pa.pts)}, ${g.h} ${P(ph.pts)} · total ${g.tot} · ${g.p>=.5?g.h:g.a} by ${f1(Math.abs(g.m))}</div><div class="mu"><b>Win chance (model):</b> ${g.h} ${P(g.pm*100)}%, ${g.a} ${P((1-g.pm)*100)}%${g.fp!=null?" · schedule feed: "+g.h+" "+P(g.fp*100)+"%":""}</div><div class="mu"><b>Recent scoring:</b> ${g.a} ${f1(sa.ppg)} for / ${f1(sa.opp)} against · ${g.h} ${f1(sh.ppg)} / ${f1(sh.opp)}</div><div style="margin-top:6px"><b>Best picks for this game</b></div>${it.slice(0,8).map(x=>`<div class="pl ${g.sc?(grade({...g,week:wk},x.mk,x.sd)===true?"hit":grade({...g,week:wk},x.mk,x.sd)===false?"miss":"pending"):(x.p<.6?"med":"")}"><b>${esc(x.txt)}</b>${playerForMarket(x.mk)?injuryTag(playerForMarket(x.mk)):''} · ${P(x.p*100)}% · ${am(dec(x.p))}${g.sc?"":`<button class="pill" onclick="addp('${g.id}','${x.mk}','${x.sd}')">+ Add</button>`}<div class="mu">${x.why}</div></div>`).join("")}</div>`}
@@ -914,8 +915,9 @@ function draw(){
     const dis=(mode==="same"&&focus!==g.id)||!!g.sc;const on=(m,s)=>legs.some(l=>l.gid===g.id&&l.mkt===m&&l.side===s);
     const b=(m,s,t,sub)=>`<button class="o ${on(m,s)?"on":""}" ${dis?"disabled":""} onclick="pick('${g.id}','${m}','${s}')">${t}<span>${sub}</span></button>`;
     const mainChoices=allPickTypes()?gameMainMarkets(g,b):filterHas(pf,'td')?propBtns(g,'td',b):'';
-    return`<div class="card g"><div class="gh" style="cursor:pointer" onclick="tog('${g.id}')"><b>${openG===g.id?"▾":"▸"} <img class="logo" loading="lazy" alt="" src="https://a.espncdn.com/i/teamlogos/nfl/500/${g.a.toLowerCase()}.png" onerror="this.style.display='none'"> ${g.a} @ <img class="logo" loading="lazy" alt="" src="https://a.espncdn.com/i/teamlogos/nfl/500/${g.h.toLowerCase()}.png" onerror="this.style.display='none'"> ${g.h}</b><span class="row"><button type="button" class="pill" onclick="event.stopPropagation();openGameInjuries('${g.a}','${g.h}',${Number(g.week||wk)})">Injuries</button><span class="mu">${g.sc?`Final ${g.a} ${g.sc[0]}, ${g.h} ${g.sc[1]}`:g.tm}</span>${mode==="same"?`<button class="pill ${focus===g.id?"on":""}" onclick="event.stopPropagation();setFocus('${g.id}')">Build here</button>`:""}</span></div>
+    return`<div class="card g"><div class="gh"><b><img class="logo" loading="lazy" alt="" src="https://a.espncdn.com/i/teamlogos/nfl/500/${g.a.toLowerCase()}.png" onerror="this.style.display='none'"> ${g.a} @ <img class="logo" loading="lazy" alt="" src="https://a.espncdn.com/i/teamlogos/nfl/500/${g.h.toLowerCase()}.png" onerror="this.style.display='none'"> ${g.h}</b><span class="row"><button type="button" class="pill injury-alert-button" onclick="event.stopPropagation();openGameInjuries('${g.a}','${g.h}',${Number(g.week||wk)})">Injuries</button><span class="mu">${g.sc?`Final ${g.a} ${g.sc[0]}, ${g.h} ${g.sc[1]}`:g.tm}</span>${mode==="same"?`<button class="pill ${focus===g.id?"on":""}" onclick="event.stopPropagation();setFocus('${g.id}')">Build here</button>`:""}</span></div>
     <div class="mu">${g.a} ${T[g.a][1]}-${T[g.a][2]} · ${g.h} ${T[g.h][1]}-${T[g.h][2]} · <span class="game-meta">${g.sc?"Completed":"Upcoming"}</span></div>
+    <div class="game-pick-actions"><button type="button" class="btn alt" aria-expanded="${openG===g.id}" onclick="toggleBestGamePicks('${g.id}')">${openG===g.id?'Hide Best Picks':'Best Picks'}</button><button type="button" class="btn alt" id="more-picks-button-${g.id}" aria-expanded="${expandedGamePicks.has(gamePicksKey(g.id))}" aria-controls="more-picks-${g.id}" onclick="toggleGamePicks('${g.id}')">${expandedGamePicks.has(gamePicksKey(g.id))?'Show fewer':'More Picks'}</button></div>
     ${gameHitRateHost(g,wk)}<div class="grid">${mainChoices||'<div class="m mu">No picks in this view match the loaded data. Try More picks or refresh statistics.</div>'}</div>${moreGamePicks(g,b)}${manualRosterPanel(g)}${det(g)}</div>`}).join("")||`<div class="card mu">No games match this kickoff window.</div>`;
   $("gameCount").textContent=games.filter(vis).length+" of "+games.length+" games · Week "+wk;
   renderPreviousGames();paintGameHitRates();
@@ -1172,11 +1174,12 @@ $('advCancelLine').onclick=()=>{$('advEditor').hidden=true};
 function load(){if(SEASON!==MODEL_SEASON)return;mode="multi";focus=null;legs=window._arr.slice(0,N).map(x=>({gid:x.g.id,mkt:"ml",side:x.home?"h":"a"}));draw();scrollTo({top:0,behavior:"smooth"})}
 function loadSG(id,s){if(SEASON!==MODEL_SEASON)return;mode="same";focus=id;N=Math.max(N,2);N=Math.min(N,3);legs=[{gid:id,mkt:"ml",side:s},{gid:id,mkt:"sp",side:s}];N=Math.max(N,2);draw();scrollTo({top:0,behavior:"smooth"})}
 plays();
-function setWk(w){syncActiveSlip();wk=Number(w);performanceSelectedWeek=wk;games=WKS[wk]||[];legs=[];focus=null;$("wk").value=wk;$("wkTop").value=wk;$("wkn").textContent=liveWeeks.has(wk)?"Updated schedule / scores":wk===CUR?"Bundled snapshot":"Bundled completed games";draw();plays();renderPerformance();renderSaved();renderAdvanced()}
+function setWk(w){syncActiveSlip();wk=Number(w);updateHeaderWeek();performanceSelectedWeek=wk;games=WKS[wk]||[];legs=[];focus=null;$("wk").value=wk;$("wkTop").value=wk;$("wkn").textContent=liveWeeks.has(wk)?"Updated schedule / scores":wk===CUR?"Bundled snapshot":"Bundled completed games";draw();plays();renderPerformance();renderSaved();renderAdvanced()}
 function populateWeeks(){const old=wk;$("wk").innerHTML=Object.keys(WKS).map(Number).sort((a,b)=>a-b).map(w=>`<option value="${w}">Week ${w}</option>`).join("");$("wk").value=old;$("wkTop").innerHTML=$("wk").innerHTML;$("wkTop").value=old}
 populateWeeks();
 $("wk").onchange=e=>{userSelectedWeek=true;setWk(+e.target.value)};$("wkTop").onchange=e=>{userSelectedWeek=true;setWk(+e.target.value)};
-$("sub").textContent=SEASON+" season · "+(SEASON===MODEL_SEASON?"2026 model baselines":"schedule and results only; prediction model requires season-specific baselines");
+function updateHeaderWeek(){$("sub").textContent=SEASON+" season · Week "+wk+" · "+(SEASON===MODEL_SEASON?"2026 model baselines":"schedule and results only; prediction model requires season-specific baselines");}
+updateHeaderWeek();
 const KEY="nflp-saved-v1";let saved=[];
 try{saved=JSON.parse(phase3LocalStorage.getItem(KEY)||"[]")}catch(e){}
 const persist=()=>{try{phase3LocalStorage.setItem(KEY,JSON.stringify(saved));return true}catch(e){$("msg").textContent="Save failed: device storage is unavailable. Your selections are preserved; please free storage or export a backup.";return false}};
@@ -3400,6 +3403,200 @@ recovery.onclick=async()=>{recovery.disabled=true;recoveryStatus.textContent='Ve
   for(let n=section;n;n=n.parentElement)if(n.tagName==='DETAILS')n.open=true;
   section.scrollIntoView({behavior:window.matchMedia('(prefers-reduced-motion: reduce)').matches?'auto':'smooth',block:'start'});
  });nav.append(a);}
+})();
+</script>
+
+<style id="compactLayoutPreviewStyles">
+.hd{padding:9px 12px!important;margin-bottom:4px!important}
+.hd h1{font-size:clamp(19px,3.6vw,27px);margin:0}
+.hd .phase3-brand-title img{width:36px;height:36px}
+.hd #phase3KickoffCountdown{margin:5px 0 0!important;padding:6px 9px!important;border-radius:9px;box-shadow:none!important}
+.hd #phase3KickoffCountdown>summary{font-size:13px;padding:2px 0!important}
+.hd #phase3KickoffCountdown .kickoff-heading{margin:0}
+.hd #phase3KickoffCountdown .kickoff-clock{gap:5px;margin:3px 0}
+.hd #phase3KickoffCountdown .kickoff-value{font-size:clamp(17px,3vw,23px)}
+#topAccountPanel{margin:6px 0!important;padding:8px 10px!important}
+#topAccountPanel>summary{padding:2px 0!important;font-size:16px!important}
+#topAccountPanel .tools{gap:5px;margin-bottom:3px!important}
+#accountIdentityCard{padding:6px 9px!important;margin:4px 0!important;gap:6px!important}
+#topAccountPanel #sumry{padding:7px 10px;margin:5px 0}
+#builderControls{padding:10px!important}
+#builderControls .row{gap:7px!important}
+#builderControls fieldset{margin-top:8px!important;padding:8px!important}
+#builderControls #oddsFrom,#builderControls #oddsThrough{width:86px!important}
+.game-pick-actions{display:flex;gap:8px;align-items:center;margin:9px 0 5px}
+.game-pick-actions button{flex:1;min-width:0;font-weight:750}
+.injury-alert-button{border:2px solid #dc2626!important;color:#dc2626!important;font-weight:850!important;background:transparent!important}
+@media(max-width:700px){#topAccountPanel #userGuideHelpLink{font-size:12px!important}.hd #phase3KickoffCountdown .kickoff-note{font-size:11px}}
+</style>
+<script id="compactLayoutPreviewBehavior">
+(()=>{
+ const $=id=>document.getElementById(id);
+ const account=$('topAccountPanel'),parlays=$('uiParlaySummary'),countdown=$('phase3KickoffCountdown'),header=document.querySelector('.hd');
+ if(account&&parlays){const summary=$('sumry');if(summary){const statBox=document.createElement('div');statBox.id='accountParlayStats';statBox.innerHTML='<strong style="font-size:13px">My Parlay Stats</strong>';statBox.append(summary);account.append(statBox);}parlays.remove();}
+ document.querySelectorAll('.navlinks a[href="#uiParlaySummary"],.navlinks a[href="#myParlays"]').forEach(a=>a.remove());
+ if(header&&countdown)header.append(countdown);
+ const controls=$('builderControls');if(controls){
+  controls.querySelectorAll('p.mu').forEach(p=>{if(p.textContent.includes('Rounded American odds for the whole parlay'))p.remove();});
+  const legend=[...controls.querySelectorAll('legend')].find(el=>el.textContent.includes('Risk factor'));if(legend)legend.textContent='Combined parlay odds';
+  const reset=$('resetBuilderFilters');if(reset){reset.parentElement.querySelectorAll('.mu').forEach(el=>el.remove());}
+  const kickoff=controls.querySelector('#tf')?.previousElementSibling;if(kickoff)kickoff.querySelectorAll('.mu').forEach(el=>el.remove());
+  const picks=controls.querySelector('#pf')?.previousElementSibling;if(picks)picks.querySelectorAll('.mu').forEach(el=>el.remove());
+  const contributor=$('regularOnly')?.closest('div');if(contributor)contributor.querySelectorAll('p.mu').forEach(el=>el.remove());
+ }
+})();
+</script>
+
+<style id="compactHeaderFilterRefinement">
+/* Three-part, single-row desktop masthead based on the approved visual reference. */
+.hd{display:grid!important;grid-template-columns:minmax(250px,1fr) minmax(340px,1.15fr) auto;align-items:center;gap:16px;padding:12px 16px!important;min-height:130px;background:linear-gradient(105deg,#1f2b63,#3c55d8)!important}
+.hd .compact-brand{min-width:0}
+.hd .compact-brand .phase3-brand-title{gap:12px}
+.hd .compact-brand .phase3-brand-title img{width:54px!important;height:70px!important;object-fit:contain}
+.hd .compact-brand h1{font-size:clamp(22px,2.3vw,31px)!important;white-space:nowrap}
+.hd .compact-brand #sub{margin-top:5px;font-size:12px}
+.hd #phase3KickoffCountdown{width:100%;box-sizing:border-box;background:#fff!important;color:#101a39!important;border:0!important;margin:0!important;padding:8px 12px!important;box-shadow:none!important;text-align:center}
+.hd #phase3KickoffCountdown .kickoff-heading{justify-content:center}
+.hd #phase3KickoffCountdown .kickoff-title{font-size:13px;color:#152145;background:#f5f7ff;padding:3px 8px}
+.hd #phase3KickoffCountdown .kickoff-week{font-size:12px;padding:3px 6px}
+.hd #phase3KickoffCountdown .kickoff-clock{gap:7px;margin:5px 0 4px}
+.hd #phase3KickoffCountdown .kickoff-unit{flex:1;min-width:0;padding:7px 4px;background:#d3defd}
+.hd #phase3KickoffCountdown .kickoff-value{font-size:clamp(21px,2.2vw,27px);color:#081632}
+.hd #phase3KickoffCountdown .kickoff-label,.hd #phase3KickoffCountdown .kickoff-note{color:#34476e}
+.hd #theme{justify-self:end;white-space:nowrap}
+@media(min-width:900px){.navlinks{display:flex!important;flex-wrap:nowrap!important;gap:5px!important;overflow-x:auto;scrollbar-width:thin}.navlinks a{flex:1 1 auto;text-align:center;white-space:nowrap;font-size:clamp(10px,.88vw,12px)!important;padding:7px 6px!important;border-radius:7px!important}}
+#builderControls{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px 14px;align-items:start}
+#builderControls .filter-group{border:1px solid var(--bd);border-radius:10px;padding:10px;min-width:0;background:color-mix(in srgb,var(--card) 94%,var(--sel))}
+#builderControls .filter-group-title{display:block;font-weight:800;font-size:13px;margin:0 0 8px;color:var(--ac)}
+#builderControls .filter-group .row{margin:0!important;gap:7px!important}
+#builderControls .filter-group .row + .row{margin-top:8px!important}
+#builderControls .filter-group .sports-links{display:flex;gap:6px;flex-wrap:wrap}
+#builderControls .filter-group .sports-links a{font-size:12px;padding:5px 7px}
+#builderControls .filter-group .sports-links img{width:17px;height:17px}
+#builderControls .filter-group .step{white-space:nowrap}
+#builderControls .filter-group input#stake{width:75px}
+#builderControls .filter-group #tf,#builderControls .filter-group #pf{display:flex;flex-wrap:wrap}
+#builderControls .filter-group fieldset{border:0;padding:0!important;margin:0!important;min-width:0}
+#builderControls .filter-group legend{display:none}
+#builderControls .filter-group .fp{padding:5px 9px}
+#builderControls .filter-group .mu{font-size:11px}
+#builderControls .filter-group #quickViewParlays{font-size:12px}
+#builderControls .filter-wide{grid-column:1/-1}
+#builderControls #hint{grid-column:1/-1;margin:0!important}
+@media(max-width:900px){.hd{grid-template-columns:minmax(0,1fr) auto!important;gap:8px!important}.hd #phase3KickoffCountdown{grid-column:1/-1;grid-row:2}.hd .compact-brand h1{white-space:normal}.hd{min-height:0}.navlinks{flex-wrap:wrap}}
+@media(max-width:620px){#builderControls{grid-template-columns:1fr}.hd .compact-brand .phase3-brand-title img{width:42px!important;height:52px!important}.hd .compact-brand h1{font-size:20px!important}.hd #theme{font-size:12px;padding:8px}}
+</style>
+<script id="compactHeaderFilterRefinementBehavior">
+(()=>{
+ const header=document.querySelector('.hd'),countdown=document.getElementById('phase3KickoffCountdown');
+ if(header&&countdown){
+  const first=header.querySelector(':scope > .row'),subtitle=header.querySelector(':scope > #sub');
+  if(first){const brand=first.querySelector('.phase3-brand-title'),theme=first.querySelector('#theme');const wrapper=document.createElement('div');wrapper.className='compact-brand';if(brand)wrapper.append(brand);if(subtitle)wrapper.append(subtitle);header.prepend(wrapper);if(theme)header.append(theme);first.remove();}
+ }
+ const controls=document.getElementById('builderControls');if(!controls)return;
+ const getRow=id=>document.getElementById(id)?.closest('.row');
+ const makeGroup=(title,nodes,wide=false)=>{const group=document.createElement('section');group.className='filter-group'+(wide?' filter-wide':'');const heading=document.createElement('span');heading.className='filter-group-title';heading.textContent=title;group.append(heading);for(const n of nodes)if(n)group.append(n);controls.append(group);return group;};
+ const reset=getRow('resetBuilderFilters'),week=getRow('wk'),mode=getRow('mode'),legs=getRow('ln'),kickLabel=getRow('tf')?.previousElementSibling,pickLabel=getRow('pf')?.previousElementSibling;
+ const kickoff=getRow('tf'),picks=getRow('pf'),regular=document.getElementById('regularOnly')?.closest('div'),odds=document.getElementById('oddsFrom')?.closest('fieldset');
+ if(week)makeGroup('Week & sportsbook',[week]);
+ makeGroup('Parlay setup',[mode,legs]);
+ makeGroup('Kickoff times',[kickoff]);
+ makeGroup('Pick markets',[picks]);
+ makeGroup('Combined parlay odds',[odds]);
+ makeGroup('Eligibility & controls',[regular,reset]);
+ // Discard label-only rows once the accessible group headings replace them.
+ for(const n of [kickLabel,pickLabel])if(n&&n.parentElement===controls)n.remove();
+})();
+</script>
+
+<style id="alignedFilterCardsRefinement">
+/* Six equal-width filter cards in a clean 3 x 2 desktop grid. */
+@media (min-width:1100px){
+ #builderControls{grid-template-columns:repeat(3,minmax(0,1fr))!important;align-items:stretch!important;grid-auto-rows:minmax(155px,auto)}
+}
+@media (min-width:621px) and (max-width:1099px){
+ #builderControls{grid-template-columns:repeat(2,minmax(0,1fr))!important;align-items:stretch!important}
+}
+#builderControls .filter-group{height:100%;box-sizing:border-box;display:flex;flex-direction:column;gap:8px;margin:0!important;min-width:0}
+#builderControls .filter-group-title{margin:0 0 2px!important;min-height:19px}
+#builderControls .filter-group .row{align-items:center;flex-wrap:wrap;min-width:0}
+#builderControls .filter-group .row + .row{margin-top:2px!important}
+#builderControls .filter-group .step{display:flex;align-items:center;gap:6px}
+#builderControls .filter-group input[type=number]{max-width:95px}
+#builderControls .filter-group .sports-links{margin-top:4px}
+#builderControls .filter-group:has(#oddsFrom) .row{align-items:center;gap:7px}
+#builderControls .filter-group:has(#oddsFrom) label{display:inline-flex;align-items:center;gap:5px}
+/* Keep dynamic messages available to assistive tech, without consuming card height. */
+#builderControls #oddsFilterStatus,#builderControls #combinedOddsStatus{position:absolute!important;width:1px!important;height:1px!important;padding:0!important;margin:-1px!important;overflow:hidden!important;clip:rect(0,0,0,0)!important;white-space:nowrap!important;border:0!important}
+@media(max-width:620px){#builderControls{grid-template-columns:1fr!important}#builderControls .filter-group{height:auto}}
+</style>
+<script id="alignedFilterCardsRefinementBehavior">
+(()=>{
+ const controls=document.getElementById('builderControls');if(!controls)return;
+ // Remove explanatory prose from the combined X-leg odds-range card; preserve inputs, actions and accessible live status.
+ const odds=controls.querySelector('.filter-group:has(#oddsFrom)');
+ if(odds){odds.querySelectorAll('p.mu').forEach(p=>p.remove());}
+ const intro=document.querySelector('#builderSettingsTitle + .mu');
+ if(intro&&intro.textContent.includes('Select the NFL week'))intro.remove();
+})();
+</script>
+
+<style id="collapseFilterTopWhitespace">
+/* Remove the full-width hint grid row and keep the six cards compact. */
+#builderControls{align-content:start!important;grid-auto-rows:auto!important;padding-top:10px!important}
+#builderControls .filter-group{min-height:0!important;gap:5px!important;padding:9px!important}
+#builderControls .filter-group-title{margin-bottom:1px!important}
+#builderControls .filter-group .row + .row{margin-top:3px!important}
+#builderControls .filter-group .sports-links{margin-top:2px!important}
+#builderControls .filter-group p.mu{display:none!important}
+/* Keep dynamically updated selection guidance accessible without occupying space. */
+#builderControls #hint{position:absolute!important;width:1px!important;height:1px!important;padding:0!important;margin:-1px!important;overflow:hidden!important;clip:rect(0,0,0,0)!important;white-space:nowrap!important;border:0!important}
+@media(min-width:1100px){#builderControls{grid-template-columns:repeat(3,minmax(0,1fr))!important}}
+
+/* Light-blue game-card Best Picks and More Picks actions */
+.game-pick-actions > button.btn{background:#dbeafe!important;color:#173b80!important;border:1px solid #93c5fd!important;font-weight:750}
+.game-pick-actions > button.btn:hover,.game-pick-actions > button.btn:focus-visible{background:#bfdbfe!important;border-color:#60a5fa!important}
+</style>
+<script id="collapseFilterTopWhitespaceBehavior">
+(()=>{
+ const controls=document.getElementById('builderControls');if(!controls)return;
+ const hint=document.getElementById('hint');
+ // The dynamic hint was a full-width first grid item, creating the blank top row.
+ // Move it out of the grid while retaining updates for assistive technology.
+ if(hint){hint.setAttribute('role','status');hint.setAttribute('aria-live','polite');controls.after(hint);}
+ const reset=document.getElementById('resetBuilderFilters')?.closest('.row');
+ if(reset){reset.querySelectorAll('span.mu').forEach(node=>node.remove());}
+})();
+</script>
+
+<style id="accountCompactAlignmentV2">
+#topAccountPanel .account-top-tools{display:flex!important;align-items:center!important;gap:8px!important;flex-wrap:wrap!important;margin-bottom:7px!important}
+#topAccountPanel .account-top-tools #quickStartGuideLink{margin-left:auto!important;white-space:nowrap!important}
+#topAccountPanel .account-top-tools #userGuideHelpLink{margin-left:0!important;white-space:nowrap!important}
+#topAccountPanel .account-top-tools #openSetup{white-space:nowrap!important}
+#topAccountPanel #accountOverviewRow{display:grid;grid-template-columns:minmax(0,1.35fr) minmax(0,1fr);gap:9px;align-items:stretch;margin:5px 0 8px}
+#topAccountPanel #accountIdentityCard{margin:0!important;min-width:0;padding:9px 11px!important}
+#topAccountPanel #accountParlayStats{margin:0!important;min-width:0;border:1px solid var(--bd);border-radius:10px;padding:8px 10px!important;display:flex;flex-direction:column;justify-content:center;gap:4px}
+#topAccountPanel #accountParlayStats > strong{font-size:12px!important}
+#topAccountPanel #accountParlayStats #sumry{padding:0!important;margin:0!important;border:0!important;box-shadow:none!important;background:transparent!important;min-width:0}
+#topAccountPanel #accountParlayStats #sumry .bar{margin:0!important;padding:0!important}
+@media(max-width:680px){#topAccountPanel #accountOverviewRow{grid-template-columns:1fr}#topAccountPanel .account-top-tools #quickStartGuideLink{margin-left:0!important}}
+</style>
+<script id="accountCompactAlignmentV2Behavior">
+(()=>{
+ const account=document.getElementById('topAccountPanel');
+ if(!account)return;
+ const heading=account.querySelector('.tools');
+ const guide=document.getElementById('userGuideHelpLink');
+ const sync=document.getElementById('openSetup');
+ if(heading&&guide&&sync){heading.classList.add('account-top-tools');guide.after(sync);}
+ const identity=document.getElementById('accountIdentityCard');
+ const stats=document.getElementById('accountParlayStats');
+ if(identity&&stats){
+  let overview=document.getElementById('accountOverviewRow');
+  if(!overview){overview=document.createElement('div');overview.id='accountOverviewRow';identity.before(overview);}
+  overview.append(identity,stats);
+ }
 })();
 </script>
 </body></html>
