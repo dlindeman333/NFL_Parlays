@@ -312,6 +312,9 @@ function readBuilderFilters(){
 }
 const rememberedBuilderFilters=readBuilderFilters();
 let regularOnly=rememberedBuilderFilters.regularOnly!==false;
+let excludeOtherTeamPicks=rememberedBuilderFilters.excludeOtherTeamPicks!==false;
+function teamMarketAllowed(mkt){return !excludeOtherTeamPicks||['ml','sp','tot'].includes(String(mkt));}
+function setExcludeOtherTeamPicks(value){excludeOtherTeamPicks=!!value;saveBuilderFilters();drawF();draw();plays();renderAdvanced();}
 let wk=estimatedNFLWeek(),games=WKS[wk]||[],tf=["all"],pf=["all"],openG=null,gameQuery="",liveWeeks=new Set();
 let startupScheduleSelection=true, userSelectedWeek=false;
 const gpOf=t=>T[t][1]+T[t][2],PLY=[];
@@ -554,7 +557,7 @@ function pickOdds(g,mkt,side){return Number(am(legOf({gid:g.id,mkt,side}).d));}
 function advancedPickSide(x){return x.p.k==='td'||x.manual?'o':x.prob>=.5?'o':'u';}
 function advancedPickOdds(x){return x.manual?Number(x.odds):pickOdds(x.g,'p'+x.p.i,advancedPickSide(x));}
 
-function saveBuilderFilters(){try{phase3LocalStorage.setItem(BUILDER_FILTERS_KEY,JSON.stringify({tf,pf,regularOnly,query:gameQuery,oddsFrom,oddsThrough,oddsRangeScope:"combined-v1"}))}catch(e){}}
+function saveBuilderFilters(){try{phase3LocalStorage.setItem(BUILDER_FILTERS_KEY,JSON.stringify({tf,pf,regularOnly,excludeOtherTeamPicks,query:gameQuery,oddsFrom,oddsThrough,oddsRangeScope:"combined-v1"}))}catch(e){}}
 function setBuilderFilter(type,value){
  const options=type==='tf'?TF:type==='pf'?PF:null;if(!options||!options.some(x=>x[0]===value))return;
  let current=normalizeFilter(type==='tf'?tf:pf,options);
@@ -562,8 +565,8 @@ function setBuilderFilter(type,value){
  if(type==='tf')tf=current;else pf=current;
  saveBuilderFilters();drawF();draw();plays();renderAdvanced();
 }
-function resetBuilderFilters(){regularOnly=true;tf=['all'];pf=['all'];gameQuery="";oddsFrom="";oddsThrough="";$("oddsFrom").value="";$("oddsThrough").value="";$("oddsFilterStatus").textContent="Combined odds target: unrestricted.";const search=$("gameSearch");if(search)search.value="";saveBuilderFilters();drawF();draw();plays();renderAdvanced()}
-function drawF(){if($('regularOnly'))$('regularOnly').checked=regularOnly;for(const [id,options,value] of [['tf',TF,tf],['pf',PF,pf]])$(id).innerHTML=options.map(([k,l])=>{const on=normalizeFilter(value,options).includes(k);return `<button type="button" class="fp ${on?'on':''}" aria-pressed="${on}" onclick="setBuilderFilter('${id}','${k}')">${l}</button>`}).join('');}
+function resetBuilderFilters(){excludeOtherTeamPicks=true;regularOnly=true;tf=['all'];pf=['all'];gameQuery="";oddsFrom="";oddsThrough="";$("oddsFrom").value="";$("oddsThrough").value="";$("oddsFilterStatus").textContent="Combined odds target: unrestricted.";const search=$("gameSearch");if(search)search.value="";saveBuilderFilters();drawF();draw();plays();renderAdvanced()}
+function drawF(){if($('excludeOtherTeamPicks'))$('excludeOtherTeamPicks').checked=excludeOtherTeamPicks;if($('regularOnly'))$('regularOnly').checked=regularOnly;for(const [id,options,value] of [['tf',TF,tf],['pf',PF,pf]])$(id).innerHTML=options.map(([k,l])=>{const on=normalizeFilter(value,options).includes(k);return `<button type="button" class="fp ${on?'on':''}" aria-pressed="${on}" onclick="setBuilderFilter('${id}','${k}')">${l}</button>`}).join('');}
 tf=normalizeFilter(rememberedBuilderFilters.tf,TF);
 pf=normalizeFilter(rememberedBuilderFilters.pf,PF);
 document.getElementById('regularOnly').checked=regularOnly;
@@ -612,7 +615,7 @@ function gamePickCandidates(g,includeManual=false){
  for(const market of ['ml','sp'])for(const side of ['a','h'])add(market,side,'game');
  for(const side of ['o','u'])add('tot',side,'game');
 
- for(const t of ['a','h'])for(const side of ['o','u'])add('td'+t,side,'td');
+ if(!excludeOtherTeamPicks)for(const t of ['a','h'])for(const side of ['o','u'])add('td'+t,side,'td');
  for(const p of PLY.filter(p=>playerSuggested(p)&&(p.tm===g.a||p.tm===g.h))){
   const manual=includeManual?advManual[advKey(g,p)]:null;
   if(manual&&Number.isFinite(Number(manual.line))&&Number(manual.line)>=0&&oddsDecimal(manual.odds)!==null){add('p'+p.i,'o',p.k,p,manual);continue;}
@@ -658,7 +661,7 @@ function moreGamePicks(g,b){
  return manualScenarioHTML(g)+'<section id="more-picks-'+g.id+'" class="more-game-picks" aria-label="More picks for '+g.a+' at '+g.h+'" style="margin-top:10px;padding-top:8px;border-top:1px solid var(--bd)"><p class="mu">50 picks initially, then up to 25 more per press. Available positions share the display so QB, RB, WR and Team choices are represented. Position and odds order are retained; filters and loaded data determine availability. Model estimates; verify sportsbook prices.</p>'+status+(body||'<p class="mu">No picks match the current filters and loaded data.</p>')+'<div class="tools" style="margin-top:12px">'+load+'<button type="button" class="btn alt" onclick="toggleGamePicks(\''+g.id+'\')">Show fewer</button></div></section>';
 }
 let filteredParlayPlans={};
-function filteredParlayContext(){return JSON.stringify([SEASON,wk,mode,N,focus,tf,pf,gameQuery,oddsFrom,oddsThrough,regularOnly,playerDataRevision]);}
+function filteredParlayContext(){return JSON.stringify([SEASON,wk,mode,N,focus,tf,pf,excludeOtherTeamPicks,gameQuery,oddsFrom,oddsThrough,regularOnly,playerDataRevision]);}
 function filteredParlayCandidates(){
  refreshPlayerMarkets();if(SEASON!==MODEL_SEASON||mode==='same'&&!focus)return [];
  const now=Date.now();return games.filter(g=>!g.sc&&vis(g)&&(mode!=='same'||g.id===focus)&&Number.isFinite(Date.parse(g.date||''))&&Date.parse(g.date)>now)
@@ -782,7 +785,7 @@ function det(g){if(SEASON!==MODEL_SEASON)return "";if(openG!==g.id)return"";
  const P=Math.round,it=[],cat=pickTypes();
  if(allPickTypes()){const h=g.p>=.5;it.push({mk:"ml",sd:h?"h":"a",p:h?g.p:1-g.p,txt:(h?g.h:g.a)+" moneyline",why:"Reference spread: "+(h?g.h:g.a)+" "+sg(h?-g.sp:g.sp)+" · Model margin "+f1(Math.abs(g.m))+" pts"+(g.fp!=null?", schedule feed "+P((h?g.fp:1-g.fp)*100)+"%":"")})}
 
- if(filterHas(pf,'td'))['a','h'].forEach(t=>{const p=g.pp[t].tdp,o=p>=.5;it.push({mk:'td'+t,sd:o?'o':'u',p:o?p:1-p,txt:(t==='a'?g.a:g.h)+' '+(o?'Over ':'Under ')+PN.td[1]+' team TDs',why:'Model team touchdown estimate'})});
+ if(!excludeOtherTeamPicks&&filterHas(pf,'td'))['a','h'].forEach(t=>{const p=g.pp[t].tdp,o=p>=.5;it.push({mk:'td'+t,sd:o?'o':'u',p:o?p:1-p,txt:(t==='a'?g.a:g.h)+' '+(o?'Over ':'Under ')+PN.td[1]+' team TDs',why:'Model team touchdown estimate'})});
  PLY.filter(p=>playerSuggested(p)&&(filterHas(pf,p.k))&&(p.tm===g.a||p.tm===g.h)).forEach(p=>{const s=pstat(p,g);if(!s)return;const o=p.k==="td"||s.p>=.5;it.push({mk:"p"+p.i,sd:o?"o":"u",p:o?s.p:1-s.p,txt:p.k==="td"?p.n+" anytime TD":p.n+" "+(o?"Over ":"Under ")+s.line+(p.k==="ps"?" pass yds":" rush yds"),why:p.k==="td"?"YTD TDs/game: "+f1(p.v)+" · Last-game TDs: "+(Number.isFinite(p.lastGameTD)?p.lastGameTD:"not available")+" · projects "+f1(s.proj)+" here":"Avg yards/game: "+Math.round(p.v)+" · projects about "+Math.round(s.proj)+" here"})});
  it.sort((a,b)=>b.p-a.p);
  const pa=g.pp.a,ph=g.pp.h,sa=S[g.a],sh=S[g.h];
@@ -914,7 +917,7 @@ function draw(){
   $("games").innerHTML=`<h3 class="week-group-heading">Week ${wk} — Selected Week</h3>`+games.filter(vis).map(g=>{
     const dis=(mode==="same"&&focus!==g.id)||!!g.sc;const on=(m,s)=>legs.some(l=>l.gid===g.id&&l.mkt===m&&l.side===s);
     const b=(m,s,t,sub)=>`<button class="o ${on(m,s)?"on":""}" ${dis?"disabled":""} onclick="pick('${g.id}','${m}','${s}')">${t}<span>${sub}</span></button>`;
-    const mainChoices=allPickTypes()?gameMainMarkets(g,b):filterHas(pf,'td')?propBtns(g,'td',b):'';
+    const mainChoices=allPickTypes()?gameMainMarkets(g,b):!excludeOtherTeamPicks&&filterHas(pf,'td')?propBtns(g,'td',b):'';
     return`<div class="card g"><div class="gh"><b><img class="logo" loading="lazy" alt="" src="https://a.espncdn.com/i/teamlogos/nfl/500/${g.a.toLowerCase()}.png" onerror="this.style.display='none'"> ${g.a} @ <img class="logo" loading="lazy" alt="" src="https://a.espncdn.com/i/teamlogos/nfl/500/${g.h.toLowerCase()}.png" onerror="this.style.display='none'"> ${g.h}</b><span class="row"><button type="button" class="pill injury-alert-button" onclick="event.stopPropagation();openGameInjuries('${g.a}','${g.h}',${Number(g.week||wk)})">Injuries</button><span class="mu">${g.sc?`Final ${g.a} ${g.sc[0]}, ${g.h} ${g.sc[1]}`:g.tm}</span>${mode==="same"?`<button class="pill ${focus===g.id?"on":""}" onclick="event.stopPropagation();setFocus('${g.id}')">Build here</button>`:""}</span></div>
     <div class="mu">${g.a} ${T[g.a][1]}-${T[g.a][2]} · ${g.h} ${T[g.h][1]}-${T[g.h][2]} · <span class="game-meta">${g.sc?"Completed":"Upcoming"}</span></div>
     <div class="game-pick-actions"><button type="button" class="btn alt" aria-expanded="${openG===g.id}" onclick="toggleBestGamePicks('${g.id}')">${openG===g.id?'Hide Best Picks':'Best Picks'}</button><button type="button" class="btn alt" id="more-picks-button-${g.id}" aria-expanded="${expandedGamePicks.has(gamePicksKey(g.id))}" aria-controls="more-picks-${g.id}" onclick="toggleGamePicks('${g.id}')">${expandedGamePicks.has(gamePicksKey(g.id))?'Show fewer':'More Picks'}</button></div>
@@ -1026,7 +1029,7 @@ function plays(){if(SEASON!==MODEL_SEASON){$("plays").innerHTML=`<div class="car
   let h="";
   if(allPickTypes())h+=`<div class="card"><b>Top moneyline plays</b>`+arr.slice(0,6).map(x=>`<div class="pl ${x.p<.68?"med":""}"><b>${x.t} ML</b> vs ${x.o} · ${Math.round(x.p*100)}% · ${am(dec(x.p))}<div class="mu">${why(x)}</div><button type="button" class="btn alt" onclick="quickAddRecommended('${x.g.id}','ml','${x.home?'h':'a'}')">+ Add to parlay</button></div>`).join("")+`</div>`;
 
-  if(filterHas(pf,'td'))for(const pf of ['td']){const L=[];(WKS[wk]||[]).filter(g=>!g.sc&&vis(g)).forEach(g=>["a","h"].forEach(t=>{const p=g.pp[t][pf+"p"],o=p>=.5;L.push({g,t,o,p:o?p:1-p})}));L.sort((a,b)=>b.p-a.p);
+  if(!excludeOtherTeamPicks&&filterHas(pf,'td'))for(const pf of ['td']){const L=[];(WKS[wk]||[]).filter(g=>!g.sc&&vis(g)).forEach(g=>["a","h"].forEach(t=>{const p=g.pp[t][pf+"p"],o=p>=.5;L.push({g,t,o,p:o?p:1-p})}));L.sort((a,b)=>b.p-a.p);
   h+=`<div class="card"><b>Top ${PL[pf]} plays</b>`+(L.slice(0,6).map(x=>{const tm=x.t==="a"?x.g.a:x.g.h;return`<div class="pl ${x.p<.6?"med":""}"><b>${tm} ${x.o?"Over":"Under"} ${PN[pf][1]} ${PN[pf][0]}</b> · ${Math.round(x.p*100)}% · ${am(dec(x.p))}<div class="mu">vs ${x.t==="a"?x.g.h:x.g.a} · projected ${pf==="td"?f1(x.g.pp[x.t].td)+" TDs":Math.round(x.g.pp[x.t][pf+"y"])+" yds"}</div><button type="button" class="btn alt" onclick="quickAddRecommended('${x.g.id}','${pf+x.t}','${x.o?'o':'u'}')">+ Add to parlay</button></div>`}).join("")||`<div class="mu">No team picks match the current filters and loaded data.</div>`)+`</div>`}
   {const Q=[];(WKS[wk]||[]).filter(g=>!g.sc&&vis(g)).forEach(g=>PLY.forEach(p=>{if(playerSuggested(p)&&(p.tm===g.a||p.tm===g.h)&&(filterHas(pf,p.k))){const s=pstat(p,g);if(!s)return;const o=p.k==="td"||s.p>=.5;Q.push({p,g,o,q:o?s.p:1-s.p,s})}}));Q.sort((a,b)=>b.q-a.q);
   h+=`<div class="card"><b>Top player picks${allPickTypes()?"":" ("+pickTypes().map(k=>PL[k]).join(", ")+")"}</b>`+(Q.slice(0,6).map(x=>`<div class="pl ${x.q<.6?"med":""}"><b>${esc(x.p.k==="td"?x.p.n+" anytime TD":x.p.n+" "+(x.o?"Over ":"Under ")+x.s.line+(x.p.k==="ps"?" pass yds":" rush yds"))}</b>${injuryTag(x.p)} · ${Math.round(x.q*100)}% · ${am(dec(x.q))}<div class="mu">${x.g.a} @ ${x.g.h}</div><button type="button" class="btn alt" onclick="quickAddRecommended('${x.g.id}','p${x.p.i}','${x.o?'o':'u'}')">+ Add to parlay</button></div>`).join("")||`<div class="mu">No player picks match the current filters and loaded data.</div>`)+`</div>`}
@@ -3467,6 +3470,7 @@ recovery.onclick=async()=>{recovery.disabled=true;recoveryStatus.textContent='Ve
 @media(min-width:900px){.navlinks{display:flex!important;flex-wrap:nowrap!important;gap:5px!important;overflow-x:auto;scrollbar-width:thin}.navlinks a{flex:1 1 auto;text-align:center;white-space:nowrap;font-size:clamp(10px,.88vw,12px)!important;padding:7px 6px!important;border-radius:7px!important}}
 #builderControls{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px 14px;align-items:start}
 #builderControls .filter-group{border:1px solid var(--bd);border-radius:10px;padding:10px;min-width:0;background:color-mix(in srgb,var(--card) 94%,var(--sel))}
+#builderControls .team-pick-exclusion{display:flex;align-items:flex-start;gap:7px;font-size:12px;line-height:1.35;cursor:pointer;margin-top:7px}#builderControls .team-pick-exclusion input{margin-top:2px;flex-shrink:0}#builderControls .team-pick-exclusion small{display:block;font-size:11px;color:var(--mu)}
 #builderControls .filter-group-title{display:block;font-weight:800;font-size:13px;margin:0 0 8px;color:var(--ac)}
 #builderControls .filter-group .row{margin:0!important;gap:7px!important}
 #builderControls .filter-group .row + .row{margin-top:8px!important}
@@ -3501,7 +3505,7 @@ recovery.onclick=async()=>{recovery.disabled=true;recoveryStatus.textContent='Ve
  if(week)makeGroup('Week & sportsbook',[week]);
  makeGroup('Parlay setup',[mode,legs]);
  makeGroup('Kickoff times',[kickoff]);
- makeGroup('Pick markets',[picks]);
+ const teamExcludeRow=document.createElement('label');teamExcludeRow.className='team-pick-exclusion';teamExcludeRow.innerHTML='<input type="checkbox" id="excludeOtherTeamPicks" checked onchange="setExcludeOtherTeamPicks(this.checked)"> <span>Exclude other team picks <small>(keep Spread, Moneyline &amp; Game Total O/U)</small></span>';makeGroup('Pick markets',[picks,teamExcludeRow]);
  makeGroup('Combined parlay odds',[odds]);
  makeGroup('Eligibility & controls',[regular,reset]);
  // Discard label-only rows once the accessible group headings replace them.
