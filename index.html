@@ -2810,10 +2810,57 @@ if(auth&&config.url&&config.key){status('Restoring saved sign-in…');setTimeout
   if(check.uid===uid&&fresh.some(p=>String(p.id)===check.id))status('POST-RELOAD RESTORE VERIFIED: 1 parlay loaded on this device. Cloud unchanged.');
   else status('POST-RELOAD RESTORE CHECK FAILED: active '+fresh.length+' saved; account partition '+partSaved.length+' saved. No cloud changes.');
  }else status('Signed in · guarded auto-sync available; legacy cloud sync disabled.');
+ // Read-only startup detection: never write, merge, or auto-recover saved parlays.
+ // Inspect before resuming a previously enabled sync, so a fresh/empty device
+ // cannot publish an empty saved list over a nonempty cloud record.
+ let startupRecoveryHold=false;
+ try{
+  if(!busy){
+   const localView=safe6View(snapshot(),'Startup device');
+   if(localView.saved.length===0){
+    const remote=await readRemote(uid);
+    if(remote){
+     const cloudView=safe6View(personalCloudValues(remote.payload),'Startup cloud');
+     if(cloudView.saved.length>0){
+      startupRecoveryHold=true;safe6Running=false;
+      const noticeId='phase3StartupCloudRecoveryNotice';
+      let notice=document.getElementById(noticeId);
+      if(!notice){
+       notice=document.createElement('div');notice.id=noticeId;notice.setAttribute('role','alert');
+       notice.style.cssText='border:2px solid #d5a028;border-radius:10px;padding:14px;margin:12px 0;background:#fff8e6;color:#32250d';
+       const title=document.createElement('strong');title.textContent='Saved parlays found in your cloud account';notice.append(title);
+       const description=document.createElement('p');description.id='phase3StartupRecoveryDescription';notice.append(description);
+       const action=document.createElement('button');action.type='button';action.className='btn alt';action.textContent='Review safe recovery';
+       action.onclick=()=>{
+        if(!stage1WriteAllowed()){
+         let help=document.getElementById('phase3StartupRecoveryHelp');
+         if(!help){help=document.createElement('p');help.id='phase3StartupRecoveryHelp';help.setAttribute('role','status');help.style.cssText='margin:10px 0 0;line-height:1.5';notice.append(help);}
+         help.textContent='This local review file can detect cloud parlays but cannot run production-only reconciliation. Your production parlays are unchanged. To recover on the production app, open Your Account → Cloud Sync Actions → Review saved-parlay reconciliation. Do not apply a recovery here or sync an empty device.';
+         status('REVIEW-ONLY: Cloud detection succeeded; reconciliation is restricted to production. No changes made.');
+         return;
+        }
+        const panel=document.getElementById('cloudSyncPanel');if(panel)panel.hidden=false;
+        const review=document.getElementById('reviewSavedReconciliation');
+        if(review)review.click();else status('Recovery review control unavailable. Open Your Account → Cloud Sync Actions. No changes made.');
+       };
+       notice.append(action);
+       const target=document.getElementById('savedParlaySlips')||document.getElementById('cloudSyncPanel');
+       if(target)target.prepend(notice);
+      }
+      document.getElementById('phase3StartupRecoveryDescription').textContent='Your device shows 0 saved parlays, but this signed-in cloud account contains '+cloudView.saved.length+'. No changes were made. Review reconciliation before syncing.';
+      status('STARTUP RECOVERY SAFEGUARD: '+cloudView.saved.length+' cloud saved parlays detected; device empty. Automatic sync paused until reviewed. No changes made.');
+     }
+    }
+   }
+  }
+ }catch(e){
+  // Fail closed on an empty device: do not resume writes if the cloud cannot be verified.
+  if(safe6View(snapshot(),'Startup device').saved.length===0){startupRecoveryHold=true;safe6Running=false;status('STARTUP CLOUD CHECK INCOMPLETE: '+e.message+'. Automatic sync paused; no changes made.');}
+ }
  // v7: Resume only a previously user-enabled, account-scoped guarded sync.
  // The v6 in-memory flag was lost on every Safari reload/navigation.
  const resumeRaw=phase3LocalStorage.getItem(safe6Key(uid));
- if(resumeRaw && stage1WriteAllowed()){
+ if(resumeRaw && stage1WriteAllowed() && !startupRecoveryHold){
   try{
    const resume=JSON.parse(resumeRaw);
    if(!resume||resume.uid!==uid||typeof resume.canonical!=='string')throw Error('Invalid saved-sync baseline');
