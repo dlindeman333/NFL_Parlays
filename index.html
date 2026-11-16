@@ -218,7 +218,7 @@ body.phase3-privacy-locked > :not(.hd):not(#topAccountPanel):not(#phase3KickoffC
 
 <h2 id="advancedPredictions">AI Matchup Recommendations</h2>
 <details id="phase3AdvancedMethodology" class="card" style="margin:8px 0 12px"><summary style="cursor:pointer;font-weight:700">How matchup analysis works (advanced details)</summary><p class="mu">Data-driven matchup analysis using available model estimates and imported player game logs. Not a live generative AI service. Sportsbook lines are optional and entered manually; no paid API or background odds scraping.</p><p class="mu">Model estimates are not sportsbook odds. Verify current lines, player availability, and kickoff times before making selections.</p></details>
-<div class="tools" role="tablist" aria-label="AI Matchups sections"><button type="button" class="btn" id="advTabRecommendations" aria-selected="true">Recommendations</button><button type="button" class="btn alt" id="advTabPerformance" aria-selected="false">Prediction Performance</button></div><div id="advRecommendationPanel"><div class="card"><div class="tools"><label for="advView"><b>View</b></label><select id="advView"><option value="picks">Top picks</option><option value="games">Game matchups</option><option value="parlays">Suggested parlay</option></select><label for="advMarket"><b>Market</b></label><select id="advMarket"><option value="all">All</option><option value="ps">Passing yards</option><option value="ru">Rushing yards</option><option value="td">Touchdowns</option></select></div><div id="advStatus" class="mu" role="status"></div><div id="advResults"></div><div id="advEditor" class="card" hidden><b id="advEditTitle">Sportsbook line</b><div class="mu">Enter a line you personally verified at the sportsbook. These values are not automatically refreshed or cloud-synced.</div><div class="tools"><select id="advBook"><option>DraftKings</option><option>FanDuel</option><option>Other</option></select><label>Line <input id="advLine" type="number" min="0" step="0.5" placeholder="225.5"></label><label>American odds <input id="advOdds" type="number" step="1" placeholder="-110"></label><button class="btn" id="advSaveLine" type="button">Save line</button><button class="btn alt" id="advCancelLine" type="button">Cancel</button></div></div></div>
+<div class="tools" role="tablist" aria-label="AI Matchups sections"><button type="button" class="btn" id="advTabRecommendations" aria-selected="true">Recommendations</button><button type="button" class="btn alt" id="advTabPerformance" aria-selected="false">Prediction Performance</button></div><div id="advRecommendationPanel"><div class="card"><div class="tools"><label for="advView"><b>View</b></label><select id="advView"><option value="picks">Top picks</option><option value="games">Game matchups</option><option value="parlays">Suggested parlay</option></select><label for="advMarket"><b>Market</b></label><select id="advMarket"><option value="all">All</option><option value="ps">Passing yards</option><option value="ru">Rushing yards</option><option value="re">Receiving yards</option><option value="td">Touchdowns</option></select></div><div id="advStatus" class="mu" role="status"></div><div id="advResults"></div><div id="advEditor" class="card" hidden><b id="advEditTitle">Sportsbook line</b><div class="mu">Enter a line you personally verified at the sportsbook. These values are not automatically refreshed or cloud-synced.</div><div class="tools"><select id="advBook"><option>DraftKings</option><option>FanDuel</option><option>Other</option></select><label>Line <input id="advLine" type="number" min="0" step="0.5" placeholder="225.5"></label><label>American odds <input id="advOdds" type="number" step="1" placeholder="-110"></label><button class="btn" id="advSaveLine" type="button">Save line</button><button class="btn alt" id="advCancelLine" type="button">Cancel</button></div></div></div>
 </div><div id="advPerformancePanel" hidden><div class="card"><b>Tracked AI recommendations</b><p class="mu">Save a local snapshot of currently ranked recommendations at least 30 minutes before scheduled kickoff. These browser snapshots are not independently verified official predictions. Once final player statistics are imported, this tab grades the original lines without changing the prediction engine. Snapshots stay in this browser; export a backup to preserve them. Only pregame snapshots count.</p><div class="tools"><button type="button" class="btn" id="advTrackSnapshot">Save current Top 12 predictions</button><button type="button" class="btn alt" id="advExportTracking">Export tracking history</button><button type="button" class="btn alt" id="advImportTracking">Import tracking history</button><input type="file" id="advImportTrackingFile" accept=".json,application/json" hidden></div><div id="advTrackingStatus" class="mu" role="status"></div><div id="advTrackingResults"></div></div><details id="cloudUserPredictionHistory" class="card" style="margin-top:12px"><summary style="cursor:pointer;font-weight:700">My cloud prediction history</summary><p class="mu">Track published upcoming games in your account to see the same original predictions on PC and iPhone. Tracking closes 30 minutes before kickoff. Local/imported snapshots stay separate and are never published as verified forecasts.</p><div id="cloudUserPredictionHistoryStatus" class="mu" role="status">Sign in to view your cloud prediction history.</div><div id="cloudUserPredictionHistoryResults"></div><button class="btn alt" type="button" id="cloudUserPredictionHistoryRefresh">Refresh my cloud history</button></details><div id="cloudOfficialGrades" class="card" style="margin-top:12px"><b>Automated cloud grading</b><p class="mu">Verified cloud grade records are shown separately from browser estimates. No records are changed here.</p><div id="cloudOfficialGradesStatus" class="mu" role="status">Waiting to load cloud grades…</div><div id="cloudOfficialGradesResults"></div><button class="btn alt" type="button" id="cloudOfficialGradesRefresh">Refresh official grades</button></div><h2 id="aiPerformance">Previous Week &amp; Season AI Performance</h2><div id="boxState" class="mu" role="status" aria-live="polite" hidden></div><div id="archivedPerformance" class="card"><b>Archived pregame prediction accuracy</b><div class="mu">Checking for timestamped pregame snapshots…</div></div><div id="performance"></div><dialog id="performanceDetails" class="performance-modal" aria-label="AI performance pick details"><div class="performance-modal-inner"><div class="performance-modal-head"><h3 id="performanceDetailsTitle">Pick details</h3><button type="button" class="btn alt" id="closePerformanceDetails">Close ✕</button></div><div id="performanceDetailsBody"></div></div></dialog><div class="mu">Only predictions with verifiable final results are scored. Player props require matching weekly CSV data. The existing performance cards below are retrospective model evaluations; archived pregame accuracy is shown separately above; unavailable outcomes are excluded from hit percentages.</div>
 
 </div>
@@ -292,7 +292,7 @@ const build=L=>L.map(([id,a,h,tm,fp,sc,date])=>{
   return{id,a,h,tm,date,fp,pm,p,m,tot:Math.round(tot*2)/2,sp:Math.round(m*2)/2||.5,pp:{a:pr(tot/2-m/2,-m,S[h].opp),h:pr(tot/2+m/2,m,S[a].opp)},sc}
 });
 const G9=[["k1","CAR","GB","Thu 8:15 PM",null,[19,27]],["k2","IND","JAC","Sun 1:00 PM",null,[7,42]],["k3","TEN","CIN","Sun 1:00 PM",null,[36,43]],["k4","CLE","PIT","Sun 1:00 PM",null,[6,27]],["k5","MIN","DET","Sun 1:00 PM",null,[15,19]],["k6","ATL","TB","Sun 1:00 PM",null,[0,16]],["k7","ARI","DAL","Sun 1:00 PM",null,[33,30]],["k8","LV","NYJ","Sun 1:00 PM",null,[38,33]],["k9","BAL","BUF","Sun 1:00 PM",null,[10,36]],["k10","LAC","LA","Sun 4:05 PM",null,[9,24]],["k11","NE","MIA","Sun 4:25 PM",null,[24,19]],["k12","KC","DEN","Sun 4:25 PM",null,[24,28]],["k13","PHI","WAS","Sun 8:20 PM",null,[10,27]],["k14","CHI","SEA","Mon 8:15 PM",null,[34,17]]];
-const PN={td:["TDs",2.5],ps:["pass yds",225.5],ru:["rush yds",110.5]},PL={td:"TD",ps:"passing",ru:"rushing"};
+const PN={td:["TDs",2.5],ps:["pass yds",225.5],ru:["rush yds",110.5],re:["rec yds",55.5]},PL={td:"TD",ps:"passing",ru:"rushing",re:"receiving"};
 // Default to the NFL's current/upcoming regular-season week on every page load.
 // Week 1 begins September 10, 2026; after Monday night, Tuesday advances to the next week.
 function estimatedNFLWeek(){
@@ -341,7 +341,7 @@ function recentContribution(p){
  const logs=weeks.map(week=>teamRows.filter(r=>r.week===week&&playerIdentity(r.player)===playerIdentity(p.n)));
  if(logs.some(rows=>rows.length>1))result.known=false;
  const latest=logs.flat()[0];if(latest?.position)result.position=latest.position;
- for(const field of ['rushing_attempts','receptions','snap_share','passing_attempts']){
+ for(const field of ['rushing_attempts','receptions','snap_share','passing_attempts','targets']){
   const values=logs.map(rows=>!rows.length?0:rows[0][field]);
   result[field]=result.known&&values.every(v=>typeof v==='number'&&Number.isFinite(v)&&v>=0)?values.reduce((a,b)=>a+b,0)/3:null;
  }
@@ -361,6 +361,7 @@ function playerSuggested(p){
  if(phase3PlayerOut(p)||!playerAvailable(p)||p.k==='ru'&&['WR','TE'].includes(position))return false;
  if(!regularOnly)return true;
  if(!stats.known)return false;
+ if(p.k==='re'){return ['WR','TE','RB','HB','FB'].includes(position)&&stats.receptions!==null&&stats.receptions>=2&&stats.targets!==null&&stats.targets>=3;}
  if(p.k==='ru'){
   const minimum=position==='QB'?3:['RB','HB','TB','FB'].includes(position)?5:null;
   const source=sourcePlayer(p);
@@ -386,7 +387,7 @@ function refreshPlayerMarkets(){
  for(const p of PLY.filter(p=>!p.dynamic)){const latest=latestTeam.get(playerIdentity(p.n));if(latest?.team===p.tm&&latest.position)p.position=latest.position;}
  for(const rows of groups.values()){
   const latest=[...rows].sort((a,b)=>b.week-a.week)[0];
-  for(const [kind,field] of [['ps','passing_yards'],['ru','rushing_yards'],['td','touchdowns']]){
+  for(const [kind,field] of [['ps','passing_yards'],['ru','rushing_yards'],['re','receiving_yards'],['td','touchdowns']]){
    if(kind==='ps'&&latest.position&&latest.position!=='QB')continue;
    const byWeek=new Map();for(const r of rows){if(!Number.isFinite(r[field]))continue;const prior=byWeek.get(r.week);if(prior===undefined)byWeek.set(r.week,r[field]);else if(prior!==r[field])byWeek.set(r.week,null);}
    const values=[...byWeek.values()].filter(Number.isFinite);if(!values.length||!values.some(v=>v>0))continue;
@@ -408,7 +409,7 @@ function freezeNewPlayerLeg(gid,mkt,side){
 
 const esc=x=>String(x??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
 function importedPlayer(p){const key=playerIdentity(p.n);return imported.filter(r=>playerIdentity(r.player)===key&&r.team===p.tm&&Number(r.season)===Number(SEASON)&&r.week<wk&&r.game_status==='COMPLETED')}
-function sourcePlayer(p){if(p.dynamic)return playerAvailable(p)?p:null;const rows=importedPlayer(p);if(!rows.length)return p;const key=p.k==="ps"?"passing_yards":p.k==="ru"?"rushing_yards":"touchdowns";const values=rows.map(r=>r[key]).filter(Number.isFinite);if(!values.length)return p;const v=values.reduce((a,b)=>a+b,0)/values.length;return {...p,v:(v+p.v)/2};}
+function sourcePlayer(p){if(p.dynamic)return playerAvailable(p)?p:null;const rows=importedPlayer(p);if(!rows.length)return p;const key=p.k==="ps"?"passing_yards":p.k==="ru"?"rushing_yards":p.k==="re"?"receiving_yards":"touchdowns";const values=rows.map(r=>r[key]).filter(Number.isFinite);if(!values.length)return p;const v=values.reduce((a,b)=>a+b,0)/values.length;return {...p,v:(v+p.v)/2};}
 function pstat(p,g){const src=sourcePlayer(p);if(!src)return null;p=src;const t=p.tm===g.a?"a":"h",mg=t==="a"?-g.m:g.m,sc=g.pp[t].pts/S[p.tm].ppg;
  if(p.k==="td")return{p:1-Math.exp(-p.v*sc),line:"Anytime TD",proj:p.v*sc};
  if(p.k==="ps"){const pj=p.v*(.6+.4*sc)*(1-.006*mg),ln=Math.floor(p.v)+.5;return{p:nc((pj-ln)/(p.v*.25)),line:ln,proj:pj}}
@@ -513,14 +514,14 @@ const plBtns=(g,k,b)=>PLY.filter(p=>playerSuggested(p)&&p.k===k&&(p.tm===g.a||p.
 const hr=tm=>{const m=/(\d+):(\d+) (AM|PM)/.exec(tm);return m?(+m[1]%12)+(m[3]==="PM"?12:0)+(+m[2])/60:0};
 const bucket=tm=>{const h=hr(tm);return h<11?"early":h<15?"aft":h<19?"eve":"late"};
 const vis=g=>filterHas(tf,bucket(g.tm))&&(!gameQuery||`${g.a} ${g.h} ${T[g.a]?.[0]||""} ${T[g.h]?.[0]||""}`.toLowerCase().includes(gameQuery));
-const TF=[["all","All"],["early","Early 9–10a"],["aft","Afternoon 12–2p"],["eve","Evening 4–6p"],["late","Late 7–10p"]],PF=[["all","All"],["td","TD"],["ps","Passing"],["ru","Rushing"]];
+const TF=[["all","All"],["early","Early 9–10a"],["aft","Afternoon 12–2p"],["eve","Evening 4–6p"],["late","Late 7–10p"]],PF=[["all","All"],["td","TD"],["ps","Passing"],["ru","Rushing"],["re","Receiving"]];
 // Multi-select: choices are OR within each group, AND across groups.
 function normalizeFilter(value,options){
  const raw=Array.isArray(value)?value:[value],keys=options.map(x=>x[0]);
  const valid=keys.filter(k=>raw.includes(k));return !valid.length||valid.includes('all')?['all']:valid;
 }
 function filterHas(value,key){const list=Array.isArray(value)?value:[value];return list.includes('all')||list.includes(key);}
-function pickTypes(){return ['td','ps','ru'].filter(k=>filterHas(pf,k));}
+function pickTypes(){return ['td','ps','ru','re'].filter(k=>filterHas(pf,k));}
 function allPickTypes(){return filterHas(pf,'all');}
 function oddsDecimal(value){const n=Number(value);return Number.isFinite(n)&&Number.isInteger(n)&&Math.abs(n)>=100?(n>0?1+n/100:1+100/Math.abs(n)):null;}
 let oddsFrom='',oddsThrough='';
@@ -600,6 +601,7 @@ function pickPosition(p){
  return p?.k==='ps'?'QB':'Other';
 }
 function gamePickCandidates(g,includeManual=false){
+ refreshPlayerMarkets();
  const rows=[];
  const add=(mkt,side,family,player=null,manual=null)=>{
   const value=legOf({gid:g.id,mkt,side});let text=value.txt,probability=value.p,odds=Number(am(value.d));
@@ -804,7 +806,7 @@ function legOf(L){
   if(L.mkt==="ml"){const p=L.side==="h"?g.p:1-g.p,t=L.side==="h"?H:A;return{txt:t+" moneyline",p,d:dec(p),g}}
   if(L.mkt==="sp"){const t=L.side==="h"?H:A,ln=L.side==="h"?-g.sp:g.sp;return{txt:t+" "+sg(ln),p:.5,d:1.91,g}}
   const p0=playerForMarket(L.mkt);
-  if(p0){const s=pstat(p0,g),pr=L.side==="o"?s.p:1-s.p;return{txt:p0.k==="td"?p0.n+" anytime TD":p0.n+" "+(L.side==="o"?"Over ":"Under ")+s.line+(p0.k==="ps"?" pass yds":" rush yds"),p:pr,d:dec(pr),g}}
+  if(p0){const s=pstat(p0,g),pr=L.side==="o"?s.p:1-s.p;return{txt:p0.k==="td"?p0.n+" anytime TD":p0.n+" "+(L.side==="o"?"Over ":"Under ")+s.line+(p0.k==="ps"?" pass yds":p0.k==="re"?" rec yds":" rush yds"),p:pr,d:dec(pr),g}}
   const mm=/^(td|ps|ru)([ah])$/.exec(L.mkt);
   if(mm){const k=mm[1],t=mm[2],po=g.pp[t][k+"p"],p=L.side==="o"?po:1-po;return{txt:`${t==="a"?A:H} ${L.side==="o"?"Over":"Under"} ${PN[k][1]} ${PN[k][0]}`,p,d:dec(p),g}}
   return{txt:(L.side==="o"?"Over ":"Under ")+g.tot,p:.5,d:1.91,g}}
@@ -1021,7 +1023,7 @@ function quickAddRecommended(gid,mkt,side){
  if(!pick(game.id,mkt,side))return;
  feedback('Pick added to current parlay. Verify current sportsbook lines and odds.');
 }
-function plays(){if(SEASON!==MODEL_SEASON){$("plays").innerHTML=`<div class="card warn">Predictions are disabled for ${SEASON}: the model still uses 2026 team baselines. Schedule, final scores, and season-specific cloud statistics remain available. Update the model inputs before enabling forecasts for this season.</div>`;window._arr=[];return;}
+function plays(){refreshPlayerMarkets();if(SEASON!==MODEL_SEASON){$("plays").innerHTML=`<div class="card warn">Predictions are disabled for ${SEASON}: the model still uses 2026 team baselines. Schedule, final scores, and season-specific cloud statistics remain available. Update the model inputs before enabling forecasts for this season.</div>`;window._arr=[];return;}
   const arr=(WKS[wk]||[]).filter(g=>!g.sc&&vis(g)&&allPickTypes()).map(g=>{const home=g.p>=.5,t=home?g.h:g.a,o=home?g.a:g.h,p=home?g.p:1-g.p,mg=Math.abs(g.m);
     const edge=g.fp==null?null:(home?g.pm-g.fp:(1-g.pm)-(1-g.fp));
     return{g,t,o,p,home,mg,edge,s:S[t],so:S[o]}}).sort((a,b)=>b.p-a.p);
@@ -1062,11 +1064,11 @@ function plays(){if(SEASON!==MODEL_SEASON){$("plays").innerHTML=`<div class="car
 const ADV_ODDS_KEY='nflp-manual-props-v1';
 let advManual={};try{advManual=JSON.parse(phase3LocalStorage.getItem(ADV_ODDS_KEY)||'{}')||{}}catch(e){}
 const advKey=(g,p)=>[SEASON,wk,g.a,g.h,p.n,p.k].join('|');
-function advLogs(p){return importedPlayer(p).filter(r=>Number.isFinite(Number(r[p.k==='ps'?'passing_yards':p.k==='ru'?'rushing_yards':'touchdowns']))).sort((a,b)=>Number(b.week)-Number(a.week));}
+function advLogs(p){return importedPlayer(p).filter(r=>Number.isFinite(Number(r[p.k==='ps'?'passing_yards':p.k==='ru'?'rushing_yards':p.k==='re'?'receiving_yards':'touchdowns']))).sort((a,b)=>Number(b.week)-Number(a.week));}
 function advAvg(a){return a.length?a.reduce((v,x)=>v+x,0)/a.length:null;}
 function advMetrics(p,g){
  const s=pstat(p,g);if(!s)return null;
- const logs=advLogs(p),field=p.k==='ps'?'passing_yards':p.k==='ru'?'rushing_yards':'touchdowns';
+ const logs=advLogs(p),field=p.k==='ps'?'passing_yards':p.k==='ru'?'rushing_yards':p.k==='re'?'receiving_yards':'touchdowns';
  const vals=logs.map(r=>Number(r[field]));
  const last3=advAvg(vals.slice(0,3)),last5=advAvg(vals.slice(0,5));
  const opponent=p.tm===g.a?g.h:g.a,opp=S[opponent],own=S[p.tm];
@@ -1098,26 +1100,26 @@ function advSaveOdds(key){
  try{phase3LocalStorage.setItem(ADV_ODDS_KEY,JSON.stringify(advManual))}catch(e){$('advStatus').textContent='Browser storage full; sportsbook line could not be saved.';return;}
  renderAdvanced();$('advStatus').textContent='Manual sportsbook line saved on this device. Verify the line is still current before using it.';
 }
-function advAdd(index){
+function advAdd(index,requestedSide){
  const x=window._advPicks?.[index];if(!x)return;
  const game=games.find(g=>String(g.id)===String(x.g.id));
  if(!game||game.sc){aiSelectionFeedback('Selection not added: game unavailable or completed.');return;}
  if(mode==='same'&&focus&&String(focus)!==String(game.id)){aiSelectionFeedback('Selection not added: this same-game slip is for a different matchup. Use a multi-game slip to combine games.');return;}
- const side=advancedPickSide(x);
- const text=x.p.k==='td'?x.p.n+' anytime TD':x.p.n+' Over '+x.line+' '+(x.p.k==='ps'?'passing yards':'rushing yards');
+ const side=x.p.k==='td'?'o':(['o','u'].includes(requestedSide)?requestedSide:advancedPickSide(x));
+ const text=x.p.k==='td'?x.p.n+' anytime TD':x.p.n+' '+(side==='o'?'Over ':'Under ')+x.line+' '+(x.p.k==='ps'?'passing yards':x.p.k==='re'?'receiving yards':'rushing yards');
  if(legs.some(l=>(String(l.gid)===String(game.id)&&l.mkt==='p'+x.p.i)||l.custom&&l.m===game.a+' @ '+game.h&&l.t===text)){
   aiSelectionFeedback('Selection not added: this player market is already in Current parlay.');return;
  }
  if(!makeSelectionRoom())return;
  if(mode==='same'&&!focus)focus=game.id;
- if(x.manual){
-  legs.push({custom:true,gid:game.id,mkt:'p'+x.p.i,side:'o',t:text,m:game.a+' @ '+game.h,o:String(x.odds)});
+ if(x.manual&&side===advancedPickSide(x)){
+  legs.push({custom:true,gid:game.id,mkt:'p'+x.p.i,side,t:text,m:game.a+' @ '+game.h,o:String(x.odds)});
  }else legs.push(freezeNewPlayerLeg(game.id,'p'+x.p.i,side));
  draw();aiSelectionFeedback('Added to Current parlay: '+legs.length+' of '+N+' legs. Other market selections are preserved. Save the parlay when finished.');
 }
 function advCard(x,i){
- const prop=x.p.k==='td'?'anytime TD':x.p.k==='ps'?'passing yards':'rushing yards';
- const selection=x.line==null?x.p.n+' '+prop:x.p.n+' '+(advancedPickSide(x)==='o'?'Over':'Under')+' '+x.line+' '+prop;
+ const prop=x.p.k==='td'?'anytime TD':x.p.k==='ps'?'passing yards':x.p.k==='re'?'receiving yards':'rushing yards';
+ const selection=x.line==null?x.p.n+' '+prop:x.p.n+' '+(advancedPickSide(x)==='o'?'Over':'Under')+' '+x.line+' '+prop+' · AI preferred';
  const confidence=x.logs>=5?'5+ games of player logs':x.logs>=3?'3–4 player game logs':'Limited player game logs';
  const pct=n=>Math.round(n*100)+'%';
  const num=n=>Number.isFinite(n)?n.toFixed(1):'unavailable';
@@ -1134,13 +1136,13 @@ function advCard(x,i){
  <b>Sportsbook comparison</b><div class="mu">${oddsDetail}${x.edge==null?'':` Model probability minus odds-implied break-even probability: ${(x.edge*100).toFixed(1)} percentage points (uncalibrated estimate).`}</div>
  <b>Risk and data quality</b><div class="mu">${esc(risk)} ${esc(confidence)}. Probabilities are unvalidated model estimates, not measured prediction accuracy.</div>
  </div></details>`;
- return `<div class="pl ${x.logs<3?'med':''}" style="padding:10px 0"><b>${esc(selection)}</b> · ${esc(x.g.a)} @ ${esc(x.g.h)}<div class="mu" data-injury-player="${esc(x.p.n)}" data-injury-team="${esc(x.p.tm)}" data-injury-week="${Number(x.g.week||wk)}">${esc(window.phase3InjuryLabel?.(x.p.n,x.p.tm,x.g.week||wk)||'Injury status not loaded')}</div><div class="mu">Selection odds: ${esc(String(advancedPickOdds(x)))} (${x.manual?'manually entered':'model estimate'})</div><div class="mu">Projected ${x.projection.toFixed(1)} ${x.p.k==='td'?'TDs':'yards'} · Model Over probability ${pct(x.prob)} · ${esc(confidence)}</div><div class="mu">Last 3: ${x.last3==null?'unavailable':x.last3.toFixed(1)} · Last 5: ${x.last5==null?'unavailable':x.last5.toFixed(1)}${x.sample&&x.line!=null?' · Over this line in '+x.hits+'/'+x.sample+' logged games':''}</div><div class="mu">Opponent ${esc(x.opponent)} allows an estimated ${S[x.opponent].opp.toFixed(1)} points/game (broad defensive proxy, not positional defense ranking). ${x.manual?esc(x.manual.book)+' manually entered '+esc(String(x.odds))+' odds · '+new Date(x.manual.updated).toLocaleString():'No verified sportsbook line; using model reference threshold.'}</div>${x.edge==null?'':`<div class="mu"><b>Estimated probability edge vs. entered odds: ${(x.edge*100).toFixed(1)} percentage points</b> (model estimate; not guaranteed value).</div>`}${details}<div class="tools"><button type="button" class="btn alt" onclick="advAdd(${i})">+ Add to current parlay</button><button type="button" class="btn alt" onclick="advEdit(${i})">${x.manual?'Edit':'Enter'} sportsbook line</button></div></div>`;
+ return `<div class="pl ${x.logs<3?'med':''}" style="padding:10px 0"><b>${esc(selection)}</b> · ${esc(x.g.a)} @ ${esc(x.g.h)}<div class="mu" data-injury-player="${esc(x.p.n)}" data-injury-team="${esc(x.p.tm)}" data-injury-week="${Number(x.g.week||wk)}">${esc(window.phase3InjuryLabel?.(x.p.n,x.p.tm,x.g.week||wk)||'Injury status not loaded')}</div><div class="mu">Selection odds: ${esc(String(advancedPickOdds(x)))} (${x.manual?'manually entered':'model estimate'})</div><div class="mu">Projected ${x.projection.toFixed(1)} ${x.p.k==='td'?'TDs':'yards'} · Model Over probability ${pct(x.prob)} · ${esc(confidence)}</div><div class="mu">Last 3: ${x.last3==null?'unavailable':x.last3.toFixed(1)} · Last 5: ${x.last5==null?'unavailable':x.last5.toFixed(1)}${x.sample&&x.line!=null?' · Over this line in '+x.hits+'/'+x.sample+' logged games':''}</div><div class="mu">Opponent ${esc(x.opponent)} allows an estimated ${S[x.opponent].opp.toFixed(1)} points/game (broad defensive proxy, not positional defense ranking). ${x.manual?esc(x.manual.book)+' manually entered '+esc(String(x.odds))+' odds · '+new Date(x.manual.updated).toLocaleString():'No verified sportsbook line; using model reference threshold.'}</div>${x.edge==null?'':`<div class="mu"><b>Estimated probability edge vs. entered odds: ${(x.edge*100).toFixed(1)} percentage points</b> (model estimate; not guaranteed value).</div>`}${details}<div class="tools">${x.p.k==='td'?`<button type="button" class="btn alt" onclick="advAdd(${i},'o')">+ Add anytime TD</button>`:`<button type="button" class="btn alt" onclick="advAdd(${i},'o')">+ Add Over (${pct(x.prob)})${advancedPickSide(x)==='o'?' · AI preferred':''}</button><button type="button" class="btn alt" onclick="advAdd(${i},'u')">+ Add Under (${pct(1-x.prob)})${advancedPickSide(x)==='u'?' · AI preferred':''}</button>`}<button type="button" class="btn alt" onclick="advEdit(${i})">${x.manual?'Edit':'Enter'} sportsbook line</button></div></div>`;
 }
 function advEdit(i){
  const x=window._advPicks?.[i];if(!x)return;
  const el=$('advEditor');if(!el)return;
  el.hidden=false;el.dataset.index=i;el.dataset.key=x.key;
- $('advEditTitle').textContent=x.p.n+' — '+(x.p.k==='td'?'Anytime TD':x.p.k==='ps'?'Passing yards':'Rushing yards');
+ $('advEditTitle').textContent=x.p.n+' — '+(x.p.k==='td'?'Anytime TD':x.p.k==='ps'?'Passing yards':x.p.k==='re'?'Receiving yards':'Rushing yards');
  $('advLine').value=x.manual?.line??x.line??'';$('advOdds').value=x.manual?.odds??'';$('advBook').value=x.manual?.book||'DraftKings';
  el.scrollIntoView({behavior:'smooth',block:'nearest'});
 }
@@ -1160,7 +1162,7 @@ function renderAdvanced(){
  }else if(view==='parlays'){
   const unique=[],seen=new Set();for(const x of all){if(seen.has(x.g.id))continue;seen.add(x.g.id);unique.push(x);if(unique.length===5)break;}
   const legSummary=unique.map((x,i)=>{
-   const marketLabel=x.p.k==='td'?'Anytime touchdown':x.p.k==='ps'?'Passing yards':'Rushing yards';
+   const marketLabel=x.p.k==='td'?'Anytime touchdown':x.p.k==='ps'?'Passing yards':x.p.k==='re'?'Receiving yards':'Rushing yards';
    const lineText=x.line==null?'Anytime touchdown':`${advancedPickSide(x)==='o'?'Over':'Under'} ${x.line}`;
    return `<li><b>${esc(x.p.n)}</b> — ${esc(marketLabel)} · ${esc(lineText)}<div class="mu">${esc(x.g.a)} @ ${esc(x.g.h)} · ${x.manual?'Manually entered '+esc(x.manual.book)+' odds '+esc(String(x.odds)):'No verified sportsbook odds'}</div></li>`;
   }).join('');
