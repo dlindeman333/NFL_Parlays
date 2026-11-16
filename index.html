@@ -177,6 +177,7 @@ body.phase3-privacy-locked > :not(.hd):not(#topAccountPanel):not(#phase3KickoffC
 <h2 id="builderSettingsTitle">Week &amp; pick filters</h2>
 <div class="mu" style="margin-bottom:8px">Select the NFL week, game type, kickoff, and pick filters here.</div>
 <div class="card" id="builderControls">
+<div class="row" style="margin-bottom:12px"><button type="button" class="btn alt" id="resetBuilderFilters" onclick="resetBuilderFilters()">Reset filters</button><span class="mu">Kickoff, pick type, odds range, and game search are remembered on this device.</span></div>
   <div class="row" style="margin-bottom:10px"><b>Week</b> <select id="wk"></select><span class="mu" id="wkn"></span><span class="sports-links"><a href="https://sportsbook.draftkings.com/" target="_blank" rel="noopener noreferrer"><img src="https://www.google.com/s2/favicons?domain=draftkings.com&sz=64" alt="" width="24" height="24" loading="lazy"> <span>DraftKings</span></a> <a href="https://sportsbook.fanduel.com/" target="_blank" rel="noopener noreferrer"><img src="https://www.google.com/s2/favicons?domain=fanduel.com&sz=64" alt="" width="24" height="24" loading="lazy"> <span>FanDuel</span></a></span></div><div class="row"><div class="seg" id="mode"><button data-m="multi" class="on">Multi-game</button><button data-m="same">Same game</button></div></div>
   <div class="row" style="margin-top:10px;justify-content:space-between">
     <div class="step"><span>Legs</span><button id="lm">−</button><b id="ln">3</b><button id="lp">+</button></div>
@@ -184,8 +185,8 @@ body.phase3-privacy-locked > :not(.hd):not(#topAccountPanel):not(#phase3KickoffC
   </div>
   <div class="row" style="margin-top:10px"><b>Kickoff</b><span class="mu">Select one or more times; All clears specific choices.</span></div><div class="row" id="tf" style="margin-top:4px"></div>
 <div class="row" style="margin-top:10px"><b>Picks</b><span class="mu">Select one or more types; All includes game markets.</span></div><div class="row" id="pf" style="margin-top:4px"></div>
-<fieldset style="margin:12px 0 0;padding:10px;border:1px solid var(--bd);border-radius:8px"><legend><b>Risk factor — combined parlay odds</b></legend><div class="row"><label for="oddsFrom">From <input id="oddsFrom" type="number" step="1" inputmode="text" placeholder="+500" style="width:100px"></label><label for="oddsThrough">Through <input id="oddsThrough" type="number" step="1" inputmode="text" placeholder="+2000" style="width:100px"></label><button type="button" class="btn alt" onclick="applyOddsRange()">Apply odds range</button><button type="button" class="btn alt" id="quickViewParlays" onclick="quickViewFilteredParlays()">Quick view: X-leg parlays in range</button></div><p class="mu" style="margin:6px 0 0">Rounded American odds for the whole parlay, inclusive. Blank means no limit. Individual picks remain visible. Model prices are estimates.</p><div class="mu" id="oddsFilterStatus" role="status" aria-live="polite"></div><div class="mu" id="combinedOddsStatus" role="status"></div></fieldset>
-<div class="row" style="margin-top:12px"><button type="button" class="btn alt" id="resetBuilderFilters" onclick="resetBuilderFilters()">Reset filters</button><span class="mu">Kickoff, pick type, odds range, and game search are remembered on this device.</span></div>
+<div style="margin-top:12px"><label><input type="checkbox" id="regularOnly" checked onchange="setRegularOnly(this.checked)"> <b>Regular contributors only</b></label><p class="mu">Last 3 completed team games: RB 5+ carries/game; QB 3+ carries/game; rushing lines 5+ yards. Other player picks need meaningful snaps or opportunities. Missing participation data is excluded. Turn off to broaden player choices. Existing selections stay intact.</p></div><fieldset style="margin:12px 0 0;padding:10px;border:1px solid var(--bd);border-radius:8px"><legend><b>Risk factor — combined parlay odds</b></legend><div class="row"><label for="oddsFrom">From <input id="oddsFrom" type="number" step="1" inputmode="text" placeholder="+500" style="width:100px"></label><label for="oddsThrough">Through <input id="oddsThrough" type="number" step="1" inputmode="text" placeholder="+2000" style="width:100px"></label><button type="button" class="btn alt" onclick="applyOddsRange()">Apply odds range</button><button type="button" class="btn alt" id="quickViewParlays" onclick="quickViewFilteredParlays()">Quick view: X-leg parlays in range</button></div><p class="mu" style="margin:6px 0 0">Rounded American odds for the whole parlay, inclusive. Blank means no limit. Individual picks remain visible. Model prices are estimates.</p><div class="mu" id="oddsFilterStatus" role="status" aria-live="polite"></div><div class="mu" id="combinedOddsStatus" role="status"></div></fieldset>
+
 <div class="mu" id="hint" style="margin-top:8px"></div>
 </div>
 
@@ -294,10 +295,11 @@ const BUILDER_FILTERS_KEY="nflp-builder-filters-v1";
 function readBuilderFilters(){
  try{const x=JSON.parse(phase3LocalStorage.getItem(BUILDER_FILTERS_KEY)||"null");
   if(!x||typeof x!=="object"||Array.isArray(x))return {};
-  return {tf:Array.isArray(x.tf)||typeof x.tf==="string"?x.tf:"all",pf:Array.isArray(x.pf)||typeof x.pf==="string"?x.pf:"all",query:typeof x.query==="string"?x.query.slice(0,120):"",oddsFrom:typeof x.oddsFrom==="string"?x.oddsFrom:"",oddsThrough:typeof x.oddsThrough==="string"?x.oddsThrough:""};
+  return {tf:Array.isArray(x.tf)||typeof x.tf==="string"?x.tf:"all",pf:Array.isArray(x.pf)||typeof x.pf==="string"?x.pf:"all",query:typeof x.query==="string"?x.query.slice(0,120):"",regularOnly:x.regularOnly!==false,oddsFrom:typeof x.oddsFrom==="string"?x.oddsFrom:"",oddsThrough:typeof x.oddsThrough==="string"?x.oddsThrough:""};
  }catch(e){return {}}
 }
 const rememberedBuilderFilters=readBuilderFilters();
+let regularOnly=rememberedBuilderFilters.regularOnly!==false;
 let wk=estimatedNFLWeek(),games=WKS[wk]||[],tf=["all"],pf=["all"],openG=null,gameQuery="",liveWeeks=new Set();
 let startupScheduleSelection=true, userSelectedWeek=false;
 const gpOf=t=>T[t][1]+T[t][2],PLY=[];
@@ -314,10 +316,38 @@ function playerForMarket(m){const old=/^p(\d+)$/.exec(String(m));return old?PLY[
 function playerAvailable(p){return !p.dynamic||p.enabled&&p.season===SEASON;}
 // Receiver rushing records remain available for existing selections and grading,
 // but are never offered as new suggested picks.
-function playerSuggested(p){
- const position=String(p.position||'').trim().toUpperCase();
- return playerAvailable(p)&&!(p.k==='ru'&&['WR','TE'].includes(position));
+let contributionCacheKey='',contributionCache=new Map();
+function recentContribution(p){
+ const revision=[playerDataRevision,SEASON,wk].join('|');if(contributionCacheKey!==revision){contributionCacheKey=revision;contributionCache.clear();}
+ const key=p.tm+'|'+playerIdentity(p.n);if(contributionCache.has(key))return contributionCache.get(key);
+ const teamRows=imported.filter(r=>r.team===p.tm&&Number(r.season)===Number(SEASON)&&r.week<wk&&r.game_status==='COMPLETED');
+ const weeks=[...new Set(teamRows.map(r=>r.week))].sort((a,b)=>b-a).slice(0,3);
+ const result={known:weeks.length===3,position:p.position||''};
+ const logs=weeks.map(week=>teamRows.filter(r=>r.week===week&&playerIdentity(r.player)===playerIdentity(p.n)));
+ if(logs.some(rows=>rows.length>1))result.known=false;
+ const latest=logs.flat()[0];if(latest?.position)result.position=latest.position;
+ for(const field of ['rushing_attempts','receptions','snap_share','passing_attempts']){
+  const values=logs.map(rows=>!rows.length?0:rows[0][field]);
+  result[field]=result.known&&values.every(v=>typeof v==='number'&&Number.isFinite(v)&&v>=0)?values.reduce((a,b)=>a+b,0)/3:null;
+ }
+ contributionCache.set(key,result);return result;
 }
+function playerSuggested(p){
+ const stats=recentContribution(p),position=String(stats.position||'').trim().toUpperCase();
+ if(!playerAvailable(p)||p.k==='ru'&&['WR','TE'].includes(position))return false;
+ if(!regularOnly)return true;
+ if(!stats.known)return false;
+ if(p.k==='ru'){
+  const minimum=position==='QB'?3:['RB','HB','TB','FB'].includes(position)?5:null;
+  const source=sourcePlayer(p);
+  return minimum!==null&&stats.rushing_attempts!==null&&stats.rushing_attempts>=minimum&&source&&Math.floor(source.v)+.5>=5;
+ }
+ const snaps=stats.snap_share!==null&&stats.snap_share>=.25;
+ if(p.k==='ps')return position==='QB'&&(snaps||stats.passing_attempts!==null&&stats.passing_attempts>=10);
+ const touches=stats.rushing_attempts!==null&&stats.receptions!==null?stats.rushing_attempts+stats.receptions:null;
+ return snaps||touches!==null&&touches>=5;
+}
+function setRegularOnly(value){regularOnly=!!value;saveBuilderFilters();drawF();draw();plays();renderAdvanced();}
 function refreshPlayerMarkets(){
  const signature=[playerDataRevision,SEASON,wk].join('|');if(signature===playerCatalogSignature)return;
  playerCatalogSignature=signature;for(const p of PLY){if(p.dynamic)p.enabled=false;else p.position=p.k==='ps'?'QB':'';}
@@ -407,7 +437,7 @@ function pickOdds(g,mkt,side){return Number(am(legOf({gid:g.id,mkt,side}).d));}
 function advancedPickSide(x){return x.p.k==='td'||x.manual?'o':x.prob>=.5?'o':'u';}
 function advancedPickOdds(x){return x.manual?Number(x.odds):pickOdds(x.g,'p'+x.p.i,advancedPickSide(x));}
 
-function saveBuilderFilters(){try{phase3LocalStorage.setItem(BUILDER_FILTERS_KEY,JSON.stringify({tf,pf,query:gameQuery,oddsFrom,oddsThrough,oddsRangeScope:"combined-v1"}))}catch(e){}}
+function saveBuilderFilters(){try{phase3LocalStorage.setItem(BUILDER_FILTERS_KEY,JSON.stringify({tf,pf,regularOnly,query:gameQuery,oddsFrom,oddsThrough,oddsRangeScope:"combined-v1"}))}catch(e){}}
 function setBuilderFilter(type,value){
  const options=type==='tf'?TF:type==='pf'?PF:null;if(!options||!options.some(x=>x[0]===value))return;
  let current=normalizeFilter(type==='tf'?tf:pf,options);
@@ -415,10 +445,11 @@ function setBuilderFilter(type,value){
  if(type==='tf')tf=current;else pf=current;
  saveBuilderFilters();drawF();draw();plays();renderAdvanced();
 }
-function resetBuilderFilters(){tf=['all'];pf=['all'];gameQuery="";oddsFrom="";oddsThrough="";$("oddsFrom").value="";$("oddsThrough").value="";$("oddsFilterStatus").textContent="Combined odds target: unrestricted.";const search=$("gameSearch");if(search)search.value="";saveBuilderFilters();drawF();draw();plays();renderAdvanced()}
-function drawF(){for(const [id,options,value] of [['tf',TF,tf],['pf',PF,pf]])$(id).innerHTML=options.map(([k,l])=>{const on=normalizeFilter(value,options).includes(k);return `<button type="button" class="fp ${on?'on':''}" aria-pressed="${on}" onclick="setBuilderFilter('${id}','${k}')">${l}</button>`}).join('');}
+function resetBuilderFilters(){regularOnly=true;tf=['all'];pf=['all'];gameQuery="";oddsFrom="";oddsThrough="";$("oddsFrom").value="";$("oddsThrough").value="";$("oddsFilterStatus").textContent="Combined odds target: unrestricted.";const search=$("gameSearch");if(search)search.value="";saveBuilderFilters();drawF();draw();plays();renderAdvanced()}
+function drawF(){if($('regularOnly'))$('regularOnly').checked=regularOnly;for(const [id,options,value] of [['tf',TF,tf],['pf',PF,pf]])$(id).innerHTML=options.map(([k,l])=>{const on=normalizeFilter(value,options).includes(k);return `<button type="button" class="fp ${on?'on':''}" aria-pressed="${on}" onclick="setBuilderFilter('${id}','${k}')">${l}</button>`}).join('');}
 tf=normalizeFilter(rememberedBuilderFilters.tf,TF);
 pf=normalizeFilter(rememberedBuilderFilters.pf,PF);
+document.getElementById('regularOnly').checked=regularOnly;
 gameQuery=rememberedBuilderFilters.query||"";
 if(!validateOddsRange(rememberedBuilderFilters.oddsFrom||'',rememberedBuilderFilters.oddsThrough||'')){oddsFrom=rememberedBuilderFilters.oddsFrom||'';oddsThrough=rememberedBuilderFilters.oddsThrough||'';}
 document.getElementById('oddsFrom').value=oddsFrom;document.getElementById('oddsThrough').value=oddsThrough;
@@ -452,6 +483,7 @@ function gamePickCandidates(g,includeManual=false){
  const add=(mkt,side,family,player=null,manual=null)=>{
   const value=legOf({gid:g.id,mkt,side});let text=value.txt,probability=value.p,odds=Number(am(value.d));
   if(manual){
+   if(regularOnly&&player.k==='ru'&&Number(manual.line)<5)return;
    odds=Number(manual.odds);const metrics=advMetrics(player,g);probability=metrics?.prob;
    text=player.k==='td'?player.n+' anytime TD':player.n+' Over '+Number(manual.line)+' '+(player.k==='ps'?'pass yds':'rush yds');
   }
@@ -495,7 +527,7 @@ function moreGamePicks(g,b){
  return '<div class="tools" style="margin-top:10px">'+button+'</div><section id="more-picks-'+g.id+'" class="more-game-picks" aria-label="More picks for '+g.a+' at '+g.h+'" style="margin-top:10px;padding-top:8px;border-top:1px solid var(--bd)"><p class="mu">25 selections per page. Position order: QB, RB, WR, TE, FB, K, Other, Team; odds low to high within each position. Model estimates; verify sportsbook prices.</p>'+nav(true)+(body||'<p class="mu">No additional picks match the loaded data and odds range.</p>')+(visible.length?nav(false):'')+'<button type="button" class="btn alt" onclick="toggleGamePicks(\''+g.id+'\')">Show fewer</button></section>';
 }
 let filteredParlayPlans={};
-function filteredParlayContext(){return JSON.stringify([SEASON,wk,mode,N,focus,tf,pf,gameQuery,oddsFrom,oddsThrough]);}
+function filteredParlayContext(){return JSON.stringify([SEASON,wk,mode,N,focus,tf,pf,gameQuery,oddsFrom,oddsThrough,regularOnly,playerDataRevision]);}
 function filteredParlayCandidates(){
  refreshPlayerMarkets();if(SEASON!==MODEL_SEASON||mode==='same'&&!focus)return [];
  const now=Date.now();return games.filter(g=>!g.sc&&vis(g)&&(mode!=='same'||g.id===focus)&&Number.isFinite(Date.parse(g.date||''))&&Date.parse(g.date)>now)
@@ -573,11 +605,24 @@ function searchCombinedParlays(pool){
  }
  return answer;
 }
+function filteredParlayEmptyReason(){
+ if(mode==='same'){
+  if(!focus)return 'No matchup selected. Open Games and select Build here, then return to Quick view.';
+  const g=games.find(g=>String(g.id)===String(focus));
+  if(!g)return 'The selected matchup is no longer in this week. Select Build here again on the intended game.';
+  if(g.sc)return 'The selected game is marked final. Select a future game.';
+  if(!vis(g))return 'The selected matchup is excluded by the kickoff or game-search filters. Adjust those filters.';
+  const start=Date.parse(g.date||'');
+  if(!Number.isFinite(start))return 'The selected game has no valid kickoff timestamp. Refresh NFL schedule, then select Build here again.';
+  if(start<=Date.now())return 'The selected game kickoff is '+new Date(start).toLocaleString()+', which is not in the future according to this device. Refresh NFL schedule and check your device clock. Started games are excluded.';
+ }
+ return 'No qualifying picks after kickoff, pick-type and participation filters. '+(regularOnly?'Regular contributors only requires 3 completed team games and participation data; turn it off to broaden player choices. ':'')+'Refresh NFL schedule or broaden filters.';
+}
 function renderFilteredParlays(){
  const pool=filteredParlayCandidates(),context=filteredParlayContext();filteredParlayPlans={};
  const bounds=(oddsFrom||'no lower bound')+' through '+(oddsThrough||'no upper bound');
  const intro='<section class="card" id="filteredParlaySuggestions"><h3>Best '+N+'-leg parlay within combined odds</h3><p><b>Whole-parlay target: '+esc(bounds)+'</b></p><p class="mu">'+(mode==='same'?'Same-game: select a matchup with Build here; legs can be correlated.':'Multi-game: one selection per game.')+' The product of all '+N+' leg prices must fit the target. Individual picks are not filtered by this range. Only known future kickoffs qualify.</p>';
- if(!pool.length)return intro+'<p>No qualifying picks. Refresh the schedule or broaden pick/kickoff filters'+(mode==='same'?' and select a matchup':'')+'.</p></section>';
+ if(!pool.length)return intro+'<p role="status">'+esc(filteredParlayEmptyReason())+'</p></section>';
  const result=searchCombinedParlays(pool);
  if(!result.best)return intro+'<p>No complete '+N+'-leg match found within the combined-odds range'+(result.truncated?' in the bounded search':'')+'. '+(result.groupCount<N?'Too few compatible games or markets. ':'')+'Adjust the combined range or Legs.</p></section>';
  const titles={best:'Best model-ranked match found',lower:'Lower combined odds',higher:'Higher combined odds'};
@@ -951,7 +996,7 @@ function renderAdvanced(){
  const root=$('advResults');if(!root)return;
  if(SEASON!==MODEL_SEASON){root.innerHTML='<div class="warn">Matchup recommendations require updated season-specific model baselines.</div>';return;}
  const market=$('advMarket').value,view=$('advView').value;
- const all=(WKS[wk]||[]).filter(g=>!g.sc&&vis(g)).flatMap(g=>PLY.filter(p=>playerSuggested(p)&&filterHas(pf,p.k)&&(p.tm===g.a||p.tm===g.h)&&(market==='all'||p.k===market)).map(p=>advMetrics(p,g)).filter(Boolean));
+ const all=(WKS[wk]||[]).filter(g=>!g.sc&&vis(g)).flatMap(g=>PLY.filter(p=>playerSuggested(p)&&filterHas(pf,p.k)&&(p.tm===g.a||p.tm===g.h)&&(market==='all'||p.k===market)).map(p=>advMetrics(p,g)).filter(Boolean).filter(x=>!regularOnly||x.p.k!=='ru'||Number(x.line)>=5));
  all.sort((a,b)=>b.score-a.score);window._advPicks=all;
  const gamesCount=new Set(all.map(x=>x.g.id)).size;
  $('advStatus').textContent=`${all.length} model candidates across ${gamesCount} upcoming games. Estimates use 2026 baseline data and any available imported player logs; not live sportsbook lines.`;
@@ -1369,13 +1414,13 @@ async function refreshNFL(){const btn=$("refresh"),state=$("dataState"),selected
 }
 $("refresh").addEventListener("click",refreshNFL);
 $("gameSearch").value=gameQuery;
-$("gameSearch").addEventListener("input",e=>{gameQuery=e.target.value.trim().toLowerCase().slice(0,120);saveBuilderFilters();draw()});
+$("gameSearch").addEventListener("input",e=>{gameQuery=e.target.value.trim().toLowerCase().slice(0,120);saveBuilderFilters();draw();plays();renderAdvanced()});
 const THEME_KEY="nflp-theme-v2";
 try{const th=phase3LocalStorage.getItem(THEME_KEY);if(th)document.documentElement.dataset.theme=th}catch(e){}
 $("theme").addEventListener("click",()=>{const next=document.documentElement.dataset.theme==="dark"?"light":"dark";document.documentElement.dataset.theme=next;try{phase3LocalStorage.setItem(THEME_KEY,next)}catch(e){}});
 // CSV import: RFC4180-style quoted cells, CRLF, escaped quotes.
 function parseCSV(text){text=String(text).replace(/^\uFEFF/,'');const first=text.split(/\r?\n/,1)[0]||'';const delimiter=(first.match(/\t/g)||[]).length>(first.match(/,/g)||[]).length?'\t':',';const out=[];let row=[],field='',quoted=false;for(let i=0;i<text.length;i++){const c=text[i];if(quoted){if(c==='"'&&text[i+1]==='"'){field+='"';i++}else if(c==='"')quoted=false;else field+=c}else if(c==='"')quoted=true;else if(c===delimiter){row.push(field);field=''}else if(c==='\n'||c==='\r'){if(c==='\r'&&text[i+1]==='\n')i++;row.push(field);if(row.some(x=>x.trim()))out.push(row);row=[];field=''}else field+=c}if(quoted)throw Error('Unclosed quoted CSV field');row.push(field);if(row.some(x=>x.trim()))out.push(row);return out}
-const aliases={player:['player','player_name','name','player_display_name','player_display','player_full_name'],team:['team','team_abbr','recent_team','team_abbreviation','team_code'],week:['week','week_number','game_week'],passing_yards:['passing_yards','pass_yards','pass_yds'],rushing_yards:['rushing_yards','rush_yards','rush_yds'],rushing_attempts:['rushing_attempts','carries','rush_attempts','rushing_att'],receiving_yards:['receiving_yards','rec_yards','receiving_yds'],receptions:['receptions','rec'],targets:['targets','tgt'],red_zone_targets:['red_zone_targets','rz_targets','rz_targets_20','redzone_targets'],red_zone_rush_attempts:['red_zone_rush_attempts','rz_rush_attempts','rz_rush_20','red_zone_carries'],snaps:['snaps','offense_snaps','offensive_snaps'],team_snaps:['team_snaps','team_offensive_snaps'],snap_share:['snap_share','snap_pct','offense_pct'],touchdowns:['touchdowns','total_tds','tds']};
+const aliases={player:['player','player_name','name','player_display_name','player_display','player_full_name'],team:['team','team_abbr','recent_team','team_abbreviation','team_code'],week:['week','week_number','game_week'],passing_attempts:['passing_attempts','pass_attempts','pass_att','attempts'],passing_yards:['passing_yards','pass_yards','pass_yds'],rushing_yards:['rushing_yards','rush_yards','rush_yds'],rushing_attempts:['rushing_attempts','carries','rush_attempts','rushing_att'],receiving_yards:['receiving_yards','rec_yards','receiving_yds'],receptions:['receptions','rec'],targets:['targets','tgt'],red_zone_targets:['red_zone_targets','rz_targets','rz_targets_20','redzone_targets'],red_zone_rush_attempts:['red_zone_rush_attempts','rz_rush_attempts','rz_rush_20','red_zone_carries'],snaps:['snaps','offense_snaps','offensive_snaps'],team_snaps:['team_snaps','team_offensive_snaps'],snap_share:['snap_share','snap_pct','offense_pct'],touchdowns:['touchdowns','total_tds','tds']};
 function loadCSV(text,{persist=true}={}){
  const rows=parseCSV(text);if(rows.length<2)throw Error('CSV needs headers and at least one data row');
  const heads=rows[0].map(h=>h.trim().toLowerCase().replace(/[^a-z0-9]+/g,'_').replace(/^_|_$/g,''));
