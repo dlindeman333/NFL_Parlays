@@ -3208,8 +3208,10 @@ recovery.onclick=async()=>{recovery.disabled=true;recoveryStatus.textContent='Ve
  }
  const labels={phase3KickoffCountdown:'Next kickoff',uiPeriodSection:'Season & schedule',topAccountPanel:'My Account',uiActiveParlay:'Current parlay',draftManagement:'Draft slips',uiParlaySummary:'My parlays',savedParlaySlips:'Saved parlays',uiBuilderSection:'Filters',uiInjurySection:'Injuries',uiGamesSection:'Games',uiPlaysSection:'Potential plays',uiAISection:'AI Matchups',phase3AdvancedMethodology:'Analysis details',uiLocalPredictionTracking:'Local prediction tracking',cloudUserPredictionHistory:'My cloud history',cloudOfficialGrades:'Cloud grading',uiRetrospective:'Previous week & season',archivedPerformance:'Archived AI accuracy'};
  const sections=[...document.querySelectorAll('details.ui-section,#phase3AdvancedMethodology,#cloudUserPredictionHistory')].filter(el=>el.id&&labels[el.id]&&!el.closest('dialog'));
+ const cutoff=sections.findIndex(el=>el.id==='phase3AdvancedMethodology');
+ const shortcuts=sections.filter((el,index)=>!['phase3KickoffCountdown','uiPeriodSection'].includes(el.id)&&(cutoff<0||index<=cutoff));
  nav.setAttribute('aria-label','Skip to section');nav.replaceChildren();
- for(const section of sections){const a=document.createElement('a');a.href='#'+section.id;a.textContent=labels[section.id];a.addEventListener('click',event=>{
+ for(const section of shortcuts){const a=document.createElement('a');a.href='#'+section.id;a.textContent=labels[section.id];a.addEventListener('click',event=>{
   event.preventDefault();const performance=document.getElementById('advPerformancePanel'),recommendations=document.getElementById('advRecommendationPanel');
   if(performance?.contains(section))document.getElementById('advTabPerformance')?.click();
   if(recommendations?.contains(section))document.getElementById('advTabRecommendations')?.click();
