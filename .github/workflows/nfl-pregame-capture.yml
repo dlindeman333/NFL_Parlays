@@ -20,15 +20,15 @@ jobs:
           python-version: '3.11'
           cache: 'pip'
           cache-dependency-path: requirements-automation.txt
-      - name: Check for games before installing browser dependencies
+      - name: Install Python dependencies for kickoff-window check
+        run: python -m pip install -r requirements-automation.txt
+      - name: Check for games before installing Chromium
         id: window
         env:
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
           SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
           NFL_SEASON: ${{ vars.NFL_SEASON || '2026' }}
         run: python snapshot_predictions.py --check-window
-      - if: steps.window.outputs.eligible == 'true'
-        run: pip install -r requirements-automation.txt
       - if: steps.window.outputs.eligible == 'true'
         run: python -m playwright install --with-deps chromium
       - name: Verify production boundary and schema before writes
