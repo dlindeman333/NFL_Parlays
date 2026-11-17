@@ -89,6 +89,7 @@ button{cursor:pointer;touch-action:manipulation}button:focus-visible,select:focu
 .week-group-heading{font-size:1.4rem;font-weight:800;letter-spacing:.02em;margin:20px 0 12px;padding:10px 14px;border-left:5px solid #3b82f6;background:rgba(59,130,246,.09);border-radius:6px}
 .setup-modal{border:1.5px solid var(--bd);border-radius:14px;background:var(--card);color:var(--tx);width:min(760px,96vw);max-height:88vh;padding:0;box-shadow:0 20px 70px #0006}.setup-modal::backdrop{background:#0009}.setup-content{padding:18px;max-height:85vh;overflow:auto}.setup-head{display:flex;align-items:center;justify-content:space-between;gap:12px}.setup-modal input[type=email],.setup-modal input[type=password]{padding:9px;border:1.5px solid var(--bd);border-radius:8px;background:var(--card);color:var(--tx);max-width:100%}.setup-modal .tools{margin:12px 0}.setup-modal #sbAuthForm label{display:flex;flex-direction:column;gap:4px;font-size:12px;font-weight:650;min-width:min(100%,180px)}.setup-modal #sbAuthForm input{width:100%}.setup-modal section{border-top:1px solid var(--bd);padding-top:12px;margin-top:15px}.setup-modal h2{margin-top:4px}.setup-modal .mu{overflow-wrap:anywhere}
 #cloudParlayPicker::backdrop{background:rgba(0,0,0,.62)}
+.filter-group-title{font-size:14px;margin:17px 0 9px;padding:8px 10px;border-left:4px solid var(--ac);background:var(--sel);border-radius:5px}.team-pick-setting{margin:12px 0;padding:10px;border:1px solid var(--bd);border-radius:9px}.team-pick-setting p{margin:5px 0 0}
 </style>
 <style>
 .pred-dashboard{display:grid;gap:16px;margin:14px 0}
@@ -114,7 +115,7 @@ button{cursor:pointer;touch-action:manipulation}button:focus-visible,select:focu
 @media(max-width:700px){#phase3MobileSlipToggle{display:block;position:fixed;bottom:calc(12px + env(safe-area-inset-bottom));right:12px;z-index:30;box-shadow:0 5px 18px #0005}body{padding-bottom:75px}}
 </style>
 <style id="phase3PrivacyShellStyles">
-body.phase3-privacy-locked > :not(.hd):not(#topAccountPanel):not(#phase3KickoffCountdown):not(.toolbar):not(.refresh-status-line):not(.navlinks):not(#setupDialog):not(#advancedSetupDialog):not(script){display:none!important}
+body.phase3-privacy-locked > :not(.hd):not(#topAccountPanel):not(.toolbar):not(.refresh-status-line):not(.navlinks):not(#setupDialog):not(#advancedSetupDialog):not(script){display:none!important}
 #phase3PrivacyNotice{margin-top:8px;padding:10px;border:1px solid var(--bd);border-radius:8px;font-size:13px}
 </style>
 <style id="phase3KickoffCountdownStyles">
@@ -147,9 +148,22 @@ body.phase3-privacy-locked > :not(.hd):not(#topAccountPanel):not(#phase3KickoffC
 @media(min-width:701px){#floatingBackToTop{left:20px;bottom:20px}}
 @media(prefers-reduced-motion:reduce){html{scroll-behavior:auto}}
 </style>
+
+<style id="embeddedCountdownHeaderStyles">
+/* Countdown now lives inside the title block rather than a second card. */
+.hd #phase3KickoffCountdown{margin:8px 0 0;padding:8px 0 0;border:0;border-top:1px solid var(--bd);border-radius:0;background:transparent;text-align:left}
+.hd #phase3KickoffCountdown .kickoff-heading{justify-content:flex-start;gap:10px;flex-wrap:wrap}
+.hd #phase3KickoffCountdown .kickoff-title{font-size:11px}
+.hd #phase3KickoffCountdown .kickoff-week{font-size:12px;padding:3px 7px}
+.hd #phase3KickoffCountdown .kickoff-clock{justify-content:flex-start;gap:5px;margin:6px 0 3px}
+.hd #phase3KickoffCountdown .kickoff-unit{min-width:0;flex:0 1 70px;padding:4px 3px;text-align:center}
+.hd #phase3KickoffCountdown .kickoff-value{font-size:clamp(17px,4vw,22px)}
+.hd #phase3KickoffCountdown .kickoff-label{font-size:10px}
+.hd #phase3KickoffCountdown .kickoff-note{font-size:11px}
+@media(max-width:560px){.hd .phase3-brand-title{gap:8px}.hd .phase3-brand-title h1{font-size:18px}.hd #phase3KickoffCountdown{margin-top:6px;padding-top:6px}}
+</style>
 </head><body class="phase3-privacy-locked">
-<div class="hd"><div class="row" style="justify-content:space-between"><div class="phase3-brand-title"><img src="./nfl-parlay-icon-512.png" width="50" height="50" alt="NFL Parlay Builder logo"><h1>NFL Parlay Builder</h1></div><button id="theme" class="btn alt" type="button" aria-label="Toggle dark mode">◐ Theme</button></div><div class="mu" id="sub"></div></div>
-<section id="phase3KickoffCountdown" aria-label="Countdown to next NFL kickoff" aria-live="off">
+<div class="hd"><div class="row" style="justify-content:space-between"><div class="phase3-brand-title"><img src="./nfl-parlay-icon-512.png" width="50" height="50" alt="NFL Parlay Builder logo"><div><h1>NFL Parlay Builder</h1><span id="headerWeekLabel" class="mu" style="font-size:13px;font-weight:750">NFL week loading…</span></div></div><button id="theme" class="btn alt" type="button" aria-label="Toggle dark mode">◐ Theme</button></div><div class="mu" id="sub"></div><section id="phase3KickoffCountdown" aria-label="Countdown to next NFL kickoff" aria-live="off">
  <div class="kickoff-heading"><div class="kickoff-title">🏈 NEXT NFL KICKOFF</div><strong id="kickoffWeek" class="kickoff-week" aria-label="NFL week">WEEK --</strong></div>
  <div class="kickoff-clock" role="timer" aria-label="Time remaining to next kickoff">
   <div class="kickoff-unit"><span class="kickoff-value" id="kickoffDays">--</span><span class="kickoff-label">Days</span></div>
@@ -158,9 +172,10 @@ body.phase3-privacy-locked > :not(.hd):not(#topAccountPanel):not(#phase3KickoffC
   <div class="kickoff-unit"><span class="kickoff-value" id="kickoffSeconds">--</span><span class="kickoff-label">Seconds</span></div>
  </div>
  <div class="kickoff-note" id="kickoffStatus" role="status" aria-live="polite">Checking NFL schedule…</div>
-</section>
+</section></div>
+
 <div class="toolbar"><label for="seasonSelect" style="font-weight:700">Season</label><select id="seasonSelect" aria-label="NFL season"></select><label for="wkTop" style="font-weight:700">Week</label><select id="wkTop" aria-label="NFL week (top selector)"></select><button id="refresh" class="btn" type="button">↻ Refresh NFL schedule</button><button id="boxRefresh" class="btn alt" type="button" hidden>↻ Load completed team box scores</button></div><div class="refresh-status-line"><span class="data-state" id="dataState" role="status" aria-live="polite">Offline snapshot • 2026 weeks 9–10</span></div>
-<section id="topAccountPanel" class="card" aria-label="NFL Parlay Builder account" style="margin:10px 0 12px;border:1px solid var(--bd)"><div class="tools" style="justify-content:space-between;align-items:center;margin:0 0 6px"><strong>🔐 NFL Parlay Builder · Your Account</strong><a id="userGuideHelpLink" class="btn alt" href="./NFL_Parlay_Builder_User_Guide.pdf" target="_blank" rel="noopener noreferrer" aria-label="Open NFL Parlay Builder user guide PDF in a new tab" style="text-decoration:none;font-size:14px">Help / User Guide</a><span class="mu" style="font-weight:700;color:#047857" id="topEnvironment">PRODUCTION · PHASE 3</span></div><div id="accountIdentityCard" role="status" aria-live="polite" style="border:1px solid var(--bd);border-radius:10px;padding:12px;margin:8px 0;display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap"><div><div class="mu">Signed in as</div><strong id="topAccountIndicator">Checking sign-in…</strong></div><span id="topConnectionBadge" class="mu">Not connected</span></div><div id="topAuthMount"></div></section>
+<section id="topAccountPanel" class="card" aria-label="NFL Parlay Builder account" style="margin:10px 0 12px;border:1px solid var(--bd)"><div class="tools" style="justify-content:space-between;align-items:center;margin:0 0 6px"><strong>🔐 NFL Parlay Builder · Your Account</strong><a id="quickStartHelpLink" class="btn alt" href="./NFL_Parlay_Builder_Quick_Start_Guide.pdf" target="_blank" rel="noopener noreferrer" aria-label="Open NFL Parlay Builder quick-start guide PDF in a new tab" style="text-decoration:none;font-size:14px">Quick-start Guide</a><a id="userGuideHelpLink" class="btn alt" href="./NFL_Parlay_Builder_User_Guide.pdf" target="_blank" rel="noopener noreferrer" aria-label="Open NFL Parlay Builder user guide PDF in a new tab" style="text-decoration:none;font-size:14px">Help / User Guide</a><span class="mu" style="font-weight:700;color:#047857" id="topEnvironment">PRODUCTION · PHASE 3</span></div><div id="accountIdentityCard" role="status" aria-live="polite" style="border:1px solid var(--bd);border-radius:10px;padding:12px;margin:8px 0;display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap"><div><div class="mu">Signed in as</div><strong id="topAccountIndicator">Checking sign-in…</strong></div><span id="topConnectionBadge" class="mu">Not connected</span></div><div id="topAuthMount"></div></section>
 
 
 <div class="navlinks"><a href="#myParlays">My parlays</a><a href="#uiBuilderSection">Filters</a><a href="#gameSection">Games</a><a href="#recommendations">Potential plays</a><a href="#advancedPredictions">AI Matchups</a></div>
@@ -169,7 +184,7 @@ body.phase3-privacy-locked > :not(.hd):not(#topAccountPanel):not(#phase3KickoffC
 <h2 style="margin:0 0 8px">Cloud sync · PC &amp; iPhone</h2>
 <div class="mu">Supabase connection is already configured. Sign in with your own account; use the same account on your PC and iPhone. Your existing browser data stays local until you sign in. Requires HTTPS (GitHub Pages).</div>
 <div class="mu" style="margin-top:9px">Cloud connection is preconfigured. Sign in or create your own account below.</div>
-<form id="sbAuthForm" class="tools" autocomplete="on" method="post" action="#" aria-label="Cloud account sign in"><label for="sbEmail">Email <input id="sbEmail" name="username" type="email" inputmode="email" autocomplete="username" autocapitalize="none" autocorrect="off" spellcheck="false" placeholder="Email" required></label><label for="sbPassword">Password <input id="sbPassword" name="password" type="password" autocomplete="current-password" placeholder="Password (8+ characters)" required></label><button class="btn" id="sbSignIn" type="submit">Sign in</button><button class="btn alt" id="sbSignUp" type="button">Create account</button><button class="btn alt" id="sbSignOut" type="button">Sign out</button></form>
+<form id="sbAuthForm" class="tools" autocomplete="on" method="post" action="#" aria-label="Cloud account sign in"><label for="sbEmail">Email <input id="sbEmail" name="username" type="email" inputmode="email" autocomplete="username" autocapitalize="none" autocorrect="off" spellcheck="false" placeholder="Email" required></label><label for="sbPassword">Password <input id="sbPassword" name="password" type="password" autocomplete="current-password" placeholder="Password (8+ characters)" required></label><button class="btn" id="sbSignIn" type="submit">Sign in</button><button class="btn alt" id="sbSignUp" type="button">Create account</button><button class="btn alt" id="sbSignOut" type="button">Sign out</button></form><div id="sbAuthFeedback" role="status" aria-live="polite" style="margin:8px 0;font-size:14px;line-height:1.45;overflow-wrap:anywhere" hidden></div>
 <div class="tools"><button class="btn alt" id="sbSyncNow">Sync now</button><button class="btn alt" id="sbBackup">Download local data backup</button><span class="mu" id="sbStatus" role="status" aria-live="polite">Cloud sync not configured; local data unchanged.</span></div>
 </section>
 <details id="phase3DataHealth" class="card" style="margin:12px 0" aria-label="Data health and synchronization status"><summary style="cursor:pointer;font-weight:700">Data health &amp; synchronization status</summary><p class="mu">Device-level diagnostics only. These indicators do not certify that NFL feeds are current or that cloud writes are enabled.</p><div id="phase3HealthResults" role="status" aria-live="polite">Checking local connection…</div><button type="button" class="btn alt" id="phase3HealthRefresh" style="margin-top:8px">Refresh status</button></details>
@@ -190,14 +205,14 @@ body.phase3-privacy-locked > :not(.hd):not(#topAccountPanel):not(#phase3KickoffC
 <div class="mu" style="margin-bottom:8px">Select the NFL week, game type, kickoff, and pick filters here.</div>
 <div class="card" id="builderControls">
 <div class="row" style="margin-bottom:12px"><button type="button" class="btn alt" id="resetBuilderFilters" onclick="resetBuilderFilters()">Reset filters</button><span class="mu">Kickoff, pick type, odds range, and game search are remembered on this device.</span></div>
-  <div class="row" style="margin-bottom:10px"><b>Week</b> <select id="wk"></select><span class="mu" id="wkn"></span><span class="sports-links"><a href="https://sportsbook.draftkings.com/" target="_blank" rel="noopener noreferrer"><img src="https://www.google.com/s2/favicons?domain=draftkings.com&sz=64" alt="" width="24" height="24" loading="lazy"> <span>DraftKings</span></a> <a href="https://sportsbook.fanduel.com/" target="_blank" rel="noopener noreferrer"><img src="https://www.google.com/s2/favicons?domain=fanduel.com&sz=64" alt="" width="24" height="24" loading="lazy"> <span>FanDuel</span></a></span></div><div class="row"><div class="seg" id="mode"><button data-m="multi" class="on">Multi-game</button><button data-m="same">Same game</button></div></div>
-  <div class="row" style="margin-top:10px;justify-content:space-between">
+  <h3 class="filter-group-title">Schedule &amp; game selection</h3><div class="row" style="margin-bottom:10px"><b>Week</b> <select id="wk"></select><span class="mu" id="wkn"></span><span class="sports-links"><a href="https://sportsbook.draftkings.com/" target="_blank" rel="noopener noreferrer"><img src="https://www.google.com/s2/favicons?domain=draftkings.com&sz=64" alt="" width="24" height="24" loading="lazy"> <span>DraftKings</span></a> <a href="https://sportsbook.fanduel.com/" target="_blank" rel="noopener noreferrer"><img src="https://www.google.com/s2/favicons?domain=fanduel.com&sz=64" alt="" width="24" height="24" loading="lazy"> <span>FanDuel</span></a></span></div><div class="row"><div class="seg" id="mode"><button data-m="multi" class="on">Multi-game</button><button data-m="same">Same game</button></div></div>
+  <h3 class="filter-group-title">Parlay setup</h3><div class="row" style="margin-top:10px;justify-content:space-between">
     <div class="step"><span>Legs</span><button id="lm">−</button><b id="ln">3</b><button id="lp">+</button></div>
     <div class="row">Stake $<input type="number" id="stake" value="10" min="1"></div>
   </div>
-  <div class="row" style="margin-top:10px"><b>Kickoff</b><span class="mu">Select one or more times; All clears specific choices.</span></div><div class="row" id="tf" style="margin-top:4px"></div>
-<div class="row" style="margin-top:10px"><b>Picks</b><span class="mu">Select one or more types; All includes game markets.</span></div><div class="row" id="pf" style="margin-top:4px"></div>
-<div style="margin-top:12px"><label><input type="checkbox" id="regularOnly" checked onchange="setRegularOnly(this.checked)"> <b>Regular contributors only</b></label><p class="mu">Last 3 completed team games: RB 5+ carries/game; QB 3+ carries/game; rushing lines 5+ yards. Other player picks need meaningful snaps or opportunities. Missing participation data is excluded. Turn off to broaden player choices. Existing selections stay intact.</p></div><fieldset style="margin:12px 0 0;padding:10px;border:1px solid var(--bd);border-radius:8px"><legend><b>Risk factor — combined parlay odds</b></legend><div class="row"><label for="oddsFrom">From <input id="oddsFrom" type="number" step="1" inputmode="text" placeholder="+500" style="width:100px"></label><label for="oddsThrough">Through <input id="oddsThrough" type="number" step="1" inputmode="text" placeholder="+2000" style="width:100px"></label><button type="button" class="btn alt" onclick="applyOddsRange()">Apply odds range</button><button type="button" class="btn alt" id="quickViewParlays" onclick="quickViewFilteredParlays()">Quick view: X-leg parlays in range</button></div><p class="mu" style="margin:6px 0 0">Rounded American odds for the whole parlay, inclusive. Blank means no limit. Individual picks remain visible. Model prices are estimates.</p><div class="mu" id="oddsFilterStatus" role="status" aria-live="polite"></div><div class="mu" id="combinedOddsStatus" role="status"></div></fieldset>
+  <h3 class="filter-group-title">Kickoff &amp; bet markets</h3><div class="row" style="margin-top:10px"><b>Kickoff</b><span class="mu">Select one or more times; All clears specific choices.</span></div><div class="row" id="tf" style="margin-top:4px"></div>
+<div class="row" style="margin-top:10px"><b>Picks</b><span class="mu">Select one or more types; All includes game markets.</span></div><div class="row" id="pf" style="margin-top:4px"></div><p class="mu">Receiving yards and receptions require completed-game player statistics. No projections are shown when supporting data is unavailable.</p>
+<div class="team-pick-setting"><label><input type="checkbox" id="supportedTeamOnly" checked onchange="setSupportedTeamOnly(this.checked)"> <b>Exclude unsupported team picks</b></label><p class="mu">On by default: show team moneyline, spread, game totals and team points totals only. Other team specialty picks are hidden from recommendations; saved picks are preserved.</p></div><h3 class="filter-group-title">Player eligibility &amp; risk</h3><div style="margin-top:12px"><label><input type="checkbox" id="regularOnly" checked onchange="setRegularOnly(this.checked)"> <b>Regular contributors only</b></label><p class="mu">Last 3 completed team games: RB 5+ carries/game; QB 3+ carries/game; rushing lines 5+ yards. Other player picks need meaningful snaps or opportunities. Missing participation data is excluded. Turn off to broaden player choices. Existing selections stay intact.</p></div><fieldset style="margin:12px 0 0;padding:10px;border:1px solid var(--bd);border-radius:8px"><legend><b>Risk factor — combined parlay odds</b></legend><div class="row"><label for="oddsFrom">From <input id="oddsFrom" type="number" step="1" inputmode="text" placeholder="+500" style="width:100px"></label><label for="oddsThrough">Through <input id="oddsThrough" type="number" step="1" inputmode="text" placeholder="+2000" style="width:100px"></label><button type="button" class="btn alt" onclick="applyOddsRange()">Apply odds range</button><button type="button" class="btn alt" id="quickViewParlays" onclick="quickViewFilteredParlays()">Quick view: X-leg parlays in range</button></div><p class="mu" style="margin:6px 0 0">Rounded American odds for the whole parlay, inclusive. Blank means no limit. Individual picks remain visible. Model prices are estimates.</p><div class="mu" id="oddsFilterStatus" role="status" aria-live="polite"></div><div class="mu" id="combinedOddsStatus" role="status"></div></fieldset>
 
 <div class="mu" id="hint" style="margin-top:8px"></div>
 </div>
@@ -292,7 +307,7 @@ const build=L=>L.map(([id,a,h,tm,fp,sc,date])=>{
   return{id,a,h,tm,date,fp,pm,p,m,tot:Math.round(tot*2)/2,sp:Math.round(m*2)/2||.5,pp:{a:pr(tot/2-m/2,-m,S[h].opp),h:pr(tot/2+m/2,m,S[a].opp)},sc}
 });
 const G9=[["k1","CAR","GB","Thu 8:15 PM",null,[19,27]],["k2","IND","JAC","Sun 1:00 PM",null,[7,42]],["k3","TEN","CIN","Sun 1:00 PM",null,[36,43]],["k4","CLE","PIT","Sun 1:00 PM",null,[6,27]],["k5","MIN","DET","Sun 1:00 PM",null,[15,19]],["k6","ATL","TB","Sun 1:00 PM",null,[0,16]],["k7","ARI","DAL","Sun 1:00 PM",null,[33,30]],["k8","LV","NYJ","Sun 1:00 PM",null,[38,33]],["k9","BAL","BUF","Sun 1:00 PM",null,[10,36]],["k10","LAC","LA","Sun 4:05 PM",null,[9,24]],["k11","NE","MIA","Sun 4:25 PM",null,[24,19]],["k12","KC","DEN","Sun 4:25 PM",null,[24,28]],["k13","PHI","WAS","Sun 8:20 PM",null,[10,27]],["k14","CHI","SEA","Mon 8:15 PM",null,[34,17]]];
-const PN={td:["TDs",2.5],ps:["pass yds",225.5],ru:["rush yds",110.5]},PL={td:"TD",ps:"passing",ru:"rushing"};
+const PN={td:["TDs",2.5],ps:["pass yds",225.5],ru:["rush yds",110.5],rec:["receiving yds",55.5],rcp:["receptions",4.5]},PL={td:"TD",ps:"passing",ru:"rushing",rec:"receiving yards",rcp:"receptions"};
 // Default to the NFL's current/upcoming regular-season week on every page load.
 // Week 1 begins September 10, 2026; after Monday night, Tuesday advances to the next week.
 function estimatedNFLWeek(){
@@ -307,11 +322,14 @@ const BUILDER_FILTERS_KEY="nflp-builder-filters-v1";
 function readBuilderFilters(){
  try{const x=JSON.parse(phase3LocalStorage.getItem(BUILDER_FILTERS_KEY)||"null");
   if(!x||typeof x!=="object"||Array.isArray(x))return {};
-  return {tf:Array.isArray(x.tf)||typeof x.tf==="string"?x.tf:"all",pf:Array.isArray(x.pf)||typeof x.pf==="string"?x.pf:"all",query:typeof x.query==="string"?x.query.slice(0,120):"",regularOnly:x.regularOnly!==false,oddsFrom:typeof x.oddsFrom==="string"?x.oddsFrom:"",oddsThrough:typeof x.oddsThrough==="string"?x.oddsThrough:""};
+  return {tf:Array.isArray(x.tf)||typeof x.tf==="string"?x.tf:"all",pf:Array.isArray(x.pf)||typeof x.pf==="string"?x.pf:"all",query:typeof x.query==="string"?x.query.slice(0,120):"",regularOnly:x.regularOnly!==false,supportedTeamOnly:x.supportedTeamOnly!==false,oddsFrom:typeof x.oddsFrom==="string"?x.oddsFrom:"",oddsThrough:typeof x.oddsThrough==="string"?x.oddsThrough:""};
  }catch(e){return {}}
 }
 const rememberedBuilderFilters=readBuilderFilters();
 let regularOnly=rememberedBuilderFilters.regularOnly!==false;
+let supportedTeamOnly=rememberedBuilderFilters.supportedTeamOnly!==false;
+function setSupportedTeamOnly(v){supportedTeamOnly=!!v;saveBuilderFilters();draw();plays();renderAdvanced();}
+function teamMarketAllowed(mkt){return !supportedTeamOnly||/^(ml|sp|tot|teamtot[a-z]*)$/.test(String(mkt));}
 let wk=estimatedNFLWeek(),games=WKS[wk]||[],tf=["all"],pf=["all"],openG=null,gameQuery="",liveWeeks=new Set();
 let startupScheduleSelection=true, userSelectedWeek=false;
 const gpOf=t=>T[t][1]+T[t][2],PLY=[];
@@ -363,6 +381,7 @@ function playerSuggested(p){
   const source=sourcePlayer(p);
   return minimum!==null&&stats.rushing_attempts!==null&&stats.rushing_attempts>=minimum&&source&&Math.floor(source.v)+.5>=5;
  }
+ if(p.k==='rec'||p.k==='rcp')return ['RB','HB','TB','FB','WR','TE'].includes(position)&&(stats.receptions!==null&&stats.receptions>=1||stats.snap_share!==null&&stats.snap_share>=.25);
  const snaps=stats.snap_share!==null&&stats.snap_share>=.25;
  if(p.k==='ps')return position==='QB'&&(snaps||stats.passing_attempts!==null&&stats.passing_attempts>=10);
  const touches=stats.rushing_attempts!==null&&stats.receptions!==null?stats.rushing_attempts+stats.receptions:null;
@@ -383,7 +402,7 @@ function refreshPlayerMarkets(){
  for(const p of PLY.filter(p=>!p.dynamic)){const latest=latestTeam.get(playerIdentity(p.n));if(latest?.team===p.tm&&latest.position)p.position=latest.position;}
  for(const rows of groups.values()){
   const latest=[...rows].sort((a,b)=>b.week-a.week)[0];
-  for(const [kind,field] of [['ps','passing_yards'],['ru','rushing_yards'],['td','touchdowns']]){
+  for(const [kind,field] of [['ps','passing_yards'],['ru','rushing_yards'],['rec','receiving_yards'],['rcp','receptions'],['td','touchdowns']]){
    if(kind==='ps'&&latest.position&&latest.position!=='QB')continue;
    const byWeek=new Map();for(const r of rows){if(!Number.isFinite(r[field]))continue;const prior=byWeek.get(r.week);if(prior===undefined)byWeek.set(r.week,r[field]);else if(prior!==r[field])byWeek.set(r.week,null);}
    const values=[...byWeek.values()].filter(Number.isFinite);if(!values.length||!values.some(v=>v>0))continue;
@@ -405,7 +424,7 @@ function freezeNewPlayerLeg(gid,mkt,side){
 
 const esc=x=>String(x??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
 function importedPlayer(p){const key=playerIdentity(p.n);return imported.filter(r=>playerIdentity(r.player)===key&&r.team===p.tm&&Number(r.season)===Number(SEASON)&&r.week<wk&&r.game_status==='COMPLETED')}
-function sourcePlayer(p){if(p.dynamic)return playerAvailable(p)?p:null;const rows=importedPlayer(p);if(!rows.length)return p;const key=p.k==="ps"?"passing_yards":p.k==="ru"?"rushing_yards":"touchdowns";const values=rows.map(r=>r[key]).filter(Number.isFinite);if(!values.length)return p;const v=values.reduce((a,b)=>a+b,0)/values.length;return {...p,v:(v+p.v)/2};}
+function sourcePlayer(p){if(p.dynamic)return playerAvailable(p)?p:null;const rows=importedPlayer(p);if(!rows.length)return p;const key=p.k==="ps"?"passing_yards":p.k==="ru"?"rushing_yards":p.k==="rec"?"receiving_yards":p.k==="rcp"?"receptions":"touchdowns";const values=rows.map(r=>r[key]).filter(Number.isFinite);if(!values.length)return p;const v=values.reduce((a,b)=>a+b,0)/values.length;return {...p,v:(v+p.v)/2};}
 function pstat(p,g){const src=sourcePlayer(p);if(!src)return null;p=src;const t=p.tm===g.a?"a":"h",mg=t==="a"?-g.m:g.m,sc=g.pp[t].pts/S[p.tm].ppg;
  if(p.k==="td")return{p:1-Math.exp(-p.v*sc),line:"Anytime TD",proj:p.v*sc};
  if(p.k==="ps"){const pj=p.v*(.6+.4*sc)*(1-.006*mg),ln=Math.floor(p.v)+.5;return{p:nc((pj-ln)/(p.v*.25)),line:ln,proj:pj}}
@@ -436,7 +455,7 @@ function manualRosterPreview(g,saved){
   const adjusted={...p,tm:saved.destination,rosterHypothetical:true};
   const st=manualRosterStat(adjusted,g,p);
   if(!st)return '';
-  const unit=p.k==='ps'?'passing yards':p.k==='ru'?'rushing yards':'touchdowns';
+  const unit=p.k==='ps'?'passing yards':p.k==='ru'?'rushing yards':p.k==='rec'?'receiving yards':p.k==='rcp'?'receptions':'touchdowns';
   return '<div><b>'+esc(unit)+'</b>: projected '+st.proj.toFixed(1)+(p.k==='td'?' · illustrative anytime TD probability '+Math.round(st.p*100)+'%':' · reference line '+st.line+' · illustrative over probability '+Math.round(st.p*100)+'%')+'</div>';
  }).filter(Boolean).join('');
  return '<b>Hypothetical · '+esc(option.n)+'</b> · '+esc(saved.sourceTeam)+' → '+esc(saved.destination)+'<div class="mu">'+esc(g.a)+' @ '+esc(g.h)+' · prior-team stats retained; new-team matchup adjustment. No verified role, snap share, or eligibility. Not included in official picks or hit rates; optional hypothetical draft legs require manual selection.</div>'+(picks||'<div class="warn">No usable statistical baseline for this player.</div>')+'<button type="button" class="btn alt" style="margin-top:8px" onclick="removeManualRoster(&quot;'+esc(g.id)+'&quot;)">Remove override</button>';
@@ -510,14 +529,14 @@ const plBtns=(g,k,b)=>PLY.filter(p=>playerSuggested(p)&&p.k===k&&(p.tm===g.a||p.
 const hr=tm=>{const m=/(\d+):(\d+) (AM|PM)/.exec(tm);return m?(+m[1]%12)+(m[3]==="PM"?12:0)+(+m[2])/60:0};
 const bucket=tm=>{const h=hr(tm);return h<11?"early":h<15?"aft":h<19?"eve":"late"};
 const vis=g=>filterHas(tf,bucket(g.tm))&&(!gameQuery||`${g.a} ${g.h} ${T[g.a]?.[0]||""} ${T[g.h]?.[0]||""}`.toLowerCase().includes(gameQuery));
-const TF=[["all","All"],["early","Early 9–10a"],["aft","Afternoon 12–2p"],["eve","Evening 4–6p"],["late","Late 7–10p"]],PF=[["all","All"],["td","TD"],["ps","Passing"],["ru","Rushing"]];
+const TF=[["all","All"],["early","Early 9–10a"],["aft","Afternoon 12–2p"],["eve","Evening 4–6p"],["late","Late 7–10p"]],PF=[["all","All"],["td","TD"],["ps","Passing"],["ru","Rushing"],["rec","Receiving yards"],["rcp","Receptions"]];
 // Multi-select: choices are OR within each group, AND across groups.
 function normalizeFilter(value,options){
  const raw=Array.isArray(value)?value:[value],keys=options.map(x=>x[0]);
  const valid=keys.filter(k=>raw.includes(k));return !valid.length||valid.includes('all')?['all']:valid;
 }
 function filterHas(value,key){const list=Array.isArray(value)?value:[value];return list.includes('all')||list.includes(key);}
-function pickTypes(){return ['td','ps','ru'].filter(k=>filterHas(pf,k));}
+function pickTypes(){return ['td','ps','ru','rec','rcp'].filter(k=>filterHas(pf,k));}
 function allPickTypes(){return filterHas(pf,'all');}
 function oddsDecimal(value){const n=Number(value);return Number.isFinite(n)&&Number.isInteger(n)&&Math.abs(n)>=100?(n>0?1+n/100:1+100/Math.abs(n)):null;}
 let oddsFrom='',oddsThrough='';
@@ -554,7 +573,7 @@ function pickOdds(g,mkt,side){return Number(am(legOf({gid:g.id,mkt,side}).d));}
 function advancedPickSide(x){return x.p.k==='td'||x.manual?'o':x.prob>=.5?'o':'u';}
 function advancedPickOdds(x){return x.manual?Number(x.odds):pickOdds(x.g,'p'+x.p.i,advancedPickSide(x));}
 
-function saveBuilderFilters(){try{phase3LocalStorage.setItem(BUILDER_FILTERS_KEY,JSON.stringify({tf,pf,regularOnly,query:gameQuery,oddsFrom,oddsThrough,oddsRangeScope:"combined-v1"}))}catch(e){}}
+function saveBuilderFilters(){try{phase3LocalStorage.setItem(BUILDER_FILTERS_KEY,JSON.stringify({tf,pf,regularOnly,supportedTeamOnly,query:gameQuery,oddsFrom,oddsThrough,oddsRangeScope:"combined-v1"}))}catch(e){}}
 function setBuilderFilter(type,value){
  const options=type==='tf'?TF:type==='pf'?PF:null;if(!options||!options.some(x=>x[0]===value))return;
  let current=normalizeFilter(type==='tf'?tf:pf,options);
@@ -562,8 +581,8 @@ function setBuilderFilter(type,value){
  if(type==='tf')tf=current;else pf=current;
  saveBuilderFilters();drawF();draw();plays();renderAdvanced();
 }
-function resetBuilderFilters(){regularOnly=true;tf=['all'];pf=['all'];gameQuery="";oddsFrom="";oddsThrough="";$("oddsFrom").value="";$("oddsThrough").value="";$("oddsFilterStatus").textContent="Combined odds target: unrestricted.";const search=$("gameSearch");if(search)search.value="";saveBuilderFilters();drawF();draw();plays();renderAdvanced()}
-function drawF(){if($('regularOnly'))$('regularOnly').checked=regularOnly;for(const [id,options,value] of [['tf',TF,tf],['pf',PF,pf]])$(id).innerHTML=options.map(([k,l])=>{const on=normalizeFilter(value,options).includes(k);return `<button type="button" class="fp ${on?'on':''}" aria-pressed="${on}" onclick="setBuilderFilter('${id}','${k}')">${l}</button>`}).join('');}
+function resetBuilderFilters(){supportedTeamOnly=true;regularOnly=true;tf=['all'];pf=['all'];gameQuery="";oddsFrom="";oddsThrough="";$("oddsFrom").value="";$("oddsThrough").value="";$("oddsFilterStatus").textContent="Combined odds target: unrestricted.";const search=$("gameSearch");if(search)search.value="";saveBuilderFilters();drawF();draw();plays();renderAdvanced()}
+function drawF(){if($('supportedTeamOnly'))$('supportedTeamOnly').checked=supportedTeamOnly;if($('regularOnly'))$('regularOnly').checked=regularOnly;for(const [id,options,value] of [['tf',TF,tf],['pf',PF,pf]])$(id).innerHTML=options.map(([k,l])=>{const on=normalizeFilter(value,options).includes(k);return `<button type="button" class="fp ${on?'on':''}" aria-pressed="${on}" onclick="setBuilderFilter('${id}','${k}')">${l}</button>`}).join('');}
 tf=normalizeFilter(rememberedBuilderFilters.tf,TF);
 pf=normalizeFilter(rememberedBuilderFilters.pf,PF);
 document.getElementById('regularOnly').checked=regularOnly;
@@ -602,7 +621,7 @@ function gamePickCandidates(g,includeManual=false){
   if(manual){
    if(regularOnly&&player.k==='ru'&&Number(manual.line)<5)return;
    odds=Number(manual.odds);const metrics=advMetrics(player,g);probability=metrics?.prob;
-   text=player.k==='td'?player.n+' anytime TD':player.n+' Over '+Number(manual.line)+' '+(player.k==='ps'?'pass yds':'rush yds');
+   text=player.k==='td'?player.n+' anytime TD':player.n+' Over '+Number(manual.line)+' '+(player.k==='ps'?'pass yds':player.k==='rec'?'receiving yds':player.k==='rcp'?'receptions':'rush yds');
   }
   const decimal=oddsDecimal(odds);
   if(decimal===null||!Number.isFinite(probability)||probability<=0||probability>=1)return;
@@ -611,7 +630,7 @@ function gamePickCandidates(g,includeManual=false){
  for(const market of ['ml','sp'])for(const side of ['a','h'])add(market,side,'game');
  for(const side of ['o','u'])add('tot',side,'game');
 
- for(const t of ['a','h'])for(const side of ['o','u'])add('td'+t,side,'td');
+ if(!supportedTeamOnly)for(const t of ['a','h'])for(const side of ['o','u'])add('td'+t,side,'td');
  for(const p of PLY.filter(p=>playerSuggested(p)&&(p.tm===g.a||p.tm===g.h))){
   const manual=includeManual?advManual[advKey(g,p)]:null;
   if(manual&&Number.isFinite(Number(manual.line))&&Number(manual.line)>=0&&oddsDecimal(manual.odds)!==null){add('p'+p.i,'o',p.k,p,manual);continue;}
@@ -657,7 +676,7 @@ function moreGamePicks(g,b){
  return '<div class="tools" style="margin-top:10px">'+button+'</div>'+manualScenarioHTML(g)+'<section id="more-picks-'+g.id+'" class="more-game-picks" aria-label="More picks for '+g.a+' at '+g.h+'" style="margin-top:10px;padding-top:8px;border-top:1px solid var(--bd)"><p class="mu">50 picks initially, then up to 25 more per press. Available positions share the display so QB, RB, WR and Team choices are represented. Position and odds order are retained; filters and loaded data determine availability. Model estimates; verify sportsbook prices.</p>'+status+(body||'<p class="mu">No picks match the current filters and loaded data.</p>')+'<div class="tools" style="margin-top:12px">'+load+'<button type="button" class="btn alt" onclick="toggleGamePicks(\''+g.id+'\')">Show fewer</button></div></section>';
 }
 let filteredParlayPlans={};
-function filteredParlayContext(){return JSON.stringify([SEASON,wk,mode,N,focus,tf,pf,gameQuery,oddsFrom,oddsThrough,regularOnly,playerDataRevision]);}
+function filteredParlayContext(){return JSON.stringify([SEASON,wk,mode,N,focus,tf,pf,gameQuery,oddsFrom,oddsThrough,regularOnly,supportedTeamOnly,playerDataRevision]);}
 function filteredParlayCandidates(){
  refreshPlayerMarkets();if(SEASON!==MODEL_SEASON||mode==='same'&&!focus)return [];
  const now=Date.now();return games.filter(g=>!g.sc&&vis(g)&&(mode!=='same'||g.id===focus)&&Number.isFinite(Date.parse(g.date||''))&&Date.parse(g.date)>now)
@@ -800,13 +819,13 @@ function legOf(L){
   if(L.mkt==="ml"){const p=L.side==="h"?g.p:1-g.p,t=L.side==="h"?H:A;return{txt:t+" moneyline",p,d:dec(p),g}}
   if(L.mkt==="sp"){const t=L.side==="h"?H:A,ln=L.side==="h"?-g.sp:g.sp;return{txt:t+" "+sg(ln),p:.5,d:1.91,g}}
   const p0=playerForMarket(L.mkt);
-  if(p0){const s=pstat(p0,g),pr=L.side==="o"?s.p:1-s.p;return{txt:p0.k==="td"?p0.n+" anytime TD":p0.n+" "+(L.side==="o"?"Over ":"Under ")+s.line+(p0.k==="ps"?" pass yds":" rush yds"),p:pr,d:dec(pr),g}}
+  if(p0){const s=pstat(p0,g),pr=L.side==="o"?s.p:1-s.p;return{txt:p0.k==="td"?p0.n+" anytime TD":p0.n+" "+(L.side==="o"?"Over ":"Under ")+s.line+(p0.k==="ps"?" pass yds":p0.k==="rec"?" receiving yds":p0.k==="rcp"?" receptions":" rush yds"),p:pr,d:dec(pr),g}}
   const mm=/^(td|ps|ru)([ah])$/.exec(L.mkt);
   if(mm){const k=mm[1],t=mm[2],po=g.pp[t][k+"p"],p=L.side==="o"?po:1-po;return{txt:`${t==="a"?A:H} ${L.side==="o"?"Over":"Under"} ${PN[k][1]} ${PN[k][0]}`,p,d:dec(p),g}}
   return{txt:(L.side==="o"?"Over ":"Under ")+g.tot,p:.5,d:1.91,g}}
 let mode="multi",N=3,legs=[],focus=null;
 const $=id=>document.getElementById(id);
-function pick(gid,mkt,side){
+function pick(gid,mkt,side){if(!teamMarketAllowed(mkt)&&/^td[a-z]$/.test(String(mkt))){aiSelectionFeedback('Team specialty picks are excluded by the team-market filter.');return;}
   const game=games.find(g=>String(g.id)===String(gid));
   if(!game||game.sc){aiSelectionFeedback('Selection not added: game unavailable or completed.');return false;}
   if(mode==='same'&&focus&&String(focus)!==String(game.id)){aiSelectionFeedback('Selection not added: this same-game slip is for a different matchup.');return false;}
@@ -902,6 +921,7 @@ $('newSlip').onclick=newSlip;$('clearAllSlips').onclick=clearAllSlips;
 function gameHitRateHost(g,week){return g.sc?'<div class="pregame-game-rate" data-rate-game="'+esc(String(g.id))+'" data-rate-week="'+Number(week)+'">Pregame AI hit rate: N/A · loading archived recommendations</div>':'';}
 function paintGameHitRates(){document.querySelectorAll('[data-rate-game]').forEach(el=>{const week=Number(el.dataset.rateWeek),g=(WKS[week]||[]).find(g=>String(g.id)===el.dataset.rateGame);if(g&&g.sc&&window.gamePregameHitRateHTML)el.innerHTML=window.gamePregameHitRateHTML(g,week);});}
 function draw(){
+ const headerWeek=document.getElementById("headerWeekLabel");if(headerWeek)headerWeek.textContent="NFL "+SEASON+" · Week "+wk;
  refreshPlayerMarkets();
  const currentDraft=slips.find(s=>s.id===activeSlip);$('save').textContent=currentDraft?.editSavedId!=null?'Save parlay changes':'Save parlay';if($('activeLegTarget'))$('activeLegTarget').textContent=String(N);
   if(mode==="multi")$("hint").textContent=legs.length>N?"Remove "+(legs.length-N)+" selected leg(s) to match the new target.":legs.length===N?"Slip is full.":"Multi-game: choose "+N+" picks across games (multiple picks per game allowed).";
@@ -1075,10 +1095,10 @@ function plays(){if(SEASON!==MODEL_SEASON){$("plays").innerHTML=`<div class="car
   let h="";
   if(allPickTypes())h+=`<div class="card"><b>Top moneyline plays</b>`+arr.slice(0,6).map(x=>`<div class="pl ${x.p<.68?"med":""}"><b>${x.t} ML</b> vs ${x.o} · ${Math.round(x.p*100)}% · ${am(dec(x.p))}<div class="mu">${why(x)}</div><button type="button" class="btn alt" onclick="quickAddRecommended('${x.g.id}','ml','${x.home?'h':'a'}')">+ Add to parlay</button></div>`).join("")+`</div>`;
 
-  if(filterHas(pf,'td'))for(const pf of ['td']){const L=[];(WKS[wk]||[]).filter(g=>!g.sc&&vis(g)).forEach(g=>["a","h"].forEach(t=>{const p=g.pp[t][pf+"p"],o=p>=.5;L.push({g,t,o,p:o?p:1-p})}));L.sort((a,b)=>b.p-a.p);
+  if(!supportedTeamOnly&&filterHas(pf,'td'))for(const pf of ['td']){const L=[];(WKS[wk]||[]).filter(g=>!g.sc&&vis(g)).forEach(g=>["a","h"].forEach(t=>{const p=g.pp[t][pf+"p"],o=p>=.5;L.push({g,t,o,p:o?p:1-p})}));L.sort((a,b)=>b.p-a.p);
   h+=`<div class="card"><b>Top ${PL[pf]} plays</b>`+(L.slice(0,6).map(x=>{const tm=x.t==="a"?x.g.a:x.g.h;return`<div class="pl ${x.p<.6?"med":""}"><b>${tm} ${x.o?"Over":"Under"} ${PN[pf][1]} ${PN[pf][0]}</b> · ${Math.round(x.p*100)}% · ${am(dec(x.p))}<div class="mu">vs ${x.t==="a"?x.g.h:x.g.a} · projected ${pf==="td"?f1(x.g.pp[x.t].td)+" TDs":Math.round(x.g.pp[x.t][pf+"y"])+" yds"}</div><button type="button" class="btn alt" onclick="quickAddRecommended('${x.g.id}','${pf+x.t}','${x.o?'o':'u'}')">+ Add to parlay</button></div>`}).join("")||`<div class="mu">No team picks match the current filters and loaded data.</div>`)+`</div>`}
   {const Q=[];(WKS[wk]||[]).filter(g=>!g.sc&&vis(g)).forEach(g=>PLY.forEach(p=>{if(playerSuggested(p)&&(p.tm===g.a||p.tm===g.h)&&(filterHas(pf,p.k))){const s=pstat(p,g);if(!s)return;const o=p.k==="td"||s.p>=.5;Q.push({p,g,o,q:o?s.p:1-s.p,s})}}));Q.sort((a,b)=>b.q-a.q);
-  h+=`<div class="card"><b>Top player picks${allPickTypes()?"":" ("+pickTypes().map(k=>PL[k]).join(", ")+")"}</b>`+(Q.slice(0,6).map(x=>`<div class="pl ${x.q<.6?"med":""}"><b>${esc(x.p.k==="td"?x.p.n+" anytime TD":x.p.n+" "+(x.o?"Over ":"Under ")+x.s.line+(x.p.k==="ps"?" pass yds":" rush yds"))}</b>${injuryTag(x.p)} · ${Math.round(x.q*100)}% · ${am(dec(x.q))}<div class="mu">${x.g.a} @ ${x.g.h}</div><button type="button" class="btn alt" onclick="quickAddRecommended('${x.g.id}','p${x.p.i}','${x.o?'o':'u'}')">+ Add to parlay</button>${playerStatsButton(x.p,x.g)}</div>`).join("")||`<div class="mu">No player picks match the current filters and loaded data.</div>`)+`</div>`}
+  h+=`<div class="card"><b>Top player picks${allPickTypes()?"":" ("+pickTypes().map(k=>PL[k]).join(", ")+")"}</b>`+(Q.slice(0,6).map(x=>`<div class="pl ${x.q<.6?"med":""}"><b>${esc(x.p.k==="td"?x.p.n+" anytime TD":x.p.n+" "+(x.o?"Over ":"Under ")+x.s.line+(x.p.k==="ps"?" pass yds":x.p.k==="rec"?" receiving yds":x.p.k==="rcp"?" receptions":" rush yds"))}</b>${injuryTag(x.p)} · ${Math.round(x.q*100)}% · ${am(dec(x.q))}<div class="mu">${x.g.a} @ ${x.g.h}</div><button type="button" class="btn alt" onclick="quickAddRecommended('${x.g.id}','p${x.p.i}','${x.o?'o':'u'}')">+ Add to parlay</button>${playerStatsButton(x.p,x.g)}</div>`).join("")||`<div class="mu">No player picks match the current filters and loaded data.</div>`)+`</div>`}
   h+=allManualScenarioHTML();
   h+=renderFilteredParlays();
   // Retrospective evaluations only: these are not verified pregame predictions.
@@ -1108,11 +1128,11 @@ function plays(){if(SEASON!==MODEL_SEASON){$("plays").innerHTML=`<div class="car
 const ADV_ODDS_KEY='nflp-manual-props-v1';
 let advManual={};try{advManual=JSON.parse(phase3LocalStorage.getItem(ADV_ODDS_KEY)||'{}')||{}}catch(e){}
 const advKey=(g,p)=>[SEASON,wk,g.a,g.h,p.n,p.k].join('|');
-function advLogs(p){return importedPlayer(p).filter(r=>Number.isFinite(Number(r[p.k==='ps'?'passing_yards':p.k==='ru'?'rushing_yards':'touchdowns']))).sort((a,b)=>Number(b.week)-Number(a.week));}
+function advLogs(p){return importedPlayer(p).filter(r=>Number.isFinite(Number(r[p.k==='ps'?'passing_yards':p.k==='ru'?'rushing_yards':p.k==='rec'?'receiving_yards':p.k==='rcp'?'receptions':'touchdowns']))).sort((a,b)=>Number(b.week)-Number(a.week));}
 function advAvg(a){return a.length?a.reduce((v,x)=>v+x,0)/a.length:null;}
 function advMetrics(p,g){
  const s=pstat(p,g);if(!s)return null;
- const logs=advLogs(p),field=p.k==='ps'?'passing_yards':p.k==='ru'?'rushing_yards':'touchdowns';
+ const logs=advLogs(p),field=p.k==='ps'?'passing_yards':p.k==='ru'?'rushing_yards':p.k==='rec'?'receiving_yards':p.k==='rcp'?'receptions':'touchdowns';
  const vals=logs.map(r=>Number(r[field]));
  const last3=advAvg(vals.slice(0,3)),last5=advAvg(vals.slice(0,5));
  const opponent=p.tm===g.a?g.h:g.a,opp=S[opponent],own=S[p.tm];
@@ -1788,8 +1808,8 @@ function gradeDetail(g,mkt,side){
  const mp=playerForMarket(mkt);
  if(mp){const p=mp;if(!p)return {result:null,reason:'Unknown player market'};
   const match=matchingPlayerRow(g,p);if(!match.row)return {result:null,reason:match.reason};
-  const stat=p.k==='ps'?match.row.passing_yards:p.k==='ru'?match.row.rushing_yards:match.row.touchdowns;
-  if(stat==null||!Number.isFinite(stat))return {result:null,reason:`Missing ${p.k==='ps'?'passing yards':p.k==='ru'?'rushing yards':'touchdowns'} in CSV for matched player`};
+  const stat=p.k==='ps'?match.row.passing_yards:p.k==='ru'?match.row.rushing_yards:p.k==='rec'?match.row.receiving_yards:p.k==='rcp'?match.row.receptions:match.row.touchdowns;
+  if(stat==null||!Number.isFinite(stat))return {result:null,reason:`Missing ${p.k==='ps'?'passing yards':p.k==='ru'?'rushing yards':p.k==='rec'?'receiving yards':p.k==='rcp'?'receptions':'touchdowns'} in CSV for matched player`};
   if(p.k==='td')return {result:stat>=1,reason:`${match.reason}; actual TDs: ${stat}`};
   const line=pstat(p,g)?.line;if(!Number.isFinite(line))return {result:null,reason:'Prediction line unavailable under current data-source setting'};
   if(stat===line)return {result:null,reason:'Push: player statistic equals prediction line'};
@@ -1853,7 +1873,7 @@ function performancePickName(g,x){
  const player=playerForMarket(m);
  if(player){const p=player;if(!p)return m;
   if(p.k==='td')return `${p.n} anytime TD`;
-  const stat=pstat(p,g);return `${p.n} ${s==='o'?'Over':'Under'} ${stat?.line??'—'} ${p.k==='ps'?'passing':'rushing'} yards`;
+  const stat=pstat(p,g);return `${p.n} ${s==='o'?'Over':'Under'} ${stat?.line??'—'} ${p.k==='ps'?'passing yards':p.k==='rec'?'receiving yards':p.k==='rcp'?'receptions':'rushing yards'}`;
  }
  return `${m} ${s}`;
 }
@@ -1951,7 +1971,7 @@ document.addEventListener('visibilitychange',()=>{if(!document.hidden)refreshSch
  const form=document.getElementById('sbAuthForm');
  const mount=document.getElementById('topAuthMount');
  if(form&&mount){
-  mount.appendChild(form);form.style.margin='4px 0';
+  mount.appendChild(form);form.style.margin='4px 0';const feedback=document.getElementById('sbAuthFeedback');if(feedback)mount.appendChild(feedback);
   const signOut=document.getElementById('sbSignOut');
   const setup=document.createElement('button');
   setup.id='openSetup';setup.className='btn alt';setup.type='button';
@@ -2084,7 +2104,7 @@ function saveActiveAccount(){
 }
 
 let config={},auth=null,remoteUpdated=0,lastPushed='',busy=false,started=false,lastPoll=0;
-const status=t=>{$('sbStatus').textContent=t;};
+const status=t=>{const message=/email rate limit exceeded/i.test(String(t))?'Email confirmation limit reached. Check your inbox for an earlier confirmation email. If you already confirmed, try Sign in. Otherwise wait before requesting another email.':t;const cloud=$('sbStatus');if(cloud)cloud.textContent=message;const feedback=$('sbAuthFeedback');if(feedback){feedback.textContent=message;feedback.hidden=false;}};
 // Keep sign-in controls visible only when authentication is actually needed.
 // The sign-out control remains accessible while signed in.
 function authControls(verified){
@@ -2196,6 +2216,8 @@ async function sign(kind){
  try{
   settings();const email=$('sbEmail').value.trim(),password=$('sbPassword').value;
   if(!email||!password)throw Error('Enter email and password.');
+  if(kind==='signup'&&password.length<8)throw Error('Use a password with at least 8 characters.');
+  const emailInput=$('sbEmail');if(emailInput&&typeof emailInput.checkValidity==='function'&&!emailInput.checkValidity())throw Error('Enter a valid email address.');
   status(kind==='signup'?'Creating account…':'Signing in…');
   const endpoint=kind==='signup'?'/auth/v1/signup':'/auth/v1/token?grant_type=password';
   const data=await api(endpoint,{method:'POST',body:JSON.stringify({email,password})});
@@ -2213,7 +2235,7 @@ async function sign(kind){
  }catch(e){status('Authentication error: '+e.message);if(phase3LocalStorage.getItem(OWNER_KEY))privacyGate('This browser is reserved for its original account. Sign in with that account or use a separate browser profile.')}
 }
 $('sbAuthForm').addEventListener('submit',e=>{e.preventDefault();sign('signin')});
-$('sbSignUp').onclick=()=>sign('signup');
+$('sbSignUp').addEventListener('click',e=>{e.preventDefault();sign('signup');});
 $('sbSignOut').onclick=()=>{try{saveActiveAccount()}catch(e){status('Could not preserve account storage; sign-out stopped: '+e.message);return;}storeAuth(null);document.dispatchEvent(new Event('phase3-account-signed-out'));started=false;lastPushed='';status('Signed out. Personal data is locked on this device.');const dialog=document.getElementById('setupDialog');if(dialog.open)dialog.close();privacyGate('Signed out. Personal data is hidden. Sign in to access your account partition.');location.reload();};
 $('sbBackup').onclick=download;
 // Retired TEST-only recovery/upload implementation removed from production review.
