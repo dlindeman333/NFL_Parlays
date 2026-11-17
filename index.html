@@ -181,6 +181,13 @@ body.phase3-privacy-locked > :not(.hd):not(#topAccountPanel):not(.toolbar):not(.
 :root[data-theme="dark"] .hd #phase3KickoffCountdown .kickoff-week{background:#22568D!important;color:#fff!important;border-color:#35669C!important}
 .hd #phase3KickoffCountdown .kickoff-value{color:#fff!important}
 @media(max-width:400px){.hd #phase3KickoffCountdown .kickoff-unit{flex:1 1 0;min-width:0}.hd #phase3KickoffCountdown .kickoff-clock{width:100%}}
+/* Higher contrast for Skip To links in dark mode; visual only. */
+@media(prefers-color-scheme:dark){
+ :root:not([data-theme="light"]) .navlinks a{background:#348DF2!important;border:2px solid #B7DBFF!important;color:#FFFFFF!important;font-weight:800!important;text-shadow:0 1px 1px #12345B!important;box-shadow:0 2px 0 #071C35!important}
+ :root:not([data-theme="light"]) .navlinks a:hover,:root:not([data-theme="light"]) .navlinks a:focus-visible{background:#1769C5!important;border-color:#FFFFFF!important;outline:2px solid #D8EDFF!important;outline-offset:2px!important}
+}
+:root[data-theme="dark"] .navlinks a{background:#348DF2!important;border:2px solid #B7DBFF!important;color:#FFFFFF!important;font-weight:800!important;text-shadow:0 1px 1px #12345B!important;box-shadow:0 2px 0 #071C35!important}
+:root[data-theme="dark"] .navlinks a:hover,:root[data-theme="dark"] .navlinks a:focus-visible{background:#1769C5!important;border-color:#FFFFFF!important;outline:2px solid #D8EDFF!important;outline-offset:2px!important}
 </style>
 </head><body class="phase3-privacy-locked">
 <div class="hd"><div class="row" style="justify-content:space-between"><div class="phase3-brand-title"><img src="./nfl-parlay-icon-512.png" width="50" height="50" alt="NFL Parlay Builder logo"><div><h1>NFL Parlay Builder</h1><span id="headerWeekLabel" class="mu" style="font-size:13px;font-weight:750">NFL week loading…</span></div></div><button id="theme" class="btn alt" type="button" aria-label="Toggle dark mode">◐ Theme</button></div><div class="mu" id="sub"></div><section id="phase3KickoffCountdown" aria-label="Countdown to next NFL kickoff" aria-live="off">
