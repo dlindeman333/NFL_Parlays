@@ -160,7 +160,7 @@ body.phase3-privacy-locked > :not(.hd):not(#topAccountPanel):not(#phase3KickoffC
  <div class="kickoff-note" id="kickoffStatus" role="status" aria-live="polite">Checking NFL schedule…</div>
 </section>
 <div class="toolbar"><label for="seasonSelect" style="font-weight:700">Season</label><select id="seasonSelect" aria-label="NFL season"></select><label for="wkTop" style="font-weight:700">Week</label><select id="wkTop" aria-label="NFL week (top selector)"></select><button id="refresh" class="btn" type="button">↻ Refresh NFL schedule</button><button id="boxRefresh" class="btn alt" type="button" hidden>↻ Load completed team box scores</button></div><div class="refresh-status-line"><span class="data-state" id="dataState" role="status" aria-live="polite">Offline snapshot • 2026 weeks 9–10</span></div>
-<section id="topAccountPanel" class="card" aria-label="NFL Parlay Builder account" style="margin:10px 0 12px;border:1px solid var(--bd)"><div class="tools" style="justify-content:space-between;align-items:center;margin:0 0 6px"><strong>🔐 NFL Parlay Builder · Your Account</strong><a id="userGuideHelpLink" class="btn alt" href="./NFL_Parlay_Builder_User_Guide.pdf" target="_blank" rel="noopener noreferrer" aria-label="Open NFL Parlay Builder user guide PDF in a new tab" style="text-decoration:none;font-size:14px">Help / User Guide</a><span class="mu" style="font-weight:700;color:#047857" id="topEnvironment">PRODUCTION · PHASE 3</span></div><div id="accountIdentityCard" role="status" aria-live="polite" style="border:1px solid var(--bd);border-radius:10px;padding:12px;margin:8px 0;display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap"><div><div class="mu">Signed in as</div><strong id="topAccountIndicator">Checking sign-in…</strong></div><span id="topConnectionBadge" class="mu">Not connected</span></div><div id="topAuthMount"></div></section>
+<section id="topAccountPanel" class="card" aria-label="NFL Parlay Builder account" style="margin:10px 0 12px;border:1px solid var(--bd)"><div class="tools" style="justify-content:space-between;align-items:center;margin:0 0 6px"><strong>🔐 NFL Parlay Builder · Your Account</strong><a id="quickStartHelpLink" class="btn alt" href="./NFL_Parlay_Builder_Quick_Start_Guide.pdf" target="_blank" rel="noopener noreferrer" aria-label="Open NFL Parlay Builder quick-start guide PDF in a new tab" style="text-decoration:none;font-size:14px">Quick-start Guide</a><a id="userGuideHelpLink" class="btn alt" href="./NFL_Parlay_Builder_User_Guide.pdf" target="_blank" rel="noopener noreferrer" aria-label="Open NFL Parlay Builder user guide PDF in a new tab" style="text-decoration:none;font-size:14px">Help / User Guide</a><span class="mu" style="font-weight:700;color:#047857" id="topEnvironment">PRODUCTION · PHASE 3</span></div><div id="accountIdentityCard" role="status" aria-live="polite" style="border:1px solid var(--bd);border-radius:10px;padding:12px;margin:8px 0;display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap"><div><div class="mu">Signed in as</div><strong id="topAccountIndicator">Checking sign-in…</strong></div><span id="topConnectionBadge" class="mu">Not connected</span></div><div id="topAuthMount"></div></section>
 
 
 <div class="navlinks"><a href="#myParlays">My parlays</a><a href="#uiBuilderSection">Filters</a><a href="#gameSection">Games</a><a href="#recommendations">Potential plays</a><a href="#advancedPredictions">AI Matchups</a></div>
@@ -169,7 +169,7 @@ body.phase3-privacy-locked > :not(.hd):not(#topAccountPanel):not(#phase3KickoffC
 <h2 style="margin:0 0 8px">Cloud sync · PC &amp; iPhone</h2>
 <div class="mu">Supabase connection is already configured. Sign in with your own account; use the same account on your PC and iPhone. Your existing browser data stays local until you sign in. Requires HTTPS (GitHub Pages).</div>
 <div class="mu" style="margin-top:9px">Cloud connection is preconfigured. Sign in or create your own account below.</div>
-<form id="sbAuthForm" class="tools" autocomplete="on" method="post" action="#" aria-label="Cloud account sign in"><label for="sbEmail">Email <input id="sbEmail" name="username" type="email" inputmode="email" autocomplete="username" autocapitalize="none" autocorrect="off" spellcheck="false" placeholder="Email" required></label><label for="sbPassword">Password <input id="sbPassword" name="password" type="password" autocomplete="current-password" placeholder="Password (8+ characters)" required></label><button class="btn" id="sbSignIn" type="submit">Sign in</button><button class="btn alt" id="sbSignUp" type="button">Create account</button><button class="btn alt" id="sbSignOut" type="button">Sign out</button></form>
+<form id="sbAuthForm" class="tools" autocomplete="on" method="post" action="#" aria-label="Cloud account sign in"><label for="sbEmail">Email <input id="sbEmail" name="username" type="email" inputmode="email" autocomplete="username" autocapitalize="none" autocorrect="off" spellcheck="false" placeholder="Email" required></label><label for="sbPassword">Password <input id="sbPassword" name="password" type="password" autocomplete="current-password" placeholder="Password (8+ characters)" required></label><button class="btn" id="sbSignIn" type="submit">Sign in</button><button class="btn alt" id="sbSignUp" type="button">Create account</button><button class="btn alt" id="sbSignOut" type="button">Sign out</button></form><div id="sbAuthFeedback" role="status" aria-live="polite" style="margin:8px 0;font-size:14px;line-height:1.45;overflow-wrap:anywhere" hidden></div>
 <div class="tools"><button class="btn alt" id="sbSyncNow">Sync now</button><button class="btn alt" id="sbBackup">Download local data backup</button><span class="mu" id="sbStatus" role="status" aria-live="polite">Cloud sync not configured; local data unchanged.</span></div>
 </section>
 <details id="phase3DataHealth" class="card" style="margin:12px 0" aria-label="Data health and synchronization status"><summary style="cursor:pointer;font-weight:700">Data health &amp; synchronization status</summary><p class="mu">Device-level diagnostics only. These indicators do not certify that NFL feeds are current or that cloud writes are enabled.</p><div id="phase3HealthResults" role="status" aria-live="polite">Checking local connection…</div><button type="button" class="btn alt" id="phase3HealthRefresh" style="margin-top:8px">Refresh status</button></details>
@@ -1951,7 +1951,7 @@ document.addEventListener('visibilitychange',()=>{if(!document.hidden)refreshSch
  const form=document.getElementById('sbAuthForm');
  const mount=document.getElementById('topAuthMount');
  if(form&&mount){
-  mount.appendChild(form);form.style.margin='4px 0';
+  mount.appendChild(form);form.style.margin='4px 0';const feedback=document.getElementById('sbAuthFeedback');if(feedback)mount.appendChild(feedback);
   const signOut=document.getElementById('sbSignOut');
   const setup=document.createElement('button');
   setup.id='openSetup';setup.className='btn alt';setup.type='button';
@@ -2084,7 +2084,7 @@ function saveActiveAccount(){
 }
 
 let config={},auth=null,remoteUpdated=0,lastPushed='',busy=false,started=false,lastPoll=0;
-const status=t=>{$('sbStatus').textContent=t;};
+const status=t=>{const message=/email rate limit exceeded/i.test(String(t))?'Email confirmation limit reached. Check your inbox for an earlier confirmation email. If you already confirmed, try Sign in. Otherwise wait before requesting another email.':t;const cloud=$('sbStatus');if(cloud)cloud.textContent=message;const feedback=$('sbAuthFeedback');if(feedback){feedback.textContent=message;feedback.hidden=false;}};
 // Keep sign-in controls visible only when authentication is actually needed.
 // The sign-out control remains accessible while signed in.
 function authControls(verified){
@@ -2196,6 +2196,8 @@ async function sign(kind){
  try{
   settings();const email=$('sbEmail').value.trim(),password=$('sbPassword').value;
   if(!email||!password)throw Error('Enter email and password.');
+  if(kind==='signup'&&password.length<8)throw Error('Use a password with at least 8 characters.');
+  const emailInput=$('sbEmail');if(emailInput&&typeof emailInput.checkValidity==='function'&&!emailInput.checkValidity())throw Error('Enter a valid email address.');
   status(kind==='signup'?'Creating account…':'Signing in…');
   const endpoint=kind==='signup'?'/auth/v1/signup':'/auth/v1/token?grant_type=password';
   const data=await api(endpoint,{method:'POST',body:JSON.stringify({email,password})});
@@ -2213,7 +2215,7 @@ async function sign(kind){
  }catch(e){status('Authentication error: '+e.message);if(phase3LocalStorage.getItem(OWNER_KEY))privacyGate('This browser is reserved for its original account. Sign in with that account or use a separate browser profile.')}
 }
 $('sbAuthForm').addEventListener('submit',e=>{e.preventDefault();sign('signin')});
-$('sbSignUp').onclick=()=>sign('signup');
+$('sbSignUp').addEventListener('click',e=>{e.preventDefault();sign('signup');});
 $('sbSignOut').onclick=()=>{try{saveActiveAccount()}catch(e){status('Could not preserve account storage; sign-out stopped: '+e.message);return;}storeAuth(null);document.dispatchEvent(new Event('phase3-account-signed-out'));started=false;lastPushed='';status('Signed out. Personal data is locked on this device.');const dialog=document.getElementById('setupDialog');if(dialog.open)dialog.close();privacyGate('Signed out. Personal data is hidden. Sign in to access your account partition.');location.reload();};
 $('sbBackup').onclick=download;
 // Retired TEST-only recovery/upload implementation removed from production review.
