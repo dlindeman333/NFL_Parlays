@@ -697,6 +697,21 @@ html{scroll-padding-top:175px}#topAccountPanel,#myParlays,#savedParlaySlips,#bui
 @media(min-width:701px) and (max-width:1000px){
  #stickySkipNavigation.skip-native-drawer #skipNavLinks{grid-template-columns:repeat(5,minmax(0,1fr))!important;}
 }
+</style>
+<style id="phase4IntelligenceStyles">
+.phase4-controls{display:grid;gap:8px;margin:10px 0 14px;min-width:0}
+.phase4-control-card,.phase4-auto-controls{border:1px solid var(--bd,#7aa9d2);border-radius:12px;padding:12px;background:rgba(64,126,229,.06);min-width:0}
+.phase4-control-card .tools{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.phase4-control-card label{display:flex;gap:6px;flex-wrap:wrap;align-items:center;min-width:0}
+.phase4-control-card select{max-width:100%;min-width:120px}
+.phase4-control-card summary{cursor:pointer;font-weight:750;color:var(--tx,#16406f)}
+.phase4-auto-controls label{display:flex;gap:8px;align-items:center}
+.phase4-auto-controls p{margin:7px 0 0}
+.phase4-new-team{display:inline-block;border:1px solid #a76b0e;border-radius:999px;padding:2px 7px;font-size:.68em;letter-spacing:.025em;color:#915c00;background:#fff4d5;vertical-align:middle}
+.phase4-controls .card,.phase4-control-card,.phase4-auto-controls{box-sizing:border-box;max-width:100%}
+#advResults .card,#advResults .pl{overflow-wrap:anywhere;max-width:100%;min-width:0}
+#advResults ol{padding-left:1.4rem}
+@media(max-width:680px){.phase4-control-card .tools{display:grid;grid-template-columns:minmax(0,1fr)}.phase4-control-card select{width:100%}}
 </style></head><body class="phase3-privacy-locked">
 <div class="hd"><div class="header-topline"><div class="phase3-brand-title"><img alt="NFL Parlay Builder logo" height="64" src="data:image/png;base64,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" width="64"/><div><h1>NFL Parlay Builder</h1><span class="mu" id="headerWeekLabel" style="font-size:13px;font-weight:750">NFL week loading…</span></div></div><div class="header-exits"><button aria-label="Toggle dark mode" class="btn alt" id="theme" type="button">◐ Theme</button></div></div><div class="mu" id="sub"></div><div class="header-panels"><section aria-label="Countdown to next NFL kickoff" aria-live="off" id="phase3KickoffCountdown">
 <div class="kickoff-heading"><div class="kickoff-title">🏈 NEXT NFL KICKOFF</div><strong aria-label="NFL week" class="kickoff-week" id="kickoffWeek">WEEK --</strong></div>
@@ -896,7 +911,23 @@ function phase3LegOut(leg){
 function playerSuggested(p){
  const stats=recentContribution(p),position=String(stats.position||'').trim().toUpperCase();
  if(phase3PlayerOut(p)||!playerAvailable(p)||p.k==='ru'&&['WR','TE'].includes(position))return false;
+ // A player with a later completed-game record on another team must not
+ // appear as an eligible pick for the former team.
+ const phase4History=phase4PlayerHistory(p);
+ if(phase4History.length&&phase4History[0].team!==p.tm)return false;
  if(!regularOnly)return true;
+ // One verified new-team appearance plus two older appearances can establish
+ // recent participation; the projection later applies a transition discount.
+ if(!stats.known&&phase4History.length>=3&&phase4History[0].team===p.tm&&
+    phase4History.some(r=>r.team!==p.tm)&&phase4History.some(r=>r.team===p.tm)){
+  const recent=phase4History.slice(0,3);
+  const average=field=>recent.every(r=>Number.isFinite(r[field])&&r[field]>=0)?recent.reduce((s,r)=>s+r[field],0)/3:null;
+  const pos=String(recent[0].position||position).toUpperCase();
+  if(p.k==='ru'){const minimum=pos==='QB'?3:['RB','HB','TB','FB'].includes(pos)?5:null;return minimum!==null&&average('rushing_attempts')!==null&&average('rushing_attempts')>=minimum&&p.v>=5;}
+  if(p.k==='ps')return pos==='QB'&&average('passing_attempts')!==null&&average('passing_attempts')>=10;
+  if(p.k==='rec'||p.k==='rcp')return ['RB','HB','TB','FB','WR','TE'].includes(pos)&&average('receptions')!==null&&average('receptions')>=1;
+  return average('snap_share')!==null&&average('snap_share')>=.25;
+ }
  if(!stats.known)return false;
  if(p.k==='ru'){
   const minimum=position==='QB'?3:['RB','HB','TB','FB'].includes(position)?5:null;
@@ -1700,7 +1731,23 @@ function plays(){if(SEASON!==MODEL_SEASON){$("plays").innerHTML=`<div class="car
 const ADV_ODDS_KEY='nflp-manual-props-v1';
 let advManual={};try{advManual=JSON.parse(phase3LocalStorage.getItem(ADV_ODDS_KEY)||'{}')||{}}catch(e){}
 const advKey=(g,p)=>[SEASON,wk,g.a,g.h,p.n,p.k].join('|');
-function advLogs(p){return importedPlayer(p).filter(r=>Number.isFinite(Number(r[p.k==='ps'?'passing_yards':p.k==='ru'?'rushing_yards':p.k==='rec'?'receiving_yards':p.k==='rcp'?'receptions':'touchdowns']))).sort((a,b)=>Number(b.week)-Number(a.week));}
+const PHASE4_WEATHER_KEY='nflp-phase4-manual-weather-v1';
+let phase4Weather={};try{const x=JSON.parse(phase3LocalStorage.getItem(PHASE4_WEATHER_KEY)||'{}');if(x&&typeof x==='object'&&!Array.isArray(x))phase4Weather=x;}catch(e){}
+const phase4Clamp=(v,low,high)=>Math.min(high,Math.max(low,v));
+function phase4PlayerHistory(p){
+ const id=playerIdentity(p.n);
+ return imported.filter(r=>playerIdentity(r.player)===id&&Number(r.season)===Number(SEASON)&&
+  Number.isInteger(Number(r.week))&&Number(r.week)<wk&&r.game_status==='COMPLETED')
+  .sort((a,b)=>Number(b.week)-Number(a.week));
+}
+function phase4WeatherForGame(g){
+ const code=phase4Weather[[SEASON,wk,g.id].join('|')]||'none';
+ return {code,label:({none:'No adjustment',wind:'Verified wind scenario',severe:'Verified strong wind scenario',wet:'Verified heavy precipitation scenario'})[code]||'No adjustment',
+  factor:k=>code==='wind'?(['ps','rec','rcp'].includes(k)?.93:1.02):
+    code==='severe'?(['ps','rec','rcp'].includes(k)?.84:1.04):
+    code==='wet'?(['ps','rec','rcp'].includes(k)?.94:1.01):1};
+}
+function advLogs(p){return phase4PlayerHistory(p).filter(r=>Number.isFinite(Number(r[p.k==='ps'?'passing_yards':p.k==='ru'?'rushing_yards':p.k==='rec'?'receiving_yards':p.k==='rcp'?'receptions':'touchdowns'])));}
 function advAvg(a){return a.length?a.reduce((v,x)=>v+x,0)/a.length:null;}
 function advMetrics(p,g){
  const s=pstat(p,g);if(!s)return null;
@@ -1708,25 +1755,51 @@ function advMetrics(p,g){
  const vals=logs.map(r=>Number(r[field]));
  const last3=advAvg(vals.slice(0,3)),last5=advAvg(vals.slice(0,5));
  const opponent=p.tm===g.a?g.h:g.a,opp=S[opponent],own=S[p.tm];
+ if(!opp||!own)return null;
  // Points conceded is only a broad defensive proxy, NOT a pass/rush defense rank.
- const defenseFactor=Math.max(.85,Math.min(1.15,opp.opp/22.5));
- const recentFactor=last5==null||p.v<=0?1:Math.max(.8,Math.min(1.2,last5/p.v));
- const projection=Math.max(0,s.proj*defenseFactor*(.75+.25*recentFactor));
+ const defenseFactor=phase4Clamp(opp.opp/22.5,.9,1.1);
+ const weights=[1,.84,.70,.58,.48];const recent=vals.slice(0,5);
+ const weighted=recent.length?recent.reduce((sum,v,i)=>sum+v*weights[i],0)/weights.slice(0,recent.length).reduce((a,b)=>a+b,0):null;
+ const recentFactor=weighted===null||!(p.v>0)?1:phase4Clamp(weighted/p.v,.82,1.18);
+ const usageField=p.k==='ps'?'passing_attempts':p.k==='ru'?'rushing_attempts':p.k==='rec'||p.k==='rcp'?'targets':null;
+ const usageRows=usageField?logs.filter(r=>Number.isFinite(r[usageField])&&r[usageField]>=0):[];
+ const usageVals=usageRows.map(r=>Number(r[usageField]));
+ const usage3=advAvg(usageVals.slice(0,3)),usage5=advAvg(usageVals.slice(0,5));
+ const usageFactor=usage3!=null&&usage5>0?phase4Clamp(usage3/usage5,.88,1.12):1;
+ const previousTeams=[...new Set(logs.map(r=>r.team).filter(t=>t!==p.tm))];
+ const newTeam=logs.length>0&&logs[0].team===p.tm&&previousTeams.length>0;
+ const weather=phase4WeatherForGame(g);
+ const injury=String(window.phase3InjuryLabel?.(p.n,p.tm,g.week||wk)||'');
+ const currentReport=injury&&!/stale|not available|no matching|unconfirmed|not loaded/i.test(injury);
+ const injuryFactor=currentReport&&/doubtful/i.test(injury)? .80:currentReport&&/questionable/i.test(injury)? .92:1;
+ // Advisory adjustments are deliberately bounded, and never invent live feeds.
+ const projection=Math.max(0,s.proj*defenseFactor*(.6+.4*recentFactor)*(.8+.2*usageFactor)*
+  (newTeam? .95:1)*weather.factor(p.k)*injuryFactor);
  const baseline=p.k==='td'?null:Number(s.line);
  const key=advKey(g,p),manual=advManual[key];
  const validLine=manual&&Number.isFinite(Number(manual.line))&&Number(manual.line)>=0;
  const line=validLine?Number(manual.line):baseline;
  const hasOdds=validLine&&Number.isFinite(Number(manual.odds))&&Number(manual.odds)!==0;
  const odds=hasOdds?Number(manual.odds):null;
- const spread=vals.length>=3?Math.max(1,Math.sqrt(advAvg(vals.map(v=>(v-advAvg(vals))**2)))):Math.max(p.k==='td'?.5:10,p.v*(p.k==='ps'?.22:.38));
+ const spread=vals.length>=3?Math.max(p.k==='td'?.35:1,Math.sqrt(advAvg(vals.map(v=>(v-advAvg(vals))**2)))):Math.max(p.k==='td'?.5:10,p.v*(p.k==='ps'?.22:.38));
  const z=line==null?null:(projection-line)/spread;
- const prob=line==null?Math.max(.05,Math.min(.95,1-Math.exp(-projection))):Math.max(.05,Math.min(.95,1/(1+Math.exp(-1.7*z))));
+ const rawProb=line==null?1-Math.exp(-projection):1/(1+Math.exp(-1.7*z));
+ // Shrink model probabilities toward an uncertain 50/50 baseline when sample
+ // size, player movement, injury, or manual weather scenarios raise risk.
+ const credibility=phase4Clamp((.65+.035*Math.min(vals.length,5))*(newTeam? .86:1)*(injuryFactor<1? .9:1)*(weather.code!=='none'? .94:1),.45,.85);
+ const prob=phase4Clamp(.5+(rawProb-.5)*credibility,.05,.95);
  const americanImplied=odds==null?null:(odds>0?100/(odds+100):(-odds)/((-odds)+100));
  const edge=americanImplied==null?null:prob-americanImplied;
  const sample=Math.min(5,vals.length);
  const hits=line==null?null:vals.slice(0,sample).filter(v=>v>line).length;
- const score=(edge==null?prob-.5:edge)*100+(sample>=3?Math.min(5,sample):0);
- return{p,g,s,opponent,projection,line,prob,odds,edge,score,last3,last5,sample,hits,logs:vals.length,defenseFactor,manual:validLine?manual:null,key};
+ const selectedProb=validLine?prob:Math.max(prob,1-prob);
+ const riskPenalty=(newTeam?4:0)+(vals.length<3?5:0)+(injuryFactor<1?6:0)+(weather.code!=='none'?2:0);
+ const score=100*(edge==null?selectedProb-.5:edge)+Math.min(5,vals.length)-riskPenalty;
+ const phase4Notes=[newTeam?'New team: historical stats retained across '+previousTeams.join(', '):'',
+  usageFactor!==1?'Recent opportunity trend factored in':'',injuryFactor<1?'Current injury caution applied':'',
+  weather.code!=='none'?'Manual weather scenario: '+weather.label:''].filter(Boolean);
+ return{p,g,s,opponent,projection,line,prob,odds,edge,score,last3,last5,sample,hits,logs:vals.length,
+  defenseFactor,manual:validLine?manual:null,key,newTeam,previousTeams,credibility,usageFactor,weather,injuryFactor,phase4Notes};
 }
 function advSaveOdds(key){
  const line=document.getElementById('advLine').value.trim(),odds=document.getElementById('advOdds').value.trim(),book=document.getElementById('advBook').value;
@@ -1736,25 +1809,27 @@ function advSaveOdds(key){
  try{phase3LocalStorage.setItem(ADV_ODDS_KEY,JSON.stringify(advManual))}catch(e){$('advStatus').textContent='Browser storage full; sportsbook line could not be saved.';return;}
  renderAdvanced();$('advStatus').textContent='Manual sportsbook line saved on this device. Verify the line is still current before using it.';
 }
+function phase4MarketLabel(k){return ({td:'anytime TD',ps:'passing yards',ru:'rushing yards',rec:'receiving yards',rcp:'receptions'})[k]||'player statistic';}
+function phase4ProjectionUnit(k){return k==='td'?'TDs':k==='rcp'?'receptions':'yards';}
 function advAdd(index){
  const x=window._advPicks?.[index];if(!x)return;
  const game=games.find(g=>String(g.id)===String(x.g.id));
  if(!game||game.sc){aiSelectionFeedback('Selection not added: game unavailable or completed.');return;}
  if(mode==='same'&&focus&&String(focus)!==String(game.id)){aiSelectionFeedback('Selection not added: this same-game slip is for a different matchup. Use a multi-game slip to combine games.');return;}
  const side=advancedPickSide(x);
- const text=x.p.k==='td'?x.p.n+' anytime TD':x.p.n+' Over '+x.line+' '+(x.p.k==='ps'?'passing yards':'rushing yards');
+ const text=x.p.k==='td'?x.p.n+' anytime TD':x.p.n+' '+(side==='u'?'Under ':'Over ')+x.line+' '+phase4MarketLabel(x.p.k);
  if(legs.some(l=>(String(l.gid)===String(game.id)&&l.mkt==='p'+x.p.i)||l.custom&&l.m===game.a+' @ '+game.h&&l.t===text)){
   aiSelectionFeedback('Selection not added: this player market is already in Current parlay.');return;
  }
  if(!makeSelectionRoom())return;
  if(mode==='same'&&!focus)focus=game.id;
  if(x.manual){
-  legs.push({custom:true,gid:game.id,mkt:'p'+x.p.i,side:'o',t:text,m:game.a+' @ '+game.h,o:String(x.odds)});
+  legs.push({custom:true,gid:game.id,mkt:'p'+x.p.i,side,t:text,m:game.a+' @ '+game.h,o:String(x.odds)});
  }else legs.push(freezeNewPlayerLeg(game.id,'p'+x.p.i,side));
  draw();aiSelectionFeedback('Added to Current parlay: '+legs.length+' of '+N+' legs. Other market selections are preserved. Save the parlay when finished.');
 }
 function advCard(x,i){
- const prop=x.p.k==='td'?'anytime TD':x.p.k==='ps'?'passing yards':'rushing yards';
+ const prop=phase4MarketLabel(x.p.k);
  const selection=x.line==null?x.p.n+' '+prop:x.p.n+' '+(advancedPickSide(x)==='o'?'Over':'Under')+' '+x.line+' '+prop;
  const confidence=x.logs>=5?'5+ games of player logs':x.logs>=3?'3–4 player game logs':'Limited player game logs';
  const pct=n=>Math.round(n*100)+'%';
@@ -1767,38 +1842,124 @@ function advCard(x,i){
  const details=`<details class="adv-expanded" style="margin:10px 0 6px;padding:10px;border:1px solid var(--border,#bbb);border-radius:8px"><summary style="cursor:pointer;font-weight:700">Why this pick? · Show expanded analysis</summary>
  <div style="padding-top:10px">
  <b>Player performance</b><div class="mu">Last 3-game average: ${num(x.last3)} · Last 5-game average: ${num(x.last5)} · Logged games: ${x.logs} · Hit rate against displayed line: ${hitRate}.</div>
- <div class="mu">Model projection: ${num(x.projection)} ${x.p.k==='td'?'TDs':'yards'} · Selected line: ${x.line==null?'Not available':num(x.line)} · Projected difference: ${spread} · Model over probability: ${pct(x.prob)}.</div>
+ <div class="mu">Model projection: ${num(x.projection)} ${phase4ProjectionUnit(x.p.k)} · Selected line: ${x.line==null?'Not available':num(x.line)} · Projected difference: ${spread} · Model over probability: ${pct(x.prob)}.</div>
  <b>Matchup factors</b><div class="mu">${esc(x.p.tm)} model scoring estimate: ${num(own.ppg)} points/game; ${esc(x.opponent)} estimated points allowed: ${num(opp.opp)} points/game. Defensive adjustment: ${(x.defenseFactor*100).toFixed(0)}% of neutral. Points allowed is a broad proxy, not a verified pass/rush positional ranking.</div>
+ <b>Phase 4 context</b><div class="mu">Recent opportunity adjustment: ${(x.usageFactor*100).toFixed(0)}% · Evidence weight: ${(x.credibility*100).toFixed(0)}% · Weather: ${esc(x.weather.label)}. ${esc(x.phase4Notes.join('; ')||'No confirmed trade, injury or weather adjustment.')} Historical logs can include a previous team; current team eligibility requires a matching recent record.</div>
  <b>Sportsbook comparison</b><div class="mu">${oddsDetail}${x.edge==null?'':` Model probability minus odds-implied break-even probability: ${(x.edge*100).toFixed(1)} percentage points (uncalibrated estimate).`}</div>
  <b>Risk and data quality</b><div class="mu">${esc(risk)} ${esc(confidence)}. Probabilities are unvalidated model estimates, not measured prediction accuracy.</div>
  </div></details>`;
- return `<div class="pl ${x.logs<3?'med':''}" style="padding:10px 0"><b>${esc(selection)}</b> · ${esc(x.g.a)} @ ${esc(x.g.h)}${playerStatsButton(x.p,x.g)}<div class="mu" data-injury-player="${esc(x.p.n)}" data-injury-team="${esc(x.p.tm)}" data-injury-week="${Number(x.g.week||wk)}">${esc(window.phase3InjuryLabel?.(x.p.n,x.p.tm,x.g.week||wk)||'Injury status not loaded')}</div><div class="mu">Selection odds: ${esc(String(advancedPickOdds(x)))} (${x.manual?'manually entered':'model estimate'})</div><div class="mu">Projected ${x.projection.toFixed(1)} ${x.p.k==='td'?'TDs':'yards'} · Model Over probability ${pct(x.prob)} · ${esc(confidence)}</div><div class="mu">Last 3: ${x.last3==null?'unavailable':x.last3.toFixed(1)} · Last 5: ${x.last5==null?'unavailable':x.last5.toFixed(1)}${x.sample&&x.line!=null?' · Over this line in '+x.hits+'/'+x.sample+' logged games':''}</div><div class="mu">Opponent ${esc(x.opponent)} allows an estimated ${S[x.opponent].opp.toFixed(1)} points/game (broad defensive proxy, not positional defense ranking). ${x.manual?esc(x.manual.book)+' manually entered '+esc(String(x.odds))+' odds · '+new Date(x.manual.updated).toLocaleString():'No verified sportsbook line; using model reference threshold.'}</div>${x.edge==null?'':`<div class="mu"><b>Estimated probability edge vs. entered odds: ${(x.edge*100).toFixed(1)} percentage points</b> (model estimate; not guaranteed value).</div>`}${details}<div class="tools"><button type="button" class="btn alt" onclick="advAdd(${i})">+ Add to current parlay</button><button type="button" class="btn alt" onclick="advEdit(${i})">${x.manual?'Edit':'Enter'} sportsbook line</button></div></div>`;
+ return `<div class="pl ${x.logs<3?'med':''}" style="padding:10px 0"><b>${esc(selection)}</b> ${x.newTeam?'<span class="phase4-new-team">NEW TEAM</span>':''} · ${esc(x.g.a)} @ ${esc(x.g.h)}${playerStatsButton(x.p,x.g)}<div class="mu" data-injury-player="${esc(x.p.n)}" data-injury-team="${esc(x.p.tm)}" data-injury-week="${Number(x.g.week||wk)}">${esc(window.phase3InjuryLabel?.(x.p.n,x.p.tm,x.g.week||wk)||'Injury status not loaded')}</div><div class="mu">Selection odds: ${esc(String(advancedPickOdds(x)))} (${x.manual?'manually entered':'model estimate'})</div><div class="mu">Projected ${x.projection.toFixed(1)} ${phase4ProjectionUnit(x.p.k)} · Risk-adjusted model Over probability ${pct(x.prob)} · ${esc(confidence)}</div><div class="mu">Last 3: ${x.last3==null?'unavailable':x.last3.toFixed(1)} · Last 5: ${x.last5==null?'unavailable':x.last5.toFixed(1)}${x.sample&&x.line!=null?' · Over this line in '+x.hits+'/'+x.sample+' logged games':''}</div><div class="mu">Opponent ${esc(x.opponent)} allows an estimated ${S[x.opponent].opp.toFixed(1)} points/game (broad defensive proxy, not positional defense ranking). ${x.manual?esc(x.manual.book)+' manually entered '+esc(String(x.odds))+' odds · '+new Date(x.manual.updated).toLocaleString():'No verified sportsbook line; using model reference threshold.'}</div>${x.edge==null?'':`<div class="mu"><b>Estimated probability edge vs. entered odds: ${(x.edge*100).toFixed(1)} percentage points</b> (model estimate; not guaranteed value).</div>`}${details}<div class="tools"><button type="button" class="btn alt" onclick="advAdd(${i})">+ Add to current parlay</button><button type="button" class="btn alt" onclick="advEdit(${i})">${x.manual?'Edit':'Enter'} sportsbook line</button></div></div>`;
 }
 function advEdit(i){
  const x=window._advPicks?.[i];if(!x)return;
  const el=$('advEditor');if(!el)return;
  el.hidden=false;el.dataset.index=i;el.dataset.key=x.key;
- $('advEditTitle').textContent=x.p.n+' — '+(x.p.k==='td'?'Anytime TD':x.p.k==='ps'?'Passing yards':'Rushing yards');
+ $('advEditTitle').textContent=x.p.n+' — '+phase4MarketLabel(x.p.k);
  $('advLine').value=x.manual?.line??x.line??'';$('advOdds').value=x.manual?.odds??'';$('advBook').value=x.manual?.book||'DraftKings';
  el.scrollIntoView({behavior:'smooth',block:'nearest'});
+}
+let phase4OptimizerPlans=[];
+function phase4Optimize(all){
+ const desired=phase4Clamp(Number($('phase4LegCount')?.value)||3,3,6);
+ const byGame=new Map(),now=Date.now();
+ for(const x of all){
+  const date=Date.parse(x.g.date||'');
+  if(!Number.isFinite(date)||date<=now+30*60*1000||x.g.sc||phase3PlayerOut(x.p)||
+     x.line==null&&!['td'].includes(x.p.k))continue;
+  const side=advancedPickSide(x),prob=side==='u'?1-x.prob:x.prob;
+  if(!Number.isFinite(prob)||prob<.53)continue;
+  const row={x,side,prob,quality:x.credibility||.5,
+   player:playerIdentity(x.p.n),gameId:String(x.g.id),
+   // Model-derived prices are illustrative and are never labeled bookmaker odds.
+   price:x.manual&&Number.isFinite(x.odds)?x.odds:Number(am(dec(prob)))};
+  const group=byGame.get(row.gameId)||[];group.push(row);byGame.set(row.gameId,group);
+ }
+ if(byGame.size<desired)return [];
+ const groups=[...byGame.values()].map(rows=>rows.sort((a,b)=>b.prob*a.quality-a.prob*b.quality).slice(0,8));
+ let states=[{rows:[],score:0}];const WIDTH_PER_LEG_COUNT=95;
+ for(const options of groups){
+  const next=states.slice();
+  for(const prior of states){
+   if(prior.rows.length>=desired)continue;
+   for(const row of options){
+    if(prior.rows.some(old=>old.player===row.player))continue;
+    const uncertainty=(1-row.quality)*.16+(row.x.newTeam? .05:0)+(row.x.injuryFactor<1? .05:0);
+    next.push({rows:[...prior.rows,row],score:prior.score+Math.log(row.prob)-uncertainty});
+   }
+  }
+  states=[];
+  for(let count=0;count<=desired;count++){
+   const bucket=next.filter(s=>s.rows.length===count).sort((a,b)=>b.score-a.score);
+   const seen=new Set();let retained=0;
+   for(const state of bucket){
+    const key=state.rows.map(r=>r.gameId+':'+r.player+':'+r.x.p.k).sort().join('|');
+    if(seen.has(key))continue;seen.add(key);states.push(state);
+    if(++retained===WIDTH_PER_LEG_COUNT)break;
+   }
+  }
+ }
+ const finished=states.filter(s=>s.rows.length===desired).sort((a,b)=>b.score-a.score);
+ const output=[],seen=new Set();
+ for(const state of finished){
+  const key=state.rows.map(r=>r.gameId+':'+r.player).sort().join('|');
+  if(seen.has(key))continue;seen.add(key);output.push(state);if(output.length===3)break;
+ }
+ return output;
+}
+function phase4RenderOptimizer(all){
+ phase4OptimizerPlans=phase4Optimize(all);
+ const n=Number($('phase4LegCount')?.value)||3;
+ if(!phase4OptimizerPlans.length)return '<div class="card">No eligible '+n+'-leg optimizer combinations. This mode requires at least '+n+' different upcoming games with qualifying player markets. Check Week, filters, and kickoff times.</div>';
+ return '<div class="card"><h3>Risk-aware parlay optimizer · '+n+' legs</h3><p class="mu">One player pick per game; no repeated player. Scores penalize thin statistics, new-team uncertainty and questionable availability. Probabilities are uncalibrated model estimates and products below are independence proxies, not verified parlay win probabilities or sportsbook odds. Correlations between games may still exist.</p></div>'+
+ phase4OptimizerPlans.map((state,i)=>{
+  const proxy=state.rows.reduce((v,r)=>v*r.prob,1),estimated=state.rows.reduce((v,r)=>v*(r.price>0?1+r.price/100:1+100/Math.abs(r.price)),1);
+  const lines=state.rows.map(r=>'<li><b>'+esc(r.x.p.n)+'</b> · '+esc(r.side==='u'?'Under':'Over')+' '+esc(r.x.p.k==='td'?'0.5 TD':r.x.line+' '+({ps:'passing yards',ru:'rushing yards',rec:'receiving yards',rcp:'receptions'}[r.x.p.k]||'yards'))+' · '+esc(r.x.g.a)+' @ '+esc(r.x.g.h)+' <span class="mu">('+Math.round(r.prob*100)+'% model estimate'+(r.x.newTeam?', new-team caution':'')+')</span></li>').join('');
+  return '<article class="card"><h3>Option '+(i+1)+' · '+Math.round(proxy*1000)/10+'% independence proxy</h3><p class="mu">Approximate combined model price '+esc(am(estimated))+'; not a sportsbook quote. Risk-adjusted ranking score '+state.score.toFixed(2)+'.</p><ol>'+lines+'</ol><button type="button" class="btn alt" onclick="phase4UseOptimizerPlan('+i+')">Use in new draft slip</button></article>';
+ }).join('');
+}
+function phase4UseOptimizerPlan(index){
+ const plan=phase4OptimizerPlans[index];if(!plan)return;
+ const currentGames=WKS[wk]||[],now=Date.now();
+ if(plan.rows.some(r=>!currentGames.some(g=>String(g.id)===r.gameId&&!g.sc&&Date.parse(g.date||'')>now+30*60*1000))){
+  $('advStatus').textContent='The schedule changed or a game is too close to kickoff. Generate fresh optimizer picks.';renderAdvanced();return;
+ }
+ if(!confirm('Create a NEW local draft from '+plan.rows.length+' model-ranked selections? Existing saved parlays will not change.'))return;
+ const selections=plan.rows.map(r=>r.x.manual?{gid:r.x.g.id,mkt:'p'+r.x.p.i,side:r.side,custom:true,
+   t:r.x.p.n+' '+(r.side==='u'?'Under ':'Over ')+(r.x.p.k==='td'?'0.5 TD':r.x.line+' '+r.x.p.k),m:r.x.g.a+' @ '+r.x.g.h,o:String(r.x.odds)}:
+   freezeNewPlayerLeg(r.x.g.id,'p'+r.x.p.i,r.side));
+ syncActiveSlip();const id=Math.max(slipSeq,...slips.map(s=>Number(s.id)||0))+1;slipSeq=id;
+ slips.push({id,name:'Phase 4 optimized '+selections.length+' legs',wk,mode:'multi',N:selections.length,
+  stake:Number($('stake').value)||10,legs:selections,focus:null});
+ switchSlip(id);persistDraftSlips();
+ $('advStatus').textContent='Created a new draft. Review actual available markets and odds before saving.';
+ $('uiActiveParlay')?.scrollIntoView({behavior:'smooth',block:'nearest'});
+}
+function phase4RefreshWeatherGames(){
+ const select=$('phase4WeatherGame');if(!select)return;
+ const previous=select.value;
+ select.innerHTML='<option value="">Choose matchup</option>'+(WKS[wk]||[]).filter(g=>!g.sc).map(g=>'<option value="'+esc(g.id)+'">'+esc(g.a)+' @ '+esc(g.h)+'</option>').join('');
+ if([...select.options].some(o=>o.value===previous))select.value=previous;
 }
 function renderAdvanced(){
  refreshPlayerMarkets();
  const root=$('advResults');if(!root)return;
  if(SEASON!==MODEL_SEASON){root.innerHTML='<div class="warn">Matchup recommendations require updated season-specific model baselines.</div>';return;}
  const market=$('advMarket').value,view=$('advView').value;
+ phase4RefreshWeatherGames();if($('phase4OptimizerOptions'))$('phase4OptimizerOptions').hidden=view!=='optimizer';
  const all=(WKS[wk]||[]).filter(g=>!g.sc&&vis(g)).flatMap(g=>PLY.filter(p=>playerSuggested(p)&&filterHas(pf,p.k)&&(p.tm===g.a||p.tm===g.h)&&(market==='all'||p.k===market)).map(p=>advMetrics(p,g)).filter(Boolean).filter(x=>!regularOnly||x.p.k!=='ru'||Number(x.line)>=5));
  all.sort((a,b)=>b.score-a.score);window._advPicks=all;
  const gamesCount=new Set(all.map(x=>x.g.id)).size;
- $('advStatus').textContent=`${all.length} model candidates across ${gamesCount} upcoming games. Estimates use 2026 baseline data and any available imported player logs; not live sportsbook lines.`;
+ $('advStatus').textContent=`${all.length} model candidates across ${gamesCount} upcoming games. Phase 4 uses weighted recent player logs, team changes, bounded matchup adjustments and risk discounts. Estimates are not validated sportsbook probabilities or live lines.`;
  let html='';
  if(view==='games'){
   const groups=[...new Set(all.map(x=>x.g.id))];
   html=groups.map(id=>{const rows=all.filter(x=>x.g.id===id),g=rows[0].g;return `<h3>${esc(g.a)} @ ${esc(g.h)}</h3><div class="mu">Model margin: ${g.m.toFixed(1)} points toward ${g.m>=0?esc(g.h):esc(g.a)}; total: ${g.tot.toFixed(1)}. These are estimates, not current betting lines.</div>`+rows.slice(0,4).map(x=>advCard(x,all.indexOf(x))).join('')}).join('');
+ }else if(view==='optimizer'){
+  html=phase4RenderOptimizer(all);
  }else if(view==='parlays'){
   const unique=[],seen=new Set();for(const x of all){if(seen.has(x.g.id))continue;seen.add(x.g.id);unique.push(x);if(unique.length===5)break;}
   const legSummary=unique.map((x,i)=>{
-   const marketLabel=x.p.k==='td'?'Anytime touchdown':x.p.k==='ps'?'Passing yards':'Rushing yards';
+   const marketLabel=phase4MarketLabel(x.p.k);
    const lineText=x.line==null?'Anytime touchdown':`${advancedPickSide(x)==='o'?'Over':'Under'} ${x.line}`;
    return `<li><b>${esc(x.p.n)}</b> — ${esc(marketLabel)} · ${esc(lineText)} ${playerStatsButton(x.p,x.g)}<div class="mu">${esc(x.g.a)} @ ${esc(x.g.h)} · ${x.manual?'Manually entered '+esc(x.manual.book)+' odds '+esc(String(x.odds)):'No verified sportsbook odds'}</div></li>`;
   }).join('');
@@ -1807,6 +1968,20 @@ function renderAdvanced(){
  html=allManualScenarioHTML()+html;
  root.innerHTML=html||'<div class="mu">No eligible upcoming player predictions for the selected week. Refresh the NFL schedule or change the market filter.</div>';
 }
+$('advView').add(new Option('Smart parlay optimizer (3–6 legs)','optimizer'));
+const phase4Controls=document.createElement('div');phase4Controls.className='phase4-controls';
+phase4Controls.innerHTML='<div id="phase4OptimizerOptions" class="phase4-control-card" hidden><label><b>Optimizer legs</b> <select id="phase4LegCount"><option>3</option><option>4</option><option>5</option><option>6</option></select></label><span class="mu">Different games only · one pick per game · risk-aware ranking</span></div>'+
+ '<details class="phase4-control-card"><summary>Manual game-weather scenario (optional)</summary><p class="mu">Enter only weather conditions you have independently checked. These local advisory adjustments do not fetch weather forecasts and do not alter official data or saved picks.</p><div class="tools"><label>Game <select id="phase4WeatherGame"></select></label><label>Condition <select id="phase4WeatherCondition"><option value="none">No adjustment</option><option value="wind">Windy</option><option value="severe">Strong wind</option><option value="wet">Heavy precipitation</option></select></label><button type="button" class="btn alt" id="phase4SaveWeather">Apply to recommendations</button></div><p class="mu" id="phase4WeatherStatus" role="status"></p></details>';
+$('advView').closest('.tools').after(phase4Controls);
+$('phase4LegCount').addEventListener('change',renderAdvanced);
+$('phase4WeatherGame').addEventListener('change',()=>{$('phase4WeatherCondition').value=phase4Weather[[SEASON,wk,$('phase4WeatherGame').value].join('|')]||'none';});
+$('phase4SaveWeather').addEventListener('click',()=>{
+ const gid=$('phase4WeatherGame').value,condition=$('phase4WeatherCondition').value;
+ if(!gid){$('phase4WeatherStatus').textContent='Select an upcoming matchup first.';return;}
+ const key=[SEASON,wk,gid].join('|');if(condition==='none')delete phase4Weather[key];else phase4Weather[key]=condition;
+ try{phase3LocalStorage.setItem(PHASE4_WEATHER_KEY,JSON.stringify(phase4Weather));$('phase4WeatherStatus').textContent='Device-only scenario applied. Recheck against the actual forecast.';renderAdvanced();}
+ catch(e){$('phase4WeatherStatus').textContent='Could not save weather scenario in this browser.';}
+});
 renderAdvanced();
 $('advView').onchange=renderAdvanced;$('advMarket').onchange=renderAdvanced;
 $('advSaveLine').onclick=()=>{const x=(window._advPicks||[]).find(x=>x.key===$('advEditor').dataset.key);if(x)advSaveOdds(x.key);else $('advStatus').textContent='This pick is no longer in the filtered results. Reopen its sportsbook line editor before saving.';};
@@ -3788,7 +3963,8 @@ window.addEventListener('online',()=>{if(safe6Running)safe6Cycle()});
  function grade(p){
   const g=(WKS[p.week]||[]).find(g=>g.a===p.away&&g.h===p.home);
   if(!g||!Array.isArray(g.sc))return [null,'Game not final'];
-  const stat=p.market==='ps'?'passing_yards':p.market==='ru'?'rushing_yards':'touchdowns';
+  const stat=({ps:'passing_yards',ru:'rushing_yards',rec:'receiving_yards',rcp:'receptions',td:'touchdowns'})[p.market];
+  if(!stat)return [null,'Market not supported for local grading'];
   const records=imported.filter(r=>Number(r.season)===p.season&&Number(r.week)===p.week&&r.team===p.team&&String(r.player).toLowerCase()===p.player.toLowerCase()&&r.game_status==='COMPLETED');
   if(!records.length)return [null,'Completed weekly player CSV needed'];
   const actual=Number(records[0][stat]);
@@ -3839,7 +4015,7 @@ window.addEventListener('online',()=>{if(safe6Running)safe6Cycle()});
     ${weekly.length?`<div class="pred-table-scroll"><table class="performance-table"><thead><tr><th>Week</th><th>Graded</th><th>Hits</th><th>Misses</th><th>Ungraded</th><th>Hit rate</th></tr></thead><tbody>${weeklyRows}</tbody></table></div>`:'<p class="mu">No weekly tracking history yet.</p>'}
    </section>
    <section class="pred-chart-card"><h3>Tracked prediction history</h3>
-    ${results.length?'<div class="pred-table-scroll"><table class="performance-table"><thead><tr><th>Saved</th><th>Week</th><th>Pick</th><th>Model probability</th><th>Outcome</th><th>Details</th></tr></thead><tbody>'+results.map(x=>'<tr><td>'+new Date(x.p.created).toLocaleString()+'</td><td>'+x.p.week+'</td><td>'+esc(x.p.player+' '+(x.p.market==='td'?'anytime TD':(x.p.side==='u'?'Under ':'Over ')+x.p.line+' '+(x.p.market==='ps'?'pass':'rush')+' yards'))+'</td><td>'+(x.p.prob*100).toFixed(0)+'%</td><td>'+(x.result[0]===null?'Ungraded':x.result[0]?'Hit':'Miss')+'</td><td>'+esc(x.result[1])+'</td></tr>').join('')+'</tbody></table></div>':'<p class="mu">No tracked predictions yet. Save a snapshot before kickoff, then import completed-game player statistics to grade it.</p>'}
+    ${results.length?'<div class="pred-table-scroll"><table class="performance-table"><thead><tr><th>Saved</th><th>Week</th><th>Pick</th><th>Model probability</th><th>Outcome</th><th>Details</th></tr></thead><tbody>'+results.map(x=>'<tr><td>'+new Date(x.p.created).toLocaleString()+'</td><td>'+x.p.week+'</td><td>'+esc(x.p.player+' '+(x.p.market==='td'?'anytime TD':(x.p.side==='u'?'Under ':'Over ')+x.p.line+' '+({ps:'passing yards',ru:'rushing yards',rec:'receiving yards',rcp:'receptions'}[x.p.market]||'player stat')) )+'</td><td>'+(x.p.prob*100).toFixed(0)+'%</td><td>'+(x.result[0]===null?'Ungraded':x.result[0]?'Hit':'Miss')+'</td><td>'+esc(x.result[1])+'</td></tr>').join('')+'</tbody></table></div>':'<p class="mu">No tracked predictions yet. Save a snapshot before kickoff, then import completed-game player statistics to grade it.</p>'}
    </section>
    </div>`;
  }
@@ -3862,6 +4038,51 @@ window.addEventListener('online',()=>{if(safe6Running)safe6Cycle()});
   history.push(snapshot);if(save())$('advTrackingStatus').textContent='Saved '+snapshot.picks.length+' prediction snapshots on this device. '+excluded+' Export a backup for safekeeping.';
   render();
  };
+ // Device-only convenience: while this page is open and active, take one
+ // immutable snapshot per game at 30-35 minutes before scheduled kickoff.
+ // It does not claim to replace an external always-on scheduler.
+ const AUTO_KEY='nflp-phase4-app-open-autocapture-v1';
+ let autoEnabled=phase3LocalStorage.getItem(AUTO_KEY)!=='off';
+ const controls=document.createElement('div');controls.className='phase4-auto-controls';
+ controls.innerHTML='<label><input type="checkbox" id="phase4AutoCapture"/> <b>Auto-capture while app is open</b></label><p class="mu">Captures up to 12 ranked picks per game, once, about 30-35 minutes before kickoff when this tab is active. This is device-local, not guaranteed background automation. Keep a backup of your tracking history.</p><p class="mu" id="phase4AutoCaptureStatus" role="status"></p>';
+ $('advTrackingStatus').before(controls);$('phase4AutoCapture').checked=autoEnabled;
+ $('phase4AutoCapture').addEventListener('change',event=>{
+  autoEnabled=event.target.checked;
+  try{phase3LocalStorage.setItem(AUTO_KEY,autoEnabled?'on':'off');}catch(e){}
+  $('phase4AutoCaptureStatus').textContent=autoEnabled?'App-open capture enabled. It cannot run when every device is closed.':'App-open capture paused on this device.';
+  if(autoEnabled)phase4AutoCapture();
+ });
+ function phase4AutoCapture(){
+  if(!autoEnabled||SEASON!==MODEL_SEASON||document.visibilityState==='hidden')return;
+  const now=Date.now(),near=(WKS[wk]||[]).filter(g=>!g.sc&&Number.isFinite(Date.parse(g.date||''))&&
+   Date.parse(g.date)-now>=30*60*1000&&Date.parse(g.date)-now<=35*60*1000);
+  if(!near.length)return;
+  let created=0,empty=0;
+  for(const g of near){
+   const id=['phase4-auto',SEASON,wk,g.id].join('-');
+   if(history.some(h=>h.id===id))continue;
+   const top=PLY.filter(p=>playerSuggested(p)&&(p.tm===g.a||p.tm===g.h))
+    .map(p=>advMetrics(p,g)).filter(x=>x&&
+     (x.p.k==='td'||(x.line!=null&&Number.isFinite(Number(x.line)))))
+    .sort((a,b)=>b.score-a.score).slice(0,12);
+   if(!top.length){empty++;continue;}
+   const createdAt=new Date(now).toISOString();
+   history.push({id,created:createdAt,capture_source:'app_open_auto_v1',
+    picks:top.map(x=>({season:SEASON,week:wk,away:g.a,home:g.h,player:x.p.n,team:x.p.tm,
+     market:x.p.k,line:x.p.k==='td'? .5:Number(x.line),side:advancedPickSide(x),
+     prob:advancedPickSide(x)==='u'?1-x.prob:x.prob,kickoff_at:g.date}))});
+   created++;
+  }
+  if(created){if(save()){
+   $('phase4AutoCaptureStatus').textContent='Automatically saved '+created+' game snapshot(s) on this device at '+new Date(now).toLocaleTimeString()+'. Export a backup for safekeeping.';
+   render();
+  }}else if(empty){$('phase4AutoCaptureStatus').textContent='An eligible game is near kickoff, but supporting player data is missing. No artificial picks were saved.';}
+ }
+ $('phase4AutoCaptureStatus').textContent=autoEnabled?'App-open capture ready; awaiting an eligible kickoff window.':'App-open capture paused on this device.';
+ const captureTimer=setInterval(phase4AutoCapture,60*1000);
+ document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible')phase4AutoCapture();});
+ window.addEventListener('focus',phase4AutoCapture);
+ setTimeout(phase4AutoCapture,4000);
  $('advExportTracking').onclick=()=>{
   const blob=new Blob([JSON.stringify({format:'nflp-prediction-tracking-v1',history},null,2)],{type:'application/json'});
   const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='nfl-prediction-tracking-'+new Date().toISOString().slice(0,10)+'.json';a.click();setTimeout(()=>URL.revokeObjectURL(a.href),1000);
@@ -3874,11 +4095,14 @@ window.addEventListener('online',()=>{if(safe6Running)safe6Cycle()});
    if(save())$('advTrackingStatus').textContent='Tracking history imported. Existing snapshots preserved.';render();
   }catch(err){$('advTrackingStatus').textContent='Import failed: '+err.message}e.target.value='';
  };
+ // Refresh local grading after imported statistics become available, without
+ // changing the original saved prediction lines or capture timestamps.
+ setInterval(()=>{if(!$('advPerformancePanel').hidden)render();},5*60*1000);
  render();
 })();
 </script>
 <script>
-/* Phase 3 official grade display: public read only; never calculates or writes grades. */
+/* Official cloud grades: immutable snapshot-backed human-readable display. Read only. */
 (()=>{
  'use strict';
  const url='https://wpvuunwtyxycqfjwuzkn.supabase.co';
@@ -3889,27 +4113,99 @@ window.addEventListener('online',()=>{if(safe6Running)safe6Cycle()});
  if(!status||!results||!refresh)return;
  let inFlight=false;
  const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+ const statNames={passing_yards:'passing yards',rushing_yards:'rushing yards',receiving_yards:'receiving yards',receptions:'receptions',touchdowns:'touchdowns',passing_tds:'passing touchdowns',rushing_tds:'rushing touchdowns',receiving_tds:'receiving touchdowns'};
+ const gradeKeyPattern=/^v1:(\d+):[a-f0-9]{64}$/;
+ const keyOf=r=>[r.season,r.week,String(r.game_id)].join('|');
+ const formatNumber=n=>Number.isFinite(Number(n))?Number(n).toLocaleString(undefined,{maximumFractionDigits:2}):String(n??'Unavailable');
+ const titleCase=s=>String(s||'').replace(/_/g,' ').replace(/\b\w/g,c=>c.toUpperCase());
+ async function readTable(path){
+  const res=await fetch(url+'/rest/v1/'+path,{headers:{apikey:key,Authorization:'Bearer '+key,Accept:'application/json'},cache:'no-store'});
+  if(!res.ok)throw new Error('HTTP '+res.status);
+  const rows=await res.json();if(!Array.isArray(rows))throw new Error('Unexpected cloud response');
+  return rows;
+ }
+ function originalPick(grade,snapshot){
+  if(!snapshot||!Array.isArray(snapshot.picks))return null;
+  const match=gradeKeyPattern.exec(String(grade.pick_key||''));
+  if(!match)return null;
+  // The server grader enumerates the original immutable picks and passes this index
+  // into pick_key(pick,index). Never reconstruct a prediction from current model data.
+  const index=Number(match[1]);
+  if(!Number.isSafeInteger(index)||index<0||index>=snapshot.picks.length)return null;
+  const pick=snapshot.picks[index];
+  if(!pick||typeof pick!=='object'||Array.isArray(pick))return null;
+  // If the snapshot supplies an explicit key, it must match before we label the grade.
+  for(const field of ['pick_key','key']){
+   if(typeof pick[field]==='string'&&gradeKeyPattern.test(pick[field])&&pick[field]!==grade.pick_key)return null;
+  }
+  return pick;
+ }
+ function predictionName(p,snapshot){
+  if(!p)return 'Original prediction details unavailable';
+  if(p.market==='ml'){
+   const team=p.side==='h'?snapshot.home_team:p.side==='a'?snapshot.away_team:p.team;
+   return team?String(team)+' moneyline (to win)':'Moneyline selection';
+  }
+  if(p.market!=='player'||!p.player_name||!p.stat||!['o','u'].includes(p.side))return 'Original prediction details unavailable';
+  const direction=p.side==='o'?'Over':'Under';
+  const line=p.line!=null&&Number.isFinite(Number(p.line))?formatNumber(p.line)+' ':'';
+  return String(p.player_name)+' - '+direction+' '+line+(statNames[p.stat]||titleCase(p.stat));
+ }
+ function actualName(grade,p,snapshot){
+  if(grade.actual_value==null||grade.actual_value==='')return 'Actual statistic unavailable';
+  const value=formatNumber(grade.actual_value);
+  if(p&&p.market==='ml'){
+   const team=p.side==='h'?snapshot.home_team:p.side==='a'?snapshot.away_team:p.team;
+   return (team?String(team)+' scored ':'Selected team scored ')+value+' points';
+  }
+  return value+(p&&p.stat?' '+(statNames[p.stat]||titleCase(p.stat)):' (recorded value)');
+ }
+ function renderCards(valid,snapshotMap,limit,missingSnapshots){
+  const visible=valid.slice(0,limit);
+  const cards=visible.map(grade=>{
+   const snapshot=snapshotMap.get(keyOf(grade));
+   const matchup=snapshot&&snapshot.away_team&&snapshot.home_team?String(snapshot.away_team)+' @ '+String(snapshot.home_team):'Matchup unavailable';
+   const pick=originalPick(grade,snapshot);
+   const outcome=String(grade.outcome).toUpperCase();
+   const statusClass=grade.outcome==='hit'?'is-hit':grade.outcome==='miss'?'is-miss':grade.outcome==='push'?'is-push':'is-pending';
+   return '<article class="official-grade-card" data-grade-week="'+esc(grade.week)+'">'+
+    '<div class="official-grade-card-head"><b>Week '+esc(grade.week)+' · '+esc(matchup)+'</b><span class="official-grade-result '+statusClass+'">'+esc(outcome)+'</span></div>'+
+    '<div class="official-grade-caption">Prediction</div><div class="official-grade-prediction">'+esc(predictionName(pick,snapshot))+'</div>'+
+    '<div class="official-grade-caption">Actual result</div><div class="official-grade-actual">'+esc(actualName(grade,pick,snapshot))+'</div>'+
+    (!pick?'<div class="official-grade-fallback">Prediction detail needs a matching archived snapshot. The original grade is unchanged.</div>':'')+
+    '</article>';
+  }).join('');
+  const notice=missingSnapshots?'<p class="mu">Archived snapshot details could not be loaded; grade counts are still shown. Check the cloud snapshot read policy.</p>':'';
+  const remaining=valid.length-visible.length;
+  return notice+'<div class="official-grade-list">'+cards+'</div>'+
+   (remaining?'<button type="button" id="officialGradeShowMore" class="btn alt">Show 50 more results ('+remaining+' remaining)</button>':'');
+ }
  async function load(){
   if(inFlight)return;
   inFlight=true;refresh.disabled=true;status.textContent='Loading official cloud grades…';
   try{
    const season=Number(document.getElementById('seasonSelect')?.value||2026);
    if(!Number.isInteger(season)||season<2020||season>2100)throw new Error('Invalid selected season');
-   const res=await fetch(url+'/rest/v1/nfl_prediction_grades_v2?select=season,week,game_id,pick_key,outcome,actual_value,grading_note,stats_source,graded_at&season=eq.'+season+'&order=week.desc,graded_at.desc&limit=1000',{
-    headers:{apikey:key,Authorization:'Bearer '+key,Accept:'application/json'},cache:'no-store'});
-   if(!res.ok)throw new Error('Cloud read failed (HTTP '+res.status+'). Check the grades table read policy.');
-   const rows=await res.json();
-   if(!Array.isArray(rows))throw new Error('Unexpected grade response');
+   const gradesRequest=readTable('nfl_prediction_grades_v2?select=season,week,game_id,pick_key,outcome,actual_value,grading_note,stats_source,graded_at&season=eq.'+season+'&order=week.desc,graded_at.desc&limit=1000');
+   const snapshotsRequest=readTable('nfl_prediction_snapshots_v2?select=season,week,game_id,away_team,home_team,picks&season=eq.'+season+'&limit=1000').catch(()=>null);
+   const [rows,snapshots]=await Promise.all([gradesRequest,snapshotsRequest]);
    const valid=rows.filter(r=>Number(r.season)===season&&Number.isInteger(Number(r.week))&&Number(r.week)>=1&&Number(r.week)<=22&&typeof r.pick_key==='string'&&/^v1:\d+:[a-f0-9]{64}$/.test(r.pick_key)&&['hit','miss','push','pending','ungraded','void'].includes(r.outcome));
    const final=valid.filter(r=>['hit','miss','push'].includes(r.outcome));
    const hits=final.filter(r=>r.outcome==='hit').length;
    const misses=final.filter(r=>r.outcome==='miss').length;
    const pushes=final.filter(r=>r.outcome==='push').length;
    const pct=hits+misses?(100*hits/(hits+misses)).toFixed(1)+'%':'N/A';
+   const snapshotMap=new Map((snapshots||[]).filter(s=>Number(s.season)===season).map(s=>[keyOf(s),s]));
    status.textContent='Season '+season+' · Automated cloud records: '+final.length+' finalized; '+valid.length+' validated of '+rows.length+' returned. Equality is a miss; pending results are excluded.';
-   results.innerHTML='<div class="performance-metrics"><div><span class="mu">Cloud hit rate</span><strong>'+pct+'</strong></div><div><span class="mu">Hits / Misses</span><strong>'+hits+' / '+misses+'</strong></div><div><span class="mu">Pushes</span><strong>'+pushes+'</strong></div></div>'+
-    (final.length?'<div style="overflow-x:auto"><table class="performance-table"><thead><tr><th>Week</th><th>Game</th><th>Pick key</th><th>Outcome</th><th>Actual</th></tr></thead><tbody>'+final.slice(0,50).map(r=>'<tr><td>'+esc(r.week)+'</td><td>'+esc(r.game_id)+'</td><td><code title="'+esc(r.pick_key)+'">'+esc(String(r.pick_key).slice(0,18))+'…</code></td><td>'+esc(r.outcome.toUpperCase())+'</td><td>'+esc(r.actual_value)+'</td></tr>').join('')+'</tbody></table></div>':'<p class="mu">No official finalized cloud grades yet. Browser estimates remain separate above.</p>');
-  }catch(e){status.textContent=e.message;results.textContent='';}
+   const metrics='<div class="performance-metrics"><div><span class="mu">Cloud hit rate</span><strong>'+pct+'</strong></div><div><span class="mu">Hits / Misses</span><strong>'+hits+' / '+misses+'</strong></div><div><span class="mu">Finalized results</span><strong>'+final.length+'</strong></div></div>';
+   let limit=50;
+   const redraw=()=>{
+    results.innerHTML=metrics+(valid.length?renderCards(valid,snapshotMap,limit,snapshots===null):'<p class="mu">No official cloud grades yet. Browser estimates remain separate above.</p>');
+    const more=document.getElementById('officialGradeShowMore');
+    if(more)more.addEventListener('click',()=>{limit+=50;redraw();});
+   };
+   redraw();
+  }catch(e){status.textContent='Cloud grades could not be loaded: '+e.message+'. No records were changed.';results.textContent='';}
   finally{inFlight=false;refresh.disabled=false;}
  }
  refresh.addEventListener('click',load);
@@ -3917,6 +4213,22 @@ window.addEventListener('online',()=>{if(safe6Running)safe6Cycle()});
  document.getElementById('seasonSelect')?.addEventListener('change',load);
 })();
 </script>
+<style id="phase4CloudReadableGradeStyles">
+.official-grade-list{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;margin:12px 0;max-width:100%;}
+.official-grade-card{min-width:0;padding:13px;border:1px solid var(--bd);border-radius:12px;background:var(--card);overflow-wrap:anywhere;}
+.official-grade-card-head{display:flex;align-items:flex-start;justify-content:space-between;flex-wrap:wrap;gap:8px;margin-bottom:12px;}
+.official-grade-card-head b{font-size:15px;line-height:1.35;}
+.official-grade-result{display:inline-flex;align-items:center;justify-content:center;min-width:60px;padding:5px 8px;border-radius:8px;font-size:12px;font-weight:900;letter-spacing:.03em;}
+.official-grade-result.is-hit{background:#d5fce5;color:#086330;}
+.official-grade-result.is-miss{background:#ffe2e6;color:#921b35;}
+.official-grade-result.is-push{background:#fff0ba;color:#724d00;}
+.official-grade-result.is-pending{background:#e7ebf3;color:#354258;}
+.official-grade-caption{font-size:11px;color:var(--muted,#6a7690);font-weight:800;letter-spacing:.045em;text-transform:uppercase;margin:10px 0 3px;}
+.official-grade-prediction{font-weight:750;line-height:1.42;color:var(--tx);}
+.official-grade-actual{font-size:14px;line-height:1.4;font-weight:650;color:var(--tx);}
+.official-grade-fallback{font-size:11px;line-height:1.4;margin-top:8px;color:var(--muted,#6a7690);}
+@media(max-width:850px){.official-grade-list{grid-template-columns:1fr;}.official-grade-card{padding:12px;}}
+</style>
 <script>
 /* Phase 3 authenticated, owner-scoped cloud prediction history preview.
    No POST/PATCH/DELETE; does not merge local snapshots into cloud. */
