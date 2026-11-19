@@ -2,6 +2,7 @@
 
 <!-- Review build: manual roster scenario management with device-local individual and confirmed bulk removal. REVIEW BEFORE DEPLOYMENT. -->
 <html lang="en"><head><meta charset="utf-8"/><title>NFL Parlay Builder</title>
+<meta name="phase4-performance-fix" content="indexed-player-history-20261119">
 <meta content="width=device-width, initial-scale=1, viewport-fit=cover" name="viewport"/>
 <link href="./apple-touch-icon.png" rel="apple-touch-icon" sizes="180x180"/>
 <link href="./nfl-parlay-icon-512.png" rel="icon" sizes="512x512" type="image/png"/>
@@ -887,7 +888,9 @@ let contributionCacheKey='',contributionCache=new Map();
 function recentContribution(p){
  const revision=[playerDataRevision,SEASON,wk].join('|');if(contributionCacheKey!==revision){contributionCacheKey=revision;contributionCache.clear();}
  const key=p.tm+'|'+playerIdentity(p.n);if(contributionCache.has(key))return contributionCache.get(key);
- const teamRows=imported.filter(r=>r.team===p.tm&&Number(r.season)===Number(SEASON)&&r.week<wk&&r.game_status==='COMPLETED');
+ // Ensure the revision-scoped index exists, then read only this team's rows.
+ phase4PlayerHistory(p);
+ const teamRows=phase4TeamHistoryIndex.get(p.tm)||[];
  const weeks=[...new Set(teamRows.map(r=>r.week))].sort((a,b)=>b-a).slice(0,3);
  const result={known:weeks.length===3,position:p.position||''};
  const logs=weeks.map(week=>teamRows.filter(r=>r.week===week&&playerIdentity(r.player)===playerIdentity(p.n)));
@@ -976,7 +979,7 @@ function freezeNewPlayerLeg(gid,mkt,side){
 }
 
 const esc=x=>String(x??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
-function importedPlayer(p){const key=playerIdentity(p.n);return imported.filter(r=>playerIdentity(r.player)===key&&r.team===p.tm&&Number(r.season)===Number(SEASON)&&r.week<wk&&r.game_status==='COMPLETED')}
+function importedPlayer(p){return phase4PlayerHistory(p).filter(r=>r.team===p.tm)}
 function sourcePlayer(p){if(p.dynamic)return playerAvailable(p)?p:null;const rows=importedPlayer(p);if(!rows.length)return p;const key=p.k==="ps"?"passing_yards":p.k==="ru"?"rushing_yards":p.k==="rec"?"receiving_yards":p.k==="rcp"?"receptions":"touchdowns";const values=rows.map(r=>r[key]).filter(Number.isFinite);if(!values.length)return p;const v=values.reduce((a,b)=>a+b,0)/values.length;return {...p,v:(v+p.v)/2};}
 function pstat(p,g){const src=sourcePlayer(p);if(!src)return null;p=src;const t=p.tm===g.a?"a":"h",mg=t==="a"?-g.m:g.m,sc=g.pp[t].pts/S[p.tm].ppg;
  if(p.k==="td")return{p:1-Math.exp(-p.v*sc),line:"Anytime TD",proj:p.v*sc};
@@ -1126,7 +1129,7 @@ function allManualScenarioHTML(limit=12){
  return '<div class="card"><b>Manual Override scenarios · not verified recommendations</b>'+gamesWithScenarios.map(id=>manualScenarioHTML(games.find(g=>g.id===id),limit)).join('')+'</div>';
 }
 function injuryTag(p,week=wk){return `<small class="mu ui-injury-label" data-injury-player="${esc(p.n)}" data-injury-team="${esc(p.tm)}" data-injury-week="${Number(week)}">${esc(window.phase3InjuryLabel?.(p.n,p.tm,week)||'Injury status loading')}</small>`;}
-const plBtns=(g,k,b)=>PLY.filter(p=>playerSuggested(p)&&p.k===k&&(p.tm===g.a||p.tm===g.h)).map(p=>{const s=pstat(p,g),sub=q=>am(dec(q))+" · "+Math.round(q*100)+"%";if(!s)return '';const buttons=k==='td'?b('p'+p.i,'o','Anytime TD',sub(s.p)):b('p'+p.i,'o','Over',sub(s.p))+b('p'+p.i,'u','Under',sub(1-s.p));return buttons?'<div class="m">'+esc(p.n)+' ('+p.tm+')'+(k==='td'?'':' · line '+s.line)+' '+injuryTag(p)+(p.dynamic?' <small class="mu">'+p.samples+' completed games</small>':'')+'</div>'+buttons:'';}).join('');
+const plBtns=(g,k,b)=>PLY.filter(p=>p.k===k&&(p.tm===g.a||p.tm===g.h)&&playerSuggested(p)).map(p=>{const s=pstat(p,g),sub=q=>am(dec(q))+" · "+Math.round(q*100)+"%";if(!s)return '';const buttons=k==='td'?b('p'+p.i,'o','Anytime TD',sub(s.p)):b('p'+p.i,'o','Over',sub(s.p))+b('p'+p.i,'u','Under',sub(1-s.p));return buttons?'<div class="m">'+esc(p.n)+' ('+p.tm+')'+(k==='td'?'':' · line '+s.line)+' '+injuryTag(p)+(p.dynamic?' <small class="mu">'+p.samples+' completed games</small>':'')+'</div>'+buttons:'';}).join('');
 const hr=tm=>{const m=/(\d+):(\d+) (AM|PM)/.exec(tm);return m?(+m[1]%12)+(m[3]==="PM"?12:0)+(+m[2])/60:0};
 const bucket=tm=>{const h=hr(tm);return h<11?"early":h<15?"aft":h<19?"eve":"late"};
 const vis=g=>filterHas(tf,bucket(g.tm))&&(!gameQuery||`${g.a} ${g.h} ${T[g.a]?.[0]||""} ${T[g.h]?.[0]||""}`.toLowerCase().includes(gameQuery));
@@ -1233,7 +1236,7 @@ function gamePickCandidates(g,includeManual=false){
  for(const side of ['o','u'])add('tot',side,'game');
 
  if(!supportedTeamOnly)for(const t of ['a','h'])for(const side of ['o','u'])add('td'+t,side,'td');
- for(const p of PLY.filter(p=>playerSuggested(p)&&(p.tm===g.a||p.tm===g.h))){
+ for(const p of PLY.filter(p=>(p.tm===g.a||p.tm===g.h)&&playerSuggested(p))){
   const manual=includeManual?advManual[advKey(g,p)]:null;
   if(manual&&Number.isFinite(Number(manual.line))&&Number(manual.line)>=0&&oddsDecimal(manual.odds)!==null){add('p'+p.i,'o',p.k,p,manual);continue;}
   for(const side of (p.k==='td'?['o']:['o','u']))add('p'+p.i,side,p.k,p);
@@ -1403,7 +1406,7 @@ function det(g){if(SEASON!==MODEL_SEASON)return "";if(openG!==g.id)return"";
  if(allPickTypes()){const h=g.p>=.5;it.push({mk:"ml",sd:h?"h":"a",p:h?g.p:1-g.p,txt:(h?g.h:g.a)+" moneyline",why:"Model margin "+f1(Math.abs(g.m))+" pts"+(g.fp!=null?", schedule feed "+P((h?g.fp:1-g.fp)*100)+"%":"")})}
 
  if(filterHas(pf,'td'))['a','h'].forEach(t=>{const p=g.pp[t].tdp,o=p>=.5;it.push({mk:'td'+t,sd:o?'o':'u',p:o?p:1-p,txt:(t==='a'?g.a:g.h)+' '+(o?'Over ':'Under ')+PN.td[1]+' team TDs',why:'Model team touchdown estimate'})});
- PLY.filter(p=>playerSuggested(p)&&(filterHas(pf,p.k))&&(p.tm===g.a||p.tm===g.h)).forEach(p=>{const s=pstat(p,g);if(!s)return;const o=p.k==="td"||s.p>=.5;it.push({mk:"p"+p.i,sd:o?"o":"u",p:o?s.p:1-s.p,txt:p.k==="td"?p.n+" anytime TD":p.n+" "+(o?"Over ":"Under ")+s.line+(p.k==="ps"?" pass yds":p.k==="ru"?" rush yds":p.k==="rec"?" receiving yds":p.k==="rcp"?" receptions":""),why:p.k==="td"?f1(p.v)+" TDs per game this season, projects "+f1(s.proj)+" here":"Averages "+Math.round(p.v)+" yds per game, projects about "+Math.round(s.proj)+" here"})});
+ PLY.filter(p=>(p.tm===g.a||p.tm===g.h)&&filterHas(pf,p.k)&&playerSuggested(p)).forEach(p=>{const s=pstat(p,g);if(!s)return;const o=p.k==="td"||s.p>=.5;it.push({mk:"p"+p.i,sd:o?"o":"u",p:o?s.p:1-s.p,txt:p.k==="td"?p.n+" anytime TD":p.n+" "+(o?"Over ":"Under ")+s.line+(p.k==="ps"?" pass yds":p.k==="ru"?" rush yds":p.k==="rec"?" receiving yds":p.k==="rcp"?" receptions":""),why:p.k==="td"?f1(p.v)+" TDs per game this season, projects "+f1(s.proj)+" here":"Averages "+Math.round(p.v)+" yds per game, projects about "+Math.round(s.proj)+" here"})});
  it.sort((a,b)=>b.p-a.p);
  const pa=g.pp.a,ph=g.pp.h,sa=S[g.a],sh=S[g.h];
  return`<div class="det" id="best-picks-${g.id}"><div class="mu"><b>Projected score:</b> ${g.a} ${P(pa.pts)}, ${g.h} ${P(ph.pts)} · total ${g.tot} · ${g.p>=.5?g.h:g.a} by ${f1(Math.abs(g.m))}</div><div class="mu"><b>Win chance (model):</b> ${g.h} ${P(g.pm*100)}%, ${g.a} ${P((1-g.pm)*100)}%${g.fp!=null?" · schedule feed: "+g.h+" "+P(g.fp*100)+"%":""}</div><div class="mu"><b>Recent scoring:</b> ${g.a} ${f1(sa.ppg)} for / ${f1(sa.opp)} against · ${g.h} ${f1(sh.ppg)} / ${f1(sh.opp)}</div><div style="margin-top:6px"><b>Best picks for this game</b></div>${it.slice(0,8).map(x=>`<div class="pl ${g.sc?(grade({...g,week:wk},x.mk,x.sd)===true?"hit":grade({...g,week:wk},x.mk,x.sd)===false?"miss":"pending"):(x.p<.6?"med":"")}"><b>${esc(x.txt)}</b>${playerForMarket(x.mk)?injuryTag(playerForMarket(x.mk)):''} · ${P(x.p*100)}% · ${am(dec(x.p))}${g.sc?"":`<button class="pill" onclick="addp('${g.id}','${x.mk}','${x.sd}')">+ Add</button>`}<div class="mu">${x.why}</div></div>`).join("")}</div>`}
@@ -1700,7 +1703,7 @@ function plays(){if(SEASON!==MODEL_SEASON){$("plays").innerHTML=`<div class="car
 
   if(!supportedTeamOnly&&filterHas(pf,'td'))for(const pf of ['td']){const L=[];(WKS[wk]||[]).filter(g=>!g.sc&&vis(g)).forEach(g=>["a","h"].forEach(t=>{const p=g.pp[t][pf+"p"],o=p>=.5;L.push({g,t,o,p:o?p:1-p})}));L.sort((a,b)=>b.p-a.p);
   h+=`<div class="card"><b>Top ${PL[pf]} plays</b>`+(L.slice(0,6).map(x=>{const tm=x.t==="a"?x.g.a:x.g.h;return`<div class="pl ${x.p<.6?"med":""}"><b>${tm} ${x.o?"Over":"Under"} ${PN[pf][1]} ${PN[pf][0]}</b> · ${Math.round(x.p*100)}% · ${am(dec(x.p))}<div class="mu">vs ${x.t==="a"?x.g.h:x.g.a} · projected ${pf==="td"?f1(x.g.pp[x.t].td)+" TDs":Math.round(x.g.pp[x.t][pf+"y"])+" yds"}</div><button type="button" class="btn alt" onclick="quickAddRecommended('${x.g.id}','${pf+x.t}','${x.o?'o':'u'}')">+ Add to parlay</button></div>`}).join("")||`<div class="mu">No team picks match the current filters and loaded data.</div>`)+`</div>`}
-  {const Q=[];(WKS[wk]||[]).filter(g=>!g.sc&&vis(g)).forEach(g=>PLY.forEach(p=>{if(playerSuggested(p)&&(p.tm===g.a||p.tm===g.h)&&(filterHas(pf,p.k))){const s=pstat(p,g);if(!s)return;const o=p.k==="td"||s.p>=.5;Q.push({p,g,o,q:o?s.p:1-s.p,s})}}));Q.sort((a,b)=>b.q-a.q);
+  {const Q=[];(WKS[wk]||[]).filter(g=>!g.sc&&vis(g)).forEach(g=>PLY.forEach(p=>{if((p.tm===g.a||p.tm===g.h)&&filterHas(pf,p.k)&&playerSuggested(p)){const s=pstat(p,g);if(!s)return;const o=p.k==="td"||s.p>=.5;Q.push({p,g,o,q:o?s.p:1-s.p,s})}}));Q.sort((a,b)=>b.q-a.q);
   h+=`<div class="card"><b>Top player picks${allPickTypes()?"":" ("+pickTypes().map(k=>PL[k]).join(", ")+")"}</b>`+(Q.slice(0,6).map(x=>`<div class="pl ${x.q<.6?"med":""}"><b>${esc(x.p.k==="td"?x.p.n+" anytime TD":x.p.n+" "+(x.o?"Over ":"Under ")+x.s.line+(x.p.k==="ps"?" pass yds":x.p.k==="rec"?" receiving yds":x.p.k==="rcp"?" receptions":" rush yds"))}</b>${injuryTag(x.p)} · ${Math.round(x.q*100)}% · ${am(dec(x.q))}<div class="mu">${x.g.a} @ ${x.g.h}</div><button type="button" class="btn alt" onclick="quickAddRecommended('${x.g.id}','p${x.p.i}','${x.o?'o':'u'}')">+ Add to parlay</button>${playerStatsButton(x.p,x.g)}</div>`).join("")||`<div class="mu">No player picks match the current filters and loaded data.</div>`)+`</div>`}
   h+=allManualScenarioHTML();
   h+=renderFilteredParlays();
@@ -1734,11 +1737,29 @@ const advKey=(g,p)=>[SEASON,wk,g.a,g.h,p.n,p.k].join('|');
 const PHASE4_WEATHER_KEY='nflp-phase4-manual-weather-v1';
 let phase4Weather={};try{const x=JSON.parse(phase3LocalStorage.getItem(PHASE4_WEATHER_KEY)||'{}');if(x&&typeof x==='object'&&!Array.isArray(x))phase4Weather=x;}catch(e){}
 const phase4Clamp=(v,low,high)=>Math.min(high,Math.max(low,v));
+// Build the completed-player index ONCE per statistics revision/week instead of
+// rescanning every imported row for every pick and every game-card redraw.
+// Index rows are read-only references; historical records remain unchanged.
+let phase4HistoryIndexKey='',phase4HistoryIndex=new Map(),phase4TeamHistoryIndex=new Map();
 function phase4PlayerHistory(p){
- const id=playerIdentity(p.n);
- return imported.filter(r=>playerIdentity(r.player)===id&&Number(r.season)===Number(SEASON)&&
-  Number.isInteger(Number(r.week))&&Number(r.week)<wk&&r.game_status==='COMPLETED')
-  .sort((a,b)=>Number(b.week)-Number(a.week));
+ const signature=[playerDataRevision,SEASON,wk].join('|');
+ if(phase4HistoryIndexKey!==signature){
+  const byName=new Map(),byTeam=new Map();
+  for(const r of imported){
+   if(Number(r.season)!==Number(SEASON)||!Number.isInteger(Number(r.week))||
+      Number(r.week)>=wk||r.game_status!=='COMPLETED')continue;
+   const identity=playerIdentity(r.player);
+   if(!identity)continue;
+   if(!byName.has(identity))byName.set(identity,[]);
+   byName.get(identity).push(r);
+   if(!byTeam.has(r.team))byTeam.set(r.team,[]);
+   byTeam.get(r.team).push(r);
+  }
+  for(const rows of byName.values())rows.sort((a,b)=>Number(b.week)-Number(a.week));
+  phase4HistoryIndex=byName;phase4TeamHistoryIndex=byTeam;
+  phase4HistoryIndexKey=signature;
+ }
+ return phase4HistoryIndex.get(playerIdentity(p.n))||[];
 }
 function phase4WeatherForGame(g){
  const code=phase4Weather[[SEASON,wk,g.id].join('|')]||'none';
@@ -1946,7 +1967,7 @@ function renderAdvanced(){
  if(SEASON!==MODEL_SEASON){root.innerHTML='<div class="warn">Matchup recommendations require updated season-specific model baselines.</div>';return;}
  const market=$('advMarket').value,view=$('advView').value;
  phase4RefreshWeatherGames();if($('phase4OptimizerOptions'))$('phase4OptimizerOptions').hidden=view!=='optimizer';
- const all=(WKS[wk]||[]).filter(g=>!g.sc&&vis(g)).flatMap(g=>PLY.filter(p=>playerSuggested(p)&&filterHas(pf,p.k)&&(p.tm===g.a||p.tm===g.h)&&(market==='all'||p.k===market)).map(p=>advMetrics(p,g)).filter(Boolean).filter(x=>!regularOnly||x.p.k!=='ru'||Number(x.line)>=5));
+ const all=(WKS[wk]||[]).filter(g=>!g.sc&&vis(g)).flatMap(g=>PLY.filter(p=>(p.tm===g.a||p.tm===g.h)&&filterHas(pf,p.k)&&(market==='all'||p.k===market)&&playerSuggested(p)).map(p=>advMetrics(p,g)).filter(Boolean).filter(x=>!regularOnly||x.p.k!=='ru'||Number(x.line)>=5));
  all.sort((a,b)=>b.score-a.score);window._advPicks=all;
  const gamesCount=new Set(all.map(x=>x.g.id)).size;
  $('advStatus').textContent=`${all.length} model candidates across ${gamesCount} upcoming games. Phase 4 uses weighted recent player logs, team changes, bounded matchup adjustments and risk discounts. Estimates are not validated sportsbook probabilities or live lines.`;
@@ -4061,7 +4082,7 @@ window.addEventListener('online',()=>{if(safe6Running)safe6Cycle()});
   for(const g of near){
    const id=['phase4-auto',SEASON,wk,g.id].join('-');
    if(history.some(h=>h.id===id))continue;
-   const top=PLY.filter(p=>playerSuggested(p)&&(p.tm===g.a||p.tm===g.h))
+   const top=PLY.filter(p=>(p.tm===g.a||p.tm===g.h)&&playerSuggested(p))
     .map(p=>advMetrics(p,g)).filter(x=>x&&
      (x.p.k==='td'||(x.line!=null&&Number.isFinite(Number(x.line)))))
     .sort((a,b)=>b.score-a.score).slice(0,12);
