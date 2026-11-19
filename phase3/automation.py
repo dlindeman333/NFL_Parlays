@@ -72,6 +72,18 @@ def number(value):
         return n if math.isfinite(n) else None
     except (TypeError,ValueError): return None
 
+def authentic_capture_window(snapshot):
+    """Only grade immutable forecasts created 30–35 minutes before kickoff."""
+    try:
+        captured=datetime.fromisoformat(snapshot['created_at'].replace('Z','+00:00'))
+        kickoff=datetime.fromisoformat(snapshot['kickoff_at'].replace('Z','+00:00'))
+        if captured.utcoffset() is None or kickoff.utcoffset() is None:
+            return False
+        lead=(kickoff-captured).total_seconds()
+        return 1800 <= lead <= 2100
+    except (KeyError,AttributeError,TypeError,ValueError,OverflowError):
+        return False
+
 def grade(pick, snapshot, event, records):
     if not event.get('status',{}).get('type',{}).get('completed'):
         return None
@@ -117,9 +129,7 @@ def grade_all(season):
         with urlopen(url,timeout=45) as response: events={str(e['id']):e for e in json.load(response).get('events',[])}
         pending=[]
         for snapshot in (s for s in snapshots if s['week']==week):
-            captured=datetime.fromisoformat(snapshot['created_at'].replace('Z','+00:00'))
-            kickoff=datetime.fromisoformat(snapshot['kickoff_at'].replace('Z','+00:00'))
-            if (kickoff-captured).total_seconds()<1800: continue
+            if not authentic_capture_window(snapshot): continue
             for index,pick in enumerate(snapshot['picks']):
                 key=pick_key(pick,index)
                 if (week,snapshot['game_id'],key) in seen: continue

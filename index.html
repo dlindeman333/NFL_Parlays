@@ -3764,15 +3764,24 @@ window.phase3ExportRecoveryData=async()=>{
   local,cloud:remote?{updated_at:remote.updated_at,payload:personalCloudValues(remote.payload)}:null,
   note:'App data only; no full database backup or credentials.'};
 };
+// A timestamp at least 30 minutes early is necessary but not sufficient:
+// records captured days before kickoff are not authentic 30–35-minute forecasts.
+window.phase3AuthenticPregameSnapshot=record=>{
+ const captured=Date.parse(record?.created_at),kickoff=Date.parse(record?.kickoff_at);
+ const lead=kickoff-captured;
+ return Number.isFinite(captured)&&Number.isFinite(kickoff)&&lead>=30*60*1000&&lead<=35*60*1000;
+};
 window.phase3TrackUpcomingPredictions=async(season,week)=>{
  if(!Number.isInteger(season)||!Number.isInteger(week)||week<1||week>22)throw Error('Invalid season/week');
  const uid=await userId();if(!safe6Active(uid))throw Error('Account ownership mismatch');
  const jwt=await token();
  const cutoff=new Date(Date.now()+30*60*1000).toISOString();
- const snapshots=await api('/rest/v1/nfl_prediction_snapshots_v2?select=season,week,game_id,kickoff_at&season=eq.'+season+'&week=eq.'+week+'&kickoff_at=gte.'+encodeURIComponent(cutoff));
+ const snapshots=await api('/rest/v1/nfl_prediction_snapshots_v2?select=season,week,game_id,created_at,kickoff_at&season=eq.'+season+'&week=eq.'+week+'&kickoff_at=gte.'+encodeURIComponent(cutoff));
  if(!safe6Active(uid))throw Error('Account changed');
- if(!Array.isArray(snapshots)||!snapshots.length)throw Error('No published predictions at least 30 minutes before kickoff for this week. Try again after automation runs.');
- const rows=snapshots.map(r=>({user_id:uid,season:r.season,week:r.week,game_id:r.game_id}));
+ if(!Array.isArray(snapshots))throw Error('Cloud prediction archive unavailable');
+ const eligible=snapshots.filter(window.phase3AuthenticPregameSnapshot);
+ if(!eligible.length)throw Error('No authentic 30–35-minute pregame predictions available for this week. Try again after capture automation runs.');
+ const rows=eligible.map(r=>({user_id:uid,season:r.season,week:r.week,game_id:r.game_id}));
  await api('/rest/v1/nfl_prediction_subscriptions_v2?on_conflict=user_id,season,week,game_id',{
   method:'POST',headers:{Authorization:'Bearer '+jwt,Prefer:'resolution=ignore-duplicates,return=minimal'},body:JSON.stringify(rows)});
  if(!safe6Active(uid))throw Error('Account changed after request; inspect history before retrying');
@@ -3796,14 +3805,13 @@ window.phase3ReadOwnPredictionHistory=async()=>{
  const keyOf=r=>[Number(r.season),Number(r.week),String(r.game_id)].join('|');
  for(const row of subscriptions){
   const original=row.nfl_prediction_snapshots_v2;
-  if(!original||!Array.isArray(original.picks))continue;
+  if(!original||!Array.isArray(original.picks)||!window.phase3AuthenticPregameSnapshot(original))continue;
   keyed.set(keyOf(row),{...row,original,archive_only:false,updated_at:row.tracked_at});
  }
  for(const original of archive){
   if(!original||!Array.isArray(original.picks)||!Number.isInteger(Number(original.week))||!Number.isInteger(Number(original.season)))continue;
-  const capture=Date.parse(original.created_at),kickoff=Date.parse(original.kickoff_at);
-  // Only authentic cloud records with timestamped pregame provenance qualify.
-  if(!Number.isFinite(capture)||!Number.isFinite(kickoff)||kickoff-capture<30*60*1000)continue;
+  // Apply the same provenance rule to shared archives and account subscriptions.
+  if(!window.phase3AuthenticPregameSnapshot(original))continue;
   const key=keyOf(original);
   if(!keyed.has(key))keyed.set(key,{season:original.season,week:original.week,game_id:original.game_id,original,
    archive_only:true,updated_at:original.created_at});
@@ -4014,20 +4022,20 @@ window.addEventListener('online',()=>{if(safe6Running)safe6Cycle()});
  };
  function renderSnapshots(){
   const el=$('archivedPerformance');if(!el)return;
-  if(!snapshots.length){el.innerHTML='<b>Archived pregame prediction accuracy</b><p class="mu">No eligible pregame snapshots found. Excluded snapshots: '+esc(el.dataset.excludedPregame||'0')+'. No forward-only forecasts have been published for this season yet; check automation status.</p>';return}
+  if(!snapshots.length){el.innerHTML='<b>Archived pregame prediction accuracy</b><p class="mu">No snapshots met the 30–35-minute pregame capture standard. Excluded snapshots: '+esc(el.dataset.excludedPregame||'0')+'. Early or late records remain in cloud storage but do not count toward verified accuracy.</p>';return}
   const week=Number(document.getElementById('performanceWeek')?.value||wk);
   const rows=snapshots.filter(s=>Number(s.season)===SEASON).flatMap(s=>(Array.isArray(s.picks)?s.picks:[]).map(p=>({...p,week:s.week,season:s.season,snapshot_at:s.created_at,game_id:s.game_id}))).filter(p=>p.week===week);
   const graded=rows.map(p=>({p,...gradeArchived(p)}));
   const hits=graded.filter(x=>x.result===true).length,misses=graded.filter(x=>x.result===false).length,unknown=graded.filter(x=>x.result===null).length;
   const rate=hits+misses?(100*hits/(hits+misses)).toFixed(1)+'%':'N/A';
   el.innerHTML='<b>Archived pregame predictions (browser estimates) · Week '+week+'</b><div class="performance-metrics"><div><span class="mu">Hit rate</span><strong>'+rate+'</strong></div><div><span class="mu">Hits / Misses</span><strong>'+hits+' / '+misses+'</strong></div><div><span class="mu">Ungraded</span><strong>'+unknown+'</strong></div><div><span class="mu">Archived picks</span><strong>'+rows.length+'</strong></div></div>'+
-   '<p class="mu">Browser-estimated results from imported CSV, NOT official cloud grades. Snapshots are included only if created at least 30 minutes before kickoff. Excluded snapshots: '+esc(el.dataset.excludedPregame||'0')+'. Historical missing predictions are not reconstructed.</p>'+
+   '<p class="mu">Browser-estimated results from imported CSV, NOT official cloud grades. Only snapshots captured 30–35 minutes before kickoff qualify. Excluded snapshots: '+esc(el.dataset.excludedPregame||'0')+'. Historical missing predictions are not reconstructed.</p>'+
    (graded.length?'<div style="overflow-x:auto"><table class="performance-table"><thead><tr><th>Pick</th><th>Outcome</th><th>Detail</th><th>Saved</th></tr></thead><tbody>'+graded.map(x=>'<tr><td>'+esc(x.p.label||x.p.team+' '+x.p.market)+'</td><td>'+(x.result===true?'HIT':x.result===false?'MISS':'Ungraded')+'</td><td>'+esc(x.reason)+'</td><td>'+new Date(x.p.snapshot_at).toLocaleString()+'</td></tr>').join('')+'</tbody></table></div>':'<p class="mu">No archived picks for this week.</p>');
  }
  async function loadSnapshots(){
   try{const raw=await get('nfl_prediction_snapshots_v2?select=season,week,game_id,away_team,home_team,created_at,kickoff_at,picks&season=eq.'+SEASON+'&order=created_at.asc&limit=500');
    const all=Array.isArray(raw)?raw:[];
-   snapshots=all.filter(r=>{const captured=Date.parse(r.created_at),kickoff=Date.parse(r.kickoff_at);return Number.isFinite(captured)&&Number.isFinite(kickoff)&&kickoff-captured>=30*60*1000});
+   snapshots=all.filter(window.phase3AuthenticPregameSnapshot);
    const excluded=all.length-snapshots.length;
    const banner=document.getElementById('archivedPerformance');if(banner)banner.dataset.excludedPregame=String(excluded);
    cardArchiveState='ready';renderSnapshots();paintGameHitRates()}
@@ -4287,20 +4295,21 @@ window.addEventListener('online',()=>{if(safe6Running)safe6Cycle()});
    const season=Number(document.getElementById('seasonSelect')?.value||2026);
    if(!Number.isInteger(season)||season<2020||season>2100)throw new Error('Invalid selected season');
    const gradesRequest=readTable('nfl_prediction_grades_v2?select=season,week,game_id,pick_key,outcome,actual_value,grading_note,stats_source,graded_at&season=eq.'+season+'&order=week.desc,graded_at.desc&limit=1000');
-   const snapshotsRequest=readTable('nfl_prediction_snapshots_v2?select=season,week,game_id,away_team,home_team,picks&season=eq.'+season+'&limit=1000').catch(()=>null);
+   const snapshotsRequest=readTable('nfl_prediction_snapshots_v2?select=season,week,game_id,away_team,home_team,created_at,kickoff_at,picks&season=eq.'+season+'&limit=1000').catch(()=>null);
    const [rows,snapshots]=await Promise.all([gradesRequest,snapshotsRequest]);
-   const valid=rows.filter(r=>Number(r.season)===season&&Number.isInteger(Number(r.week))&&Number(r.week)>=1&&Number(r.week)<=22&&typeof r.pick_key==='string'&&/^v1:\d+:[a-f0-9]{64}$/.test(r.pick_key)&&['hit','miss','push','pending','ungraded','void'].includes(r.outcome));
+   if(snapshots===null){status.textContent='Cloud snapshot provenance unavailable; official grades cannot be verified.';results.textContent='No verified grading totals shown until the original capture timestamps can be read.';return;}
+   const snapshotMap=new Map(snapshots.filter(s=>Number(s.season)===season&&window.phase3AuthenticPregameSnapshot(s)).map(s=>[keyOf(s),s]));
+   const valid=rows.filter(r=>Number(r.season)===season&&Number.isInteger(Number(r.week))&&Number(r.week)>=1&&Number(r.week)<=22&&typeof r.pick_key==='string'&&/^v1:\d+:[a-f0-9]{64}$/.test(r.pick_key)&&['hit','miss','push','pending','ungraded','void'].includes(r.outcome)&&snapshotMap.has(keyOf(r)));
    const final=valid.filter(r=>['hit','miss','push'].includes(r.outcome));
    const hits=final.filter(r=>r.outcome==='hit').length;
    const misses=final.filter(r=>r.outcome==='miss').length;
    const pushes=final.filter(r=>r.outcome==='push').length;
    const pct=hits+misses?(100*hits/(hits+misses)).toFixed(1)+'%':'N/A';
-   const snapshotMap=new Map((snapshots||[]).filter(s=>Number(s.season)===season).map(s=>[keyOf(s),s]));
-   status.textContent='Season '+season+' · Automated cloud records: '+final.length+' finalized; '+valid.length+' validated of '+rows.length+' returned. Equality is a miss; pending results are excluded.';
+   status.textContent='Season '+season+' · 30–35-minute pregame captures: '+final.length+' finalized grades; '+valid.length+' eligible of '+rows.length+' grade records returned. '+(rows.length-valid.length)+' excluded (invalid or unavailable capture provenance). Equality is a miss; pending results are excluded.';
    const metrics='<div class="performance-metrics"><div><span class="mu">Cloud hit rate</span><strong>'+pct+'</strong></div><div><span class="mu">Hits / Misses</span><strong>'+hits+' / '+misses+'</strong></div><div><span class="mu">Finalized results</span><strong>'+final.length+'</strong></div></div>';
    let limit=50;
    const redraw=()=>{
-    results.innerHTML=metrics+(valid.length?renderCards(valid,snapshotMap,limit,snapshots===null):'<p class="mu">No official cloud grades yet. Browser estimates remain separate above.</p>');
+    results.innerHTML=metrics+(valid.length?renderCards(valid,snapshotMap,limit,false):'<p class="mu">No grades backed by 30–35-minute cloud captures yet. Browser estimates remain separate above.</p>');
     const more=document.getElementById('officialGradeShowMore');
     if(more)more.addEventListener('click',()=>{limit+=50;redraw();});
    };

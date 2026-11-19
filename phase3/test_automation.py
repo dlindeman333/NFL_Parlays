@@ -1,5 +1,10 @@
 import unittest
-from automation import grade, injury_rows, number
+import io
+import json
+from datetime import datetime, timedelta, timezone
+from unittest.mock import patch
+import automation
+from automation import authentic_capture_window, grade, injury_rows, number
 from grade_contract import pick_key
 
 class FeatureChecks(unittest.TestCase):
@@ -44,5 +49,42 @@ class FeatureChecks(unittest.TestCase):
         self.assertEqual(pick_key(self.pick,0),pick_key(dict(reversed(list(self.pick.items()))),0))
         self.assertNotEqual(pick_key(self.pick,0),pick_key({**self.pick,'line':51},0))
         self.assertIsNone(number('nan'));self.assertIsNone(number('inf'))
+
+    def test_authentic_capture_window_inclusive_boundaries(self):
+        kickoff=datetime(2026,11,27,20,0,tzinfo=timezone.utc)
+        for minutes,expected in [(29.99,False),(30,True),(32,True),(35,True),(35.01,False),(8*24*60,False)]:
+            row={'created_at':(kickoff-timedelta(minutes=minutes)).isoformat(),
+                 'kickoff_at':kickoff.isoformat()}
+            with self.subTest(minutes=minutes):
+                self.assertEqual(authentic_capture_window(row),expected)
+        for row in [{}, {'created_at':'bad','kickoff_at':kickoff.isoformat()},
+                    {'created_at':'2026-11-27T19:28:00','kickoff_at':kickoff.isoformat()}]:
+            self.assertFalse(authentic_capture_window(row))
+
+    def test_grader_excludes_early_and_late_snapshots_without_writing(self):
+        kickoff=datetime(2026,11,27,20,0,tzinfo=timezone.utc)
+        snapshots=[]
+        events=[]
+        for name,minutes in [('early',8*24*60),('too-early',35.01),('start',35),
+                             ('middle',32),('end',30),('too-late',29.99)]:
+            snapshots.append({**self.snapshot,'game_id':name,
+                'kickoff_at':kickoff.isoformat(),
+                'created_at':(kickoff-timedelta(minutes=minutes)).isoformat(),
+                'picks':[{'market':'ml','side':'a'}]})
+            events.append({**self.event,'id':name})
+        writes=[]
+        def database(path,rows=None,conflict=None):
+            if path.startswith('nfl_prediction_snapshots_v2?'):return snapshots
+            if path.startswith('nfl_stat_exports?'):return [{'csv_text':'season,week,team\n'}]
+            if path.startswith('nfl_prediction_grades_v2?on_conflict='):
+                writes.extend(rows)
+                return rows
+            if path.startswith('nfl_prediction_grades_v2?'):return []
+            raise AssertionError('Unexpected database route: '+path)
+        # Mock both the feed and the database. Never touch production data.
+        with patch.object(automation,'rest',side_effect=database), \
+             patch.object(automation,'urlopen',return_value=io.BytesIO(json.dumps({'events':events}).encode())):
+            automation.grade_all(2026)
+        self.assertEqual({r['game_id'] for r in writes},{'start','middle','end'})
 
 if __name__=='__main__':unittest.main()
