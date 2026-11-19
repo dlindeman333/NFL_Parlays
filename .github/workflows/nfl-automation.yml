@@ -1,7 +1,8 @@
 name: NFL production statistics, predictions, grading and injuries
 on:
   schedule:
-    # Every 3 hours; snapshots are created once per upcoming game, at least 30m before kickoff.
+    # Every 3 hours for statistics, injury status and final-game grading.
+    # Pregame publishing is exclusive to the five-minute kickoff-window workflow.
     - cron: '17 */3 * * *'
   workflow_dispatch:
 permissions:
@@ -22,13 +23,17 @@ jobs:
           cache: 'pip'
           cache-dependency-path: requirements-automation.txt
       - run: pip install -r requirements-automation.txt
-      - run: python -m playwright install --with-deps chromium
+      - if: vars.NFL_PHASE3_PUBLISH_ENABLED == 'true' && vars.NFL_PHASE3_LAUNCH_APPROVED == 'true'
+        run: python -m playwright install --with-deps chromium
       - name: Focused production feature checks
+        if: vars.NFL_PHASE3_PUBLISH_ENABLED == 'true' && vars.NFL_PHASE3_LAUNCH_APPROVED == 'true'
         run: |
           python -m unittest discover -s phase3 -p 'test_*.py' -v
           node phase3/check_frontend.cjs
           python phase3/browser_smoke.py
-      - name: Verify production boundary and schema before any writes
+      - name: Verify Phase 3 production boundary and schema before feature writes
+        id: preflight
+        if: vars.NFL_PHASE3_PUBLISH_ENABLED == 'true' && vars.NFL_PHASE3_LAUNCH_APPROVED == 'true'
         env:
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
           SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
@@ -41,19 +46,14 @@ jobs:
           NFL_SEASON: ${{ vars.NFL_SEASON || '2026' }}
         run: python export_automated.py
       - name: Refresh weekly injury reports
+        if: vars.NFL_PHASE3_PUBLISH_ENABLED == 'true' && vars.NFL_PHASE3_LAUNCH_APPROVED == 'true' && steps.preflight.outcome == 'success'
         env:
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
           SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
           NFL_SEASON: ${{ vars.NFL_SEASON || '2026' }}
         run: python phase3/automation.py injuries
-      - name: Archive original forward-only pregame predictions
-        env:
-          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
-          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
-          NFL_SEASON: ${{ vars.NFL_SEASON || '2026' }}
-        run: python snapshot_predictions.py
       - name: Grade final games from original snapshots
-        if: ${{ !cancelled() && steps.stats.outcome == 'success' }}
+        if: ${{ !cancelled() && vars.NFL_PHASE3_PUBLISH_ENABLED == 'true' && vars.NFL_PHASE3_LAUNCH_APPROVED == 'true' && steps.preflight.outcome == 'success' && steps.stats.outcome == 'success' }}
         env:
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
           SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}

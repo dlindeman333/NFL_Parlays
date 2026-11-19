@@ -1,12 +1,16 @@
 """One desktop/mobile browser smoke check using synthetic data; no live writes."""
 import json
+import os
 from datetime import datetime, timezone
 from pathlib import Path
 from playwright.sync_api import sync_playwright
 
 html=(Path(__file__).resolve().parents[1]/'index.html').read_text()
 with sync_playwright() as p:
-    browser=p.chromium.launch()
+    # CI uses Playwright's installed Chromium; local reviewers may supply an
+    # already-installed system Chromium without downloading another browser.
+    executable=os.environ.get('PLAYWRIGHT_CHROMIUM_EXECUTABLE')
+    browser=p.chromium.launch(executable_path=executable) if executable else p.chromium.launch()
     for mobile in (False,True):
         context=browser.new_context(viewport={'width':390 if mobile else 1365,'height':844},is_mobile=mobile,has_touch=mobile,service_workers='block')
         errors=[]; writes=[]

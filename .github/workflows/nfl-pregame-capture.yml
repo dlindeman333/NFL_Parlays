@@ -10,7 +10,7 @@ concurrency:
   cancel-in-progress: false
 jobs:
   capture:
-    if: github.repository == 'dlindeman333/NFL_Parlays' && vars.NFL_AUTOMATION_ENABLED == 'true'
+    if: github.repository == 'dlindeman333/NFL_Parlays' && vars.NFL_AUTOMATION_ENABLED == 'true' && vars.NFL_PHASE3_PUBLISH_ENABLED == 'true' && vars.NFL_PHASE3_LAUNCH_APPROVED == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
@@ -20,17 +20,18 @@ jobs:
           python-version: '3.11'
           cache: 'pip'
           cache-dependency-path: requirements-automation.txt
-      - name: Install Python dependencies for kickoff-window check
-        run: python -m pip install -r requirements-automation.txt
-      - name: Check for games before installing Chromium
+      # Standard-library-only preflight, so ordinary five-minute runs do not
+      # install Python packages, browsers or contact the production database.
+      - name: Check read-only 30–35 minute kickoff window
         id: window
         env:
-          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
-          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
           NFL_SEASON: ${{ vars.NFL_SEASON || '2026' }}
         run: python snapshot_predictions.py --check-window
-      - if: steps.window.outputs.eligible == 'true'
-        run: python -m playwright install --with-deps chromium
+      - name: Install Chromium only for eligible kickoff windows
+        if: steps.window.outputs.eligible == 'true'
+        run: |
+          python -m pip install playwright
+          python -m playwright install --with-deps chromium
       - name: Verify production boundary and schema before writes
         if: steps.window.outputs.eligible == 'true'
         env:
