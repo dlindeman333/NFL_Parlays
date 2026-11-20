@@ -772,7 +772,7 @@ html{scroll-padding-top:175px}#topAccountPanel,#myParlays,#savedParlaySlips,#bui
 
 
 <h2 id="recommendations">Potential plays</h2>
-<div class="mu">Recommendations for Week 10 based on the original model. Schedule refresh updates matchups and final scores, but does not update team records, player stats, or model probabilities. These are not sportsbook odds.</div>
+<div aria-live="polite" class="mu" id="potentialPlaysDataNotice">Checking selected week and model-data age…</div>
 <div aria-live="polite" class="mu" id="recommendationActionStatus" role="status" style="margin:8px 0"></div><div id="plays"></div>
 <h2 id="advancedPredictions">AI Matchup Recommendations</h2>
 <details class="card" id="phase3AdvancedMethodology" style="margin:8px 0 12px"><summary style="cursor:pointer;font-weight:700">How matchup analysis works (advanced details)</summary><p class="mu">Data-driven matchup analysis using available model estimates and imported player game logs. Not a live generative AI service. Sportsbook lines are optional and entered manually; no paid API or background odds scraping.</p><p class="mu">Model estimates are not sportsbook odds. Verify current lines, player availability, and kickoff times before making selections.</p></details>
@@ -1739,7 +1739,20 @@ window.playerStatsOpen=function(index,gameId){
  catch(error) { console.error(error); alert('Player Stats error: '+(error?.message||String(error))); }
 };
 
-function plays(){if(SEASON!==MODEL_SEASON){$("plays").innerHTML=`<div class="card warn">Predictions are disabled for ${SEASON}: the model still uses 2026 team baselines. Schedule, final scores, and season-specific cloud statistics remain available. Update the model inputs before enabling forecasts for this season.</div>`;window._arr=[];return;}
+// Schedule refresh changes matchups and finals, but does not refresh the
+// bundled team model. Never label other weeks as newly trained forecasts.
+function potentialPlaysNotice(week,baselineWeek,hasSchedule,supportedSeason){
+ if(!supportedSeason)return {warning:true,text:`Week ${week}: predictions are disabled for this season until season-specific model inputs are available.`};
+ if(!hasSchedule)return {warning:true,text:`Week ${week}: no verified schedule loaded for this week. Refresh the NFL schedule to see potential plays; none are inferred from another week's games.`};
+ if(week!==baselineWeek)return {warning:true,text:`Week ${week} matchups are evaluated using bundled Week ${baselineWeek}-era team baselines and available imported player statistics. This is NOT a verified Week ${week} model refresh or a record of pregame picks. Schedule refresh updates matchups and final scores, not the underlying team baselines or player statistics. Percentages are provisional model estimates, not sportsbook odds.`};
+ return {warning:false,text:`Week ${week} potential plays use bundled Week ${baselineWeek}-era team baselines and available imported player statistics. Schedule refresh updates matchups and final scores, not the underlying team baselines or player statistics. Percentages are model estimates, not sportsbook odds.`};
+}
+function plays(){
+ const hasSchedule=Array.isArray(WKS[wk])&&WKS[wk].length>0;
+ const notice=potentialPlaysNotice(wk,CUR,hasSchedule,SEASON===MODEL_SEASON);
+ const noticeEl=$('potentialPlaysDataNotice');noticeEl.textContent=notice.text;noticeEl.classList.toggle('warn',notice.warning);
+ if(SEASON!==MODEL_SEASON){$("plays").innerHTML=`<div class="card warn">Predictions are disabled for ${SEASON}: the model still uses 2026 team baselines. Schedule, final scores, and season-specific cloud statistics remain available. Update the model inputs before enabling forecasts for this season.</div>`;window._arr=[];return;}
+ if(!hasSchedule){$("plays").innerHTML='<div class="card mu">No scheduled games are loaded for the selected week. Use Refresh to load the matchups.</div>';window._arr=[];return;}
   const arr=(WKS[wk]||[]).filter(g=>!g.sc&&vis(g)&&allPickTypes()).map(g=>{const home=g.p>=.5,t=home?g.h:g.a,o=home?g.a:g.h,p=home?g.p:1-g.p,mg=Math.abs(g.m);
     const edge=g.fp==null?null:(home?g.pm-g.fp:(1-g.pm)-(1-g.fp));
     return{g,t,o,p,home,mg,edge,s:S[t],so:S[o]}}).sort((a,b)=>b.p-a.p);
