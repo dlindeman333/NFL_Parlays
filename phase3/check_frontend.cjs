@@ -3,6 +3,30 @@ const html=fs.readFileSync(__dirname+'/../index.html','utf8');
 let checks=0;
 for(const match of html.matchAll(/<script\b[^>]*>([\s\S]*?)<\/script>/gi))new vm.Script(match[1]);
 checks++;
+// A schedule refresh does not refresh model baselines. Keep the selected week
+// in the notice, flag other weeks as provisional, and never recycle Week 10
+// games when the selected week's schedule has not loaded.
+const potentialStart=html.indexOf('function potentialPlaysNotice(');
+const potentialEnd=html.indexOf('\nfunction plays()',potentialStart);
+assert(potentialStart>0&&potentialEnd>potentialStart,'Potential Plays notice must exist');
+const potentialContext={};vm.createContext(potentialContext);
+vm.runInContext(html.slice(potentialStart,potentialEnd),potentialContext);
+const potentialNotice=(w,available=true,supported=true)=>vm.runInContext(`potentialPlaysNotice(${w},10,${available},${supported})`,potentialContext);
+assert.match(potentialNotice(10).text,/Week 10 potential plays/);
+assert.equal(potentialNotice(10).warning,false);
+assert.match(potentialNotice(11).text,/Week 11 matchups/);
+assert.match(potentialNotice(11).text,/NOT a verified Week 11 model refresh/);
+assert.equal(potentialNotice(11).warning,true);
+assert.match(potentialNotice(9).text,/Week 9 matchups/);
+assert.match(potentialNotice(11,false).text,/no verified schedule loaded/);
+assert.match(potentialNotice(11,true,false).text,/predictions are disabled/);
+assert(html.includes("if(!hasSchedule){$(\"plays\").innerHTML="));
+assert(html.includes("noticeEl.textContent=notice.text"));
+assert(html.includes('href="./NFL_Parlay_Builder_User_Guide.pdf"'),'help links to the one current full guide');
+assert(html.includes('href="./NFL_Parlay_Builder_Quick_Start_Guide.pdf"'),'quick-start help link retained');
+assert(/function setWk\(w\)\{[^\n]*plays\(\)/.test(html),'week changes rerender Potential Plays notice');
+assert(/if\(target===wk\)\{[^\n]*plays\(\)/.test(html),'schedule refresh rerenders Potential Plays notice');
+checks++;
 assert(html.includes('teamtot[a-z]*|td[ah]'));
 assert(html.includes("for(const t of ['a','h'])for(const side of ['o','u'])add('td'+t,side,'td')"));
 assert(!html.includes("if(!supportedTeamOnly&&filterHas(pf,'td'))"));
