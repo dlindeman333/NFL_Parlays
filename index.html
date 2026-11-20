@@ -1868,6 +1868,16 @@ function advMetrics(p,g){
  return{p,g,s,opponent,projection,line,prob,odds,edge,score,last3,last5,sample,hits,logs:vals.length,
   defenseFactor,manual:validLine?manual:null,key,newTeam,previousTeams,credibility,usageFactor,weather,injuryFactor,phase4Notes};
 }
+// Canonical per-game Top 12 pool shared by local convenience capture and the
+// protected Phase 3 writer. Selected-week display filters are not applied.
+// The writer checks official weekly injuries before selecting the first twelve.
+function phase4Top12GameCandidates(g){
+ return PLY.filter(p=>(p.tm===g.a||p.tm===g.h)&&playerSuggested(p)&&!phase3PlayerOut(p))
+  .map(p=>advMetrics(p,g)).filter(x=>x&&!x.manual&&
+    (x.p.k==='td'||(x.line!=null&&Number.isFinite(Number(x.line)))))
+  .sort((a,b)=>b.score-a.score||b.prob-a.prob||a.p.n.localeCompare(b.p.n)||a.p.k.localeCompare(b.p.k));
+}
+window.phase4Top12GameCandidates=phase4Top12GameCandidates;
 function advSaveOdds(key){
  const line=document.getElementById('advLine').value.trim(),odds=document.getElementById('advOdds').value.trim(),book=document.getElementById('advBook').value;
  if(!line||!Number.isFinite(Number(line))||Number(line)<0){$('advStatus').textContent='Enter a valid nonnegative sportsbook line.';return;}
@@ -3834,7 +3844,7 @@ window.phase3ReadOwnPredictionHistory=async()=>{
   // PostgREST installations may cap rows per response even if a larger limit
   // is requested. Read bounded pages so full-season grades remain complete.
   for(let offset=0;offset<10000;offset+=1000){
-   const values=await api('/rest/v1/nfl_prediction_grades_v2?select=season,week,game_id,outcome&season=eq.'+season+'&order=week.desc,game_id,pick_key&limit=1000&offset='+offset);
+   const values=await api('/rest/v1/nfl_prediction_grades_v2?select=season,week,game_id,pick_key,outcome,actual_value&season=eq.'+season+'&order=week.desc,game_id,pick_key&limit=1000&offset='+offset);
    if(!Array.isArray(values))throw Error('Unexpected grade response');
    grades.push(...values);if(values.length<1000)break;
   }
@@ -3842,6 +3852,9 @@ window.phase3ReadOwnPredictionHistory=async()=>{
  if(!safe6Active(uid))throw Error('Account changed while reading grades');
  return rows.map(r=>({...r,tracking_id:r.season+' W'+r.week+' '+r.original.away_team+' @ '+r.original.home_team,
   payload:{status:'verified_pregame',capture_evidence:{created_at:r.original.created_at},picks:r.original.picks,
+   original_grades:(()=>{const a=grades.filter(g=>Number(g.season)===Number(r.season)&&Number(g.week)===Number(r.week)&&String(g.game_id)===String(r.game_id));
+    return r.original.picks.map((_,i)=>{const matching=a.filter(g=>new RegExp('^v1:'+i+':[a-f0-9]{64}$').test(String(g.pick_key||'')));
+     return matching.length===1?{outcome:matching[0].outcome,actual_value:matching[0].actual_value}:{outcome:'pending',actual_value:null};});})(),
    grade_summary:(()=>{const a=grades.filter(g=>Number(g.season)===Number(r.season)&&Number(g.week)===Number(r.week)&&String(g.game_id)===String(r.game_id));return a.filter(g=>g.outcome==='hit').length+' hits / '+a.filter(g=>g.outcome==='miss').length+' misses / '+Math.max(0,r.original.picks.length-a.length)+' pending';})()}}));
 };
 settings();auth=authLoad();authControls(false);
@@ -4181,10 +4194,7 @@ window.addEventListener('online',()=>{if(safe6Running)safe6Cycle()});
   for(const g of near){
    const id=['phase4-auto',SEASON,wk,g.id].join('-');
    if(history.some(h=>h.id===id))continue;
-   const top=PLY.filter(p=>(p.tm===g.a||p.tm===g.h)&&playerSuggested(p))
-    .map(p=>advMetrics(p,g)).filter(x=>x&&
-     (x.p.k==='td'||(x.line!=null&&Number.isFinite(Number(x.line)))))
-    .sort((a,b)=>b.score-a.score).slice(0,12);
+   const top=phase4Top12GameCandidates(g).slice(0,12);
    if(!top.length){empty++;continue;}
    const createdAt=new Date(now).toISOString();
    history.push({id,created:createdAt,capture_source:'app_open_auto_v1',
@@ -4389,7 +4399,15 @@ window.addEventListener('online',()=>{if(safe6Running)safe6Cycle()});
       rawStatus==='unverified_pregame'||payload.kind==='local_snapshot'?'Unverified local snapshot':
       rawStatus==='unavailable'?'Outcome unavailable':
       rawStatus==='pending'?'Awaiting final results':'Stored — verification not established';
-    tr.innerHTML='<td>'+esc(dateText)+'</td><td>'+esc(row.tracking_id)+'</td><td>'+esc((payload.picks||[]).map(p=>p.label||p.player_name||p.market).join('; '))+'</td><td>'+esc(state)+'</td>';
+    const selections=Array.isArray(payload.picks)?payload.picks:[];
+    const outcomeRows=Array.isArray(payload.original_grades)?payload.original_grades:[];
+    const detail=selections.map((p,i)=>{
+     const outcome=outcomeRows[i]||{outcome:'pending',actual_value:null};
+     const name=p.label||[p.player_name,p.side==='u'?'Under':'Over',p.line,p.stat].join(' ');
+     const actual=outcome.actual_value==null?'':(' · actual '+outcome.actual_value);
+     return '<li>'+esc(name)+' — <b>'+esc(String(outcome.outcome||'pending').toUpperCase())+'</b>'+esc(actual)+'</li>';
+    }).join('');
+    tr.innerHTML='<td>'+esc(dateText)+'</td><td>'+esc(row.tracking_id)+'</td><td>'+selections.length+' original picks<details><summary>View selections and results</summary><ol>'+detail+'</ol></details></td><td>'+esc(state)+'</td>';
     tbody.appendChild(tr);
    }
    table.appendChild(tbody);resultsEl.appendChild(table);
@@ -4657,4 +4675,28 @@ recovery.onclick=async()=>{recovery.disabled=true;recoveryStatus.textContent='Ve
  if(desktop.addEventListener)desktop.addEventListener('change',syncNavPlacement);
  // The orderedSectionNavigation handler owns destination positioning and close.
 })();
-</script></body></html>
+</script>
+<script id="phase3UnifiedTop12Presentation">(function(){
+ 'use strict';
+ const root=document.getElementById('advPerformancePanel');
+ const history=document.getElementById('cloudUserPredictionHistory');
+ const grades=document.getElementById('cloudOfficialGrades');
+ const button=document.getElementById('advTrackSnapshot');
+ if(!root||!history||!grades||!button)return;
+ const localCard=button.closest('.card');
+ if(!localCard)return;
+ const intro=document.createElement('p');intro.className='mu';
+ intro.textContent='Official Top 12: the scheduled Phase 3 writer archives up to 12 eligible player predictions per game 30-35 minutes before kickoff, when its capture workflow reaches the window. Original selections and official HIT/MISS grades are available from the shared cloud archive on PC and iPhone. No manual save is required for official tracking. Missing or unverified captures are not reconstructed.';
+ root.insertBefore(intro,root.firstChild);
+ root.insertBefore(history,localCard);
+ root.insertBefore(grades,localCard);
+ history.open=true;
+ const legacy=document.createElement('details');legacy.className='card';legacy.id='legacyLocalPredictionTracker';
+ const summary=document.createElement('summary');summary.textContent='Optional legacy browser-only Top 12 tracking and backups';
+ legacy.append(summary);root.insertBefore(legacy,localCard);legacy.append(localCard);
+ const description=localCard.querySelector('p.mu');
+ if(description)description.textContent='Optional device-only legacy snapshots are separate from verified Phase 3 cloud predictions. They preserve historical browser tracking and manual exports; they do not upload, overwrite or grade official cloud records. For official future predictions use the automated archive above.';
+ button.textContent='Save optional local Top 12 backup';
+ const auto=legacy.querySelector('.phase4-auto-controls p.mu');
+ if(auto)auto.textContent='Optional app-open local backup: up to 12 player picks per game during the 30-35 minute window while this tab is active. Official cloud capture runs independently; these local records are never promoted to verified cloud forecasts.';
+})();</script></body></html>

@@ -17,6 +17,9 @@ PRODUCTION = 'https://wpvuunwtyxycqfjwuzkn.supabase.co'
 WINDOW_MIN = timedelta(minutes=30)
 WINDOW_MAX = timedelta(minutes=35)
 ROOT = Path(__file__).resolve().parent
+TOP_N = 12
+SUPPORTED_STATS = {'passing_yards', 'rushing_yards', 'receiving_yards', 'receptions', 'touchdowns'}
+EXCLUDED_INJURIES = {'out', 'doubtful', 'injured reserve', 'ir', 'suspended'}
 
 
 def credentials():
@@ -72,6 +75,40 @@ def check_window():
     return eligible
 
 
+def select_top12(candidates, reports, week):
+    """Freeze ranked, unique, supported picks; filter injuries before Top 12 cap."""
+    from phase3.automation import team
+    if not isinstance(reports, list):
+        raise ValueError('Injury records unavailable; no capture')
+    selected, seen = [], set()
+    for pick in candidates:
+        if pick.get('market') != 'player' or pick.get('stat') not in SUPPORTED_STATS:
+            continue
+        if pick.get('side') not in ('o', 'u') or not str(pick.get('player_name') or '').strip():
+            continue
+        if not isinstance(pick.get('line'), (int, float)) or not isinstance(pick.get('probability'), (int, float)):
+            continue
+        if not 0 <= pick['probability'] <= 1:
+            continue
+        identity = (team(pick.get('team')), str(pick['player_name']).casefold(),
+                    pick['stat'], pick['side'], pick['line'])
+        if identity in seen:
+            continue
+        matching = [r for r in reports if str(r.get('week')) == str(week)
+                    and team(r.get('team')) == team(pick.get('team'))
+                    and str(r.get('player', '')).casefold() == str(pick['player_name']).casefold()]
+        statuses = {str(r.get('status', '')).strip().casefold() for r in matching}
+        if statuses & EXCLUDED_INJURIES:
+            continue
+        seen.add(identity)
+        selected.append({**pick,
+                         'injury_status': ', '.join(sorted(statuses)) if statuses else 'unknown / no matching weekly report',
+                         'injury_report_week': week})
+        if len(selected) == TOP_N:
+            break
+    return selected
+
+
 def main():
     if SEASON != MODEL_SEASON:
         raise RuntimeError(f"Pregame snapshots disabled for {SEASON}: browser model inputs are still based on {MODEL_SEASON}. Update and validate the model before archiving forecasts.")
@@ -98,9 +135,6 @@ def main():
     reports = injury_data[0]
     if (datetime.now(timezone.utc)-datetime.fromisoformat(reports['fetched_at'].replace('Z','+00:00'))).total_seconds() > 24*3600:
         raise RuntimeError('Injury refresh is stale; no snapshots published')
-    import sys
-    sys.path.insert(0,str(ROOT/'phase3'))
-    from automation import team
     html = ROOT / 'index.html'
     if not html.exists():
         raise RuntimeError('Place the updated app in the repository as index.html')
@@ -117,32 +151,23 @@ def main():
               const a=normalizeTeam(e.a),h=normalizeTeam(e.h);
               if(!T[a]||!T[h])return null;
               const g=build([['espn'+e.id,a,h,'Scheduled',null]])[0];
-              const best=bestFor(g).filter(x=>x.m==='ml'||/^p\\d+$/.test(x.m));
-              const picks=best.map(x=>{
-                const base={away_team:a,home_team:h,market:x.m==='ml'?'ml':'player',side:x.s,
-                  probability:x.p,model_line:null,label:performancePickName(g,x)};
-                if(x.m==='ml')return {...base,team:x.s==='h'?h:a};
-                const p=PLY[Number(x.m.slice(1))],stat=p.k==='ps'?'passing_yards':p.k==='ru'?'rushing_yards':'touchdowns';
-                const line=p.k==='td'?0.5:pstat(p,g).line;
-                return {...base,player_name:p.n,team:p.tm,stat,line};
+              const candidates=window.phase4Top12GameCandidates(g);
+              const stats={ps:'passing_yards',ru:'rushing_yards',rec:'receiving_yards',
+                rcp:'receptions',td:'touchdowns'};
+              const picks=candidates.map(x=>{
+                const p=x.p,side=advancedPickSide(x),probability=side==='u'?1-x.prob:x.prob;
+                return {away_team:a,home_team:h,market:'player',side,
+                  probability,model_line:x.line,
+                  label:p.n+' '+(side==='u'?'Under ':'Over ')+x.line+' '+stats[p.k],
+                  player_name:p.n,team:p.tm,stat:stats[p.k],
+                  line:p.k==='td'?0.5:Number(x.line)};
               });
               return {away_team:a,home_team:h,picks};
             }''', e)
             if not result or not result['picks']:
                 continue
-            # Match only the same report week/team/name; absence means unknown, not healthy.
-            filtered=[]
-            for pick in result['picks']:
-                matching=[r for r in reports['records'] if r['week']==e['week']
-                          and team(r['team'])==team(pick.get('team'))
-                          and r['player'].casefold()==str(pick.get('player_name','')).casefold()]
-                statuses={r['status'].casefold() for r in matching}
-                if pick.get('market')=='player' and statuses & {'out','doubtful','injured reserve','ir','suspended'}:
-                    continue
-                pick['injury_status']=', '.join(sorted(statuses)) if statuses else 'unknown / no matching weekly report'
-                pick['injury_report_week']=reports['latest_week']
-                filtered.append(pick)
-            result['picks']=filtered
+            # Filter excluded injuries BEFORE the limit, filling from next-ranked picks.
+            filtered=select_top12(result['picks'], reports['records'], e['week'])
             if not filtered: continue
             # Browser startup and model evaluation can take several minutes.
             # The database independently enforces the 30-minute minimum.
@@ -152,8 +177,8 @@ def main():
                 continue
             row = {'season': SEASON, 'week': e['week'], 'game_id': e['id'],
                    'away_team': result['away_team'], 'home_team': result['home_team'],
-                   'kickoff_at': e['kickoff'], 'model_version': 'browser-model-2026-phase3-v2',
-                   'picks': result['picks']}
+                   'kickoff_at': e['kickoff'], 'model_version': 'browser-model-2026-phase3-top12-v1',
+                   'picks': filtered}
             request = Request(base + '/rest/v1/nfl_prediction_snapshots_v2?on_conflict=season,week,game_id',
                               data=json.dumps(row).encode(), method='POST',
                               headers={'apikey': key, 'Authorization': 'Bearer '+key,
@@ -161,7 +186,8 @@ def main():
                                        'Prefer': 'resolution=ignore-duplicates,return=minimal'})
             try:
                 with urlopen(request, timeout=40) as r:
-                    print('Archived week', e['week'], result['away_team'], '@', result['home_team'], r.status)
+                    print('Archived Top 12 week', e['week'], result['away_team'], '@', result['home_team'],
+                          len(filtered), 'picks; HTTP', r.status)
             except HTTPError as err:
                 raise RuntimeError(f'Prediction snapshot upload HTTP {err.code}: {err.read().decode()[:500]}') from err
         browser.close()
