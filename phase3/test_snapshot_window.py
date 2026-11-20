@@ -70,6 +70,38 @@ class CaptureWindowChecks(unittest.TestCase):
              patch.object(snapshots, 'credentials', side_effect=AssertionError('cloud accessed')):
             self.assertIsNone(snapshots.main())
 
+    def test_existing_immutable_snapshot_is_never_replaced(self):
+        event={'week':11,'id':'123','a':'BUF','h':'MIA','kickoff':self.now.isoformat()}
+        with patch.object(snapshots,'schedule',return_value=[event]), \
+             patch.object(snapshots,'credentials',return_value=(snapshots.PRODUCTION,'synthetic')), \
+             patch.object(snapshots,'fetch',return_value=[{'week':11,'game_id':'123'}]) as fetch:
+            self.assertIsNone(snapshots.main())
+            self.assertEqual(fetch.call_count,1)  # No data or writer invoked.
+
+    def test_top12_filters_injuries_before_cap_and_preserves_rank(self):
+        candidates=[{'market':'player','stat':'receptions','side':'o','line':4.5,
+                     'probability':.75,'player_name':f'Player {i}','team':'BUF'} for i in range(15)]
+        reports=[{'week':11,'team':'BUF','player':'Player 0','status':'Out'},
+                 {'week':10,'team':'BUF','player':'Player 1','status':'Out'},
+                 {'week':11,'team':'BUF','player':'Player 2','status':'Doubtful'}]
+        selected=snapshots.select_top12(candidates,reports,11)
+        self.assertEqual(len(selected),12)
+        self.assertEqual([r['player_name'] for r in selected],
+                         ['Player 1']+[f'Player {i}' for i in range(3,14)])
+        self.assertEqual(selected[0]['injury_status'],'unknown / no matching weekly report')
+        self.assertEqual(selected[0]['injury_report_week'],11)
+        self.assertEqual(len(candidates),15)  # Frozen source input remains unchanged.
+
+    def test_top12_rejects_duplicate_or_unsupported_selections(self):
+        candidate={'market':'player','stat':'receiving_yards','side':'u','line':59.5,
+                   'probability':.65,'player_name':'Receiver','team':'MIA'}
+        rows=[candidate,candidate.copy(),{**candidate,'market':'ml'},
+              {**candidate,'stat':'unsupported'},{**candidate,'line':None}]
+        selected=snapshots.select_top12(rows,[],11)
+        self.assertEqual(len(selected),1)
+        self.assertEqual(selected[0]['player_name'],'Receiver')
+        self.assertEqual(len(rows),5)
+
 
 if __name__ == '__main__':
     unittest.main()

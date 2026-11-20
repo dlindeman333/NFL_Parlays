@@ -101,7 +101,7 @@ def grade(pick, snapshot, event, records):
     if pick.get('market')!='player' or pick.get('side') not in ('o','u'): return None
     if team(pick.get('team')) not in (team(snapshot['away_team']),team(snapshot['home_team'])): return None
     stat=pick.get('stat')
-    if stat not in ('passing_yards','rushing_yards','receiving_yards','touchdowns'): return None
+    if stat not in ('passing_yards','rushing_yards','receiving_yards','receptions','touchdowns'): return None
     # Exact name/team/week/opponent match. Ambiguous/missing records stay ungraded.
     expected_opp=snapshot['home_team'] if team(pick.get('team'))==team(snapshot['away_team']) else snapshot['away_team']
     matches=[r for r in records if str(r.get('season'))==str(snapshot['season'])

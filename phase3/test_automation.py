@@ -38,6 +38,13 @@ class FeatureChecks(unittest.TestCase):
     def test_under_and_touchdown(self):
         self.assertEqual(grade({**self.pick,'side':'u'},self.snapshot,self.event,[self.record])[0],'miss')
         self.assertEqual(grade({**self.pick,'stat':'touchdowns','line':0.5},self.snapshot,self.event,[{**self.record,'touchdowns':'1'}])[0],'hit')
+    def test_top12_receptions_and_receiving_yards_grade_without_changing_original(self):
+        before=dict(self.pick)
+        self.assertEqual(grade({**self.pick,'stat':'receptions','line':4.5},self.snapshot,self.event,
+                               [{**self.record,'receptions':'5'}]),('hit',5))
+        self.assertEqual(grade({**self.pick,'stat':'receiving_yards','line':49.5,'side':'u'},
+                               self.snapshot,self.event,[{**self.record,'receiving_yards':'49'}]),('hit',49))
+        self.assertEqual(self.pick,before)
     def test_injuries_exact_week_and_unknown_not_healthy(self):
         text='season,game_type,week,team,full_name,report_status\n2026,REG,10,JAC,Player Example,Out\n2026,REG,10,BUF,Other Player,\n2025,REG,10,BUF,Old Player,Out\n'
         rows=injury_rows(text,2026)
