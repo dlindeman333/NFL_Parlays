@@ -33,6 +33,7 @@ jobs:
           node phase3/test_top12_contract.cjs
           node phase3/test_player_props.cjs
           node phase3/test_advanced_optimizer.cjs
+          node phase3/test_historical_calibration.cjs
           python phase3/browser_smoke.py
       - name: Verify Phase 3 production boundary and schema before feature writes
         id: preflight

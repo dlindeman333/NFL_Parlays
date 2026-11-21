@@ -31,6 +31,7 @@ jobs:
           node phase3/test_top12_contract.cjs
           node phase3/test_player_props.cjs
           node phase3/test_advanced_optimizer.cjs
+          node phase3/test_historical_calibration.cjs
           python snapshot_predictions.py --help
       - name: Smoke-test desktop and iPhone-sized layouts with synthetic data
         run: python phase3/browser_smoke.py
