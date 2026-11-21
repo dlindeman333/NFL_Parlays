@@ -22,11 +22,45 @@ assert.match(potentialNotice(11,false).text,/no verified schedule loaded/);
 assert.match(potentialNotice(11,true,false).text,/predictions are disabled/);
 assert(html.includes("if(!hasSchedule){$(\"plays\").innerHTML="));
 assert(html.includes("noticeEl.textContent=notice.text"));
-assert(html.includes('href="./NFL_Parlay_Builder_User_Guide.pdf"'),'help links to the one current full guide');
+assert(html.includes('href="./NFL_Parlay_Builder_User_Guide.pdf"'),'help links to the one current illustrated full guide');
 assert(html.includes('href="./NFL_Parlay_Builder_Quick_Start_Guide.pdf"'),'quick-start help link retained');
 assert(/function setWk\(w\)\{[^\n]*plays\(\)/.test(html),'week changes rerender Potential Plays notice');
 assert(/if\(target===wk\)\{[^\n]*plays\(\)/.test(html),'schedule refresh rerenders Potential Plays notice');
 checks++;
+// Risk parlays live immediately AFTER Potential Plays. Their leg/odds controls
+// must be the Skip To destination, and must not modify current draft settings.
+assert(html.includes('<a href="#bestRiskParlayControls">Risk Parlays</a>'));
+assert(html.indexOf('id="recommendations"')<html.indexOf('id="bestRiskParlays"'));
+assert(html.indexOf('id="bestRiskParlays"')<html.indexOf('id="advancedPredictions"'));
+assert(html.includes("wrapRange($('bestRiskParlays'),$('bestRiskParlayResults'),'Best risk-based parlays','uiRiskSection')"));
+assert(html.includes("'bestRiskParlayControls'].includes(target.id)"),'nav special-cases controls as scroll destination');
+assert(html.includes('nav.getBoundingClientRect().height+12'),'desktop jump compensates for sticky toolbar');
+checks++;
+const riskStart=html.indexOf('let filteredParlayPlans={};'),riskEnd=html.indexOf('function filteredParlayContext()',riskStart);
+assert(riskStart>0&&riskEnd>riskStart);
+const riskNodes={riskParlayLegs:{value:'3'},riskParlayFrom:{value:''},riskParlayThrough:{value:''},
+ riskParlayStatus:{textContent:''},bestRiskParlayControls:{tagName:'DIV',parentElement:null,getBoundingClientRect:()=>({top:300})},
+ stickySkipNavigation:{getBoundingClientRect:()=>({height:72})}};
+let riskRenders=0,riskScroll=null,desktopRisk=true;
+const riskMock={Math,Number,oddsFrom:'',oddsThrough:'',window:{scrollY:100,
+ matchMedia:()=>({matches:desktopRisk}),scrollTo:options=>{riskScroll=options}},
+ $:id=>riskNodes[id],renderRiskBasedParlays:()=>{riskRenders++},
+ validateOddsRange:(from,through)=>{
+  const valid=s=>s===''||Number.isInteger(Number(s))&&Math.abs(Number(s))>=100;
+  return !valid(from)||!valid(through)?'Invalid American odds':from&&through&&Number(from)>Number(through)?'Invalid range':'';
+ }};
+vm.createContext(riskMock);vm.runInContext(html.slice(riskStart,riskEnd),riskMock);
+riskNodes.riskParlayLegs.value='4';riskNodes.riskParlayFrom.value='+500';riskNodes.riskParlayThrough.value='+2000';
+assert.equal(vm.runInContext('applyRiskParlaySettings()',riskMock),true);
+assert.equal(vm.runInContext('riskParlayLegs',riskMock),4);
+assert.equal(vm.runInContext('riskParlayFrom',riskMock),'+500');
+assert.equal(riskRenders,1);checks++;
+riskNodes.riskParlayFrom.value='-20';assert.equal(vm.runInContext('applyRiskParlaySettings()',riskMock),false);
+assert.equal(riskRenders,1);assert.equal(vm.runInContext('riskParlayFrom',riskMock),'+500');checks++;
+vm.runInContext('scrollToRiskParlaySettings()',riskMock);assert.equal(riskScroll.top,316);checks++;
+desktopRisk=false;vm.runInContext('scrollToRiskParlaySettings()',riskMock);assert.equal(riskScroll.top,388);checks++;
+assert(!html.includes('h+=renderFilteredParlays()'),'risk options no longer buried within Potential Plays');
+assert(html.includes('renderRiskBasedParlays()'),'risk options rerender when Potential Plays changes');checks++;
 assert(html.includes('teamtot[a-z]*|td[ah]'));
 assert(html.includes("for(const t of ['a','h'])for(const side of ['o','u'])add('td'+t,side,'td')"));
 assert(!html.includes("if(!supportedTeamOnly&&filterHas(pf,'td'))"));

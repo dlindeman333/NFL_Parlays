@@ -34,7 +34,36 @@ with sync_playwright() as p:
         assert not writes,writes
         assert page.get_by_role('button',name='Track upcoming predictions in my account',include_hidden=True).count()==1
         assert page.evaluate("window.phase3InjuryLabel('Missing Player','BUF',10).includes('unconfirmed')")
-        if mobile: assert page.evaluate('document.documentElement.scrollWidth<=window.innerWidth+2')
+        # This test deliberately has no authenticated account. Reveal the local
+        # UI only for layout checks; it does NOT prove cloud sign-in or RLS.
+        page.evaluate("document.body.classList.remove('phase3-privacy-locked')")
+        # The Best risk-based parlays section sits AFTER Potential Plays, and
+        # its shortcut lands at the leg/odds selectors (not halfway down picks).
+        assert page.locator('#bestRiskParlayControls').count()==1
+        assert page.evaluate("document.getElementById('uiPlaysSection').compareDocumentPosition(document.getElementById('uiRiskSection')) & Node.DOCUMENT_POSITION_FOLLOWING")
+        if mobile: page.locator('#skipNavToggle').click()
+        page.locator('#skipNavLinks a[href="#bestRiskParlayControls"]').click()
+        page.wait_for_function("""() => {
+          const box=document.getElementById('bestRiskParlayControls');
+          const nav=document.getElementById('stickySkipNavigation');
+          const expected=window.innerWidth>=701?nav.getBoundingClientRect().height+12:10;
+          return box&&Math.abs(box.getBoundingClientRect().top-expected)<40;
+        }""")
+        before=page.locator('#ln').inner_text()
+        page.locator('#riskParlayLegs').select_option('4')
+        page.locator('#riskParlayFrom').fill('500')
+        page.locator('#riskParlayThrough').fill('2000')
+        page.locator('#riskParlayApply').click()
+        assert 'Showing 4-leg options' in page.locator('#riskParlayStatus').inner_text()
+        assert page.locator('#ln').inner_text()==before,'exploration must not change the active slip'
+        assert page.locator('#filteredParlaySuggestions h3').inner_text().startswith('Best 4-leg')
+        assert page.locator('#riskParlayComparison').count()==1
+        for leg_count in (3,4,5,6):
+            assert page.locator(f'[data-risk-comparison="{leg_count}"]').count()==1
+        if mobile:
+            assert page.evaluate('document.documentElement.scrollWidth<=window.innerWidth+2')
+            assert page.evaluate("""() => [...document.querySelectorAll('#bestRiskParlayControls input,#bestRiskParlayControls select,#bestRiskParlayControls button')]
+              .every(e => e.getBoundingClientRect().left>=-2&&e.getBoundingClientRect().right<=window.innerWidth+2)""")
         print(('Mobile' if mobile else 'Desktop')+' feature smoke passed; no runtime errors or live writes')
         context.close()
     browser.close()
