@@ -55,7 +55,10 @@ assert(html.includes('id="advSide"'),'line editor labels the sportsbook side');
 assert(html.includes('Selected line:')&&html.includes('Selection HIT probability vs. bet value'));
 // Four comparison recommendations must be built regardless of the selected
 // 2-8 leg filter; no UI operation here can mutate the active saved parlay.
-const comparisonCtx={Math,Number,Map,Set,riskParlayLegs:2,riskParlayFrom:'+500',riskParlayThrough:'+2000',
+// The comparison renderer now reads both the whole-parlay odds range and the
+// optional model break-even filter. Keep the VM fixture aligned with that UI.
+// Unbounded defaults let all mocked 3/4/5/6-leg combinations qualify.
+const comparisonCtx={Math,Number,Map,Set,riskParlayLegs:2,riskParlayFrom:'',riskParlayThrough:'',riskParlayHideBelowBreakEven:false,
  filteredParlayCandidates:()=>[],filteredParlayContext:()=>'{"week":11}',
  parlayJointScenario:rows=>({joint:.2,independent:.18}),esc:s=>String(s),am:n=>'+'+Math.round((n-1)*100),
  searchCombinedParlays:(pool,count,options)=>{
@@ -64,13 +67,44 @@ const comparisonCtx={Math,Number,Map,Set,riskParlayLegs:2,riskParlayFrom:'+500',
    price:Math.pow(2.2,count),scenario:{joint:.2,independent:.18}}};
  }};
 vm.createContext(comparisonCtx);
+vm.runInContext(snippet('function oddsDecimal(','function applyOddsRange('),comparisonCtx);
 vm.runInContext(snippet('let riskComparisonPlans={};','function renderRiskBasedParlays(){'),comparisonCtx);
 const compareHtml=vm.runInContext('renderRiskComparisonParlays()',comparisonCtx);
 assert.equal(vm.runInContext('riskParlayLegs',comparisonCtx),2);
+assert(compareHtml.includes('Show all qualifying odds results'),'the optional break-even filter defaults to off');
 for(const count of [3,4,5,6]){
  assert(compareHtml.includes('data-risk-comparison="'+count+'"'));
  assert.equal(vm.runInContext('riskComparisonPlans['+count+'].rows.length',comparisonCtx),count);
 }
+// The 3/4/5/6 comparison must honor the entire-parlay odds bounds even when
+// a stale search result (such as a +174 six-leg plan) falls outside +500..+1500.
+assert.equal(vm.runInContext("combinedOddsInRange(2.74,'+500','+1500')",comparisonCtx),false);
+assert.equal(vm.runInContext("combinedOddsInRange(10,'+500','+1500')",comparisonCtx),true);
+comparisonCtx.riskParlayFrom='+500';comparisonCtx.riskParlayThrough='+1500';
+comparisonCtx.searchCombinedParlays=(pool,count)=>({best:{
+ rows:Array.from({length:count},(_,i)=>({text:'Leg '+i,matchup:'BUF @ MIA',odds:120,decimal:2.2,gid:'g'+i,probability:.6})),
+ price:count===6?2.74:10,scenario:{joint:.08,independent:.07}}});
+const boundedHtml=vm.runInContext('renderRiskComparisonParlays()',comparisonCtx);
+assert(boundedHtml.includes('Active whole-parlay odds range: +500 through +1500'));
+assert(boundedHtml.includes('A candidate was rejected because its combined odds fell outside the active range'));
+assert(!boundedHtml.includes('6-leg recommendation'),'the out-of-range six-leg result must not be recommended');
+assert.equal(vm.runInContext('riskComparisonPlans[6]',comparisonCtx),undefined);
+assert(boundedHtml.includes('data-risk-value="below-break-even"'),'below-break-even options need a visible warning');
+comparisonCtx.riskParlayHideBelowBreakEven=true;
+const filteredHtml=vm.runInContext('renderRiskComparisonParlays()',comparisonCtx);
+assert(filteredHtml.includes('Experimental break-even filter ON'));
+assert(filteredHtml.includes('candidate was hidden by the optional uncalibrated break-even filter'));
+assert.equal(vm.runInContext('riskComparisonPlans[3]',comparisonCtx),undefined,'filtered-out plans are not loadable');
+// A no-winner search may show explanatory examples, but never add-to-draft actions.
+comparisonCtx.riskParlayFrom='+100';comparisonCtx.riskParlayThrough='+1500';
+comparisonCtx.searchCombinedParlays=(pool,count)=>({best:null,groupCount:12,truncated:count===4,
+ informationalBest:{rows:Array.from({length:count},(_,i)=>({text:'Under '+i,matchup:'BUF @ MIA',odds:-110,decimal:1.5,gid:'g'+i,probability:.3})),
+ price:Math.pow(1.5,count),scenario:{joint:.02,independent:.02}}});
+const infoHtml=vm.runInContext('renderRiskComparisonParlays()',comparisonCtx);
+for(const count of [3,4,5,6])assert(infoHtml.includes('data-risk-comparison="'+count+'" data-risk-info-only="true"'),
+ count+'-leg explanatory result must be informational only');
+assert(!infoHtml.includes('Use 3-leg option in new draft'));
+assert.equal(vm.runInContext('riskComparisonPlans[4]',comparisonCtx),undefined);
 assert(html.includes('renderFilteredParlays()+renderRiskComparisonParlays()'),
  'best 3-6 leg suggestions must be below the chosen-leg recommendations');
 console.log('Advanced parlay scenarios, defensive data guards, manual bet value, and under-side contracts passed (synthetic, read-only).');
