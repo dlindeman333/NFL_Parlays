@@ -1043,7 +1043,10 @@ function propNormalCdf(x){
  return x<0?tail:1-tail;
 }
 function propReceivingContext(p){
- const rows=phase4PlayerHistory(p).slice(0,8).filter(r=>Number.isFinite(r.receptions)&&r.receptions>=0&&Number.isFinite(r.receiving_yards)&&r.receiving_yards>=0);
+ // Negative receiving yards are legitimate game results. A positive-gain
+ // count/yard model treats them as zero, but must retain the entire game in
+ // the denominator rather than silently dropping an unfavorable observation.
+ const rows=phase4PlayerHistory(p).slice(0,8).filter(r=>Number.isFinite(r.receptions)&&r.receptions>=0&&Number.isFinite(r.receiving_yards)).map(r=>({...r,receiving_yards:Math.max(0,r.receiving_yards)}));
  const catches=rows.reduce((s,r)=>s+r.receptions,0),yards=rows.reduce((s,r)=>s+r.receiving_yards,0);
  const targets=rows.filter(r=>Number.isFinite(r.targets)&&r.targets>=r.receptions);
  const targetTotal=targets.reduce((s,r)=>s+r.targets,0),targetCatches=targets.reduce((s,r)=>s+r.receptions,0);
@@ -1103,7 +1106,9 @@ function propYardageOver(kind,projection,line,p,shrink=true){
  if(!['ps','ru'].includes(kind)||!Number.isFinite(projection)||projection<0||!Number.isFinite(line))return null;
  if(line<0)return 1;
  const field=kind==='ps'?'passing_yards':'rushing_yards';
- const games=phase4PlayerHistory(p).slice(0,8).map(r=>r[field]).filter(v=>Number.isFinite(v)&&v>=0);
+ // Keep negative-yards games as zero exposure for a nonnegative yardage
+ // distribution. Excluding them biases the distribution toward Over.
+ const games=phase4PlayerHistory(p).slice(0,8).map(r=>r[field]).filter(Number.isFinite).map(v=>Math.max(0,v));
  const mean=games.length?games.reduce((s,v)=>s+v,0)/games.length:0;
  const variance=games.length>1?games.reduce((s,v)=>s+(v-mean)**2,0)/(games.length-1):0;
  const priorCv=kind==='ps'?.42:.72;
@@ -1601,7 +1606,7 @@ function filteredParlayEmptyReason(){
 function renderFilteredParlays(){
  const pool=filteredParlayCandidates(),context=filteredParlayContext();filteredParlayPlans={};
  const bounds=(riskParlayFrom||'no lower bound')+' through '+(riskParlayThrough||'no upper bound');
- const intro='<section class="card" id="filteredParlaySuggestions"><h3>Best '+riskParlayLegs+'-leg parlays within selected risk range</h3><p><b>Whole-parlay target: '+esc(bounds)+'</b></p><p class="mu">'+(mode==='same'?'Same-game: select a matchup with Build here; legs can be correlated.':'Multi-game: one selection per game.')+' The product of all '+riskParlayLegs+' leg prices must fit the target. Individual picks are not filtered by this range. Only known future kickoffs qualify.</p>';
+ const intro='<section class="card" id="filteredParlaySuggestions"><h3>Best '+riskParlayLegs+'-leg parlays within selected risk range</h3><p><b>Whole-parlay target: '+esc(bounds)+'</b></p><p class="mu">'+(mode==='same'?'Same-game: select a matchup with Build here; legs can be correlated.':'Multi-game: one selection per game.')+' The product of all '+riskParlayLegs+' leg prices must fit the target. Individual picks are not filtered by this range. Only known future kickoffs qualify. Model-derived reference lines can favor Under because yardage is right-skewed; this is not proof of a sportsbook edge. Check each real Over/Under line and price.</p>';
  if(!pool.length)return intro+'<p role="status">'+esc(filteredParlayEmptyReason())+'</p></section>';
  const result=searchCombinedParlays(pool);
  if(!result.best)return intro+'<p>No complete '+riskParlayLegs+'-leg match found within the combined-odds range'+(result.truncated?' in the bounded search':'')+'. '+(result.groupCount<riskParlayLegs?'Too few compatible games or markets. ':'')+'Adjust the combined range or Legs.</p></section>';
