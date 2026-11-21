@@ -30,6 +30,9 @@ jobs:
         run: |
           python -m unittest discover -s phase3 -p 'test_*.py' -v
           node phase3/check_frontend.cjs
+          node phase3/test_top12_contract.cjs
+          node phase3/test_player_props.cjs
+          node phase3/test_advanced_optimizer.cjs
           python phase3/browser_smoke.py
       - name: Verify Phase 3 production boundary and schema before feature writes
         id: preflight

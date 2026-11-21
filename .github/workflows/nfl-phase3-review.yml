@@ -29,6 +29,8 @@ jobs:
           python -m unittest discover -s phase3 -p 'test_*.py' -v
           node phase3/check_frontend.cjs
           node phase3/test_top12_contract.cjs
+          node phase3/test_player_props.cjs
+          node phase3/test_advanced_optimizer.cjs
           python snapshot_predictions.py --help
       - name: Smoke-test desktop and iPhone-sized layouts with synthetic data
         run: python phase3/browser_smoke.py
