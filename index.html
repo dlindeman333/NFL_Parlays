@@ -1552,6 +1552,34 @@ function searchCombinedParlays(pool,targetLegs=riskParlayLegs,{comparison=false}
   for(let k=1;k<=targetLegs;k++){min[i][k]=Math.min(min[i+1][k],lo+min[i+1][k-1]);max[i][k]=Math.max(max[i+1][k],hi+max[i+1][k-1]);}
  }
  if(min[0][targetLegs]>logHigh+eps||max[0][targetLegs]<logLow-eps)return answer;
+ // A six-leg comparison can exhaust the bounded DP budget before it ever
+ // reaches a complete six-pick state. First seek a feasible combination by
+ // walking one pick per compatible group toward the requested WHOLE-parlay
+ // price. This is a bounded seed, not a claim of a globally optimal parlay;
+ // the normal risk-ranked DP continues below and can replace the seed.
+ // Critically, never relax the chosen odds interval or same/multi-game rules.
+ if(targetLegs>=6&&!answer.best){
+  const targetLog=Number.isFinite(logHigh)?(logLow+logHigh)/2:logLow+targetLegs*.35;
+  const preferredPerLeg=targetLog/targetLegs;
+  const guided=groups.map(group=>[...group].sort((a,b)=>
+   Math.abs(Math.log(a.decimal)-preferredPerLeg)-Math.abs(Math.log(b.decimal)-preferredPerLeg)||
+   b.probability-a.probability).slice(0,16));
+  let visits=0,found=false;
+  const seek=(index,rows,logPrice)=>{
+   if(found||++visits>30000)return;
+   const need=targetLegs-rows.length;
+   if(need===0){accept(rows);found=!!answer.best;return;}
+   if(index>=count||count-index<need||logPrice+min[index][need]>logHigh+eps||logPrice+max[index][need]<logLow-eps)return;
+   for(const pick of guided[index]){
+    const nextLog=logPrice+Math.log(pick.decimal);
+    if(nextLog>logHigh+eps)continue;
+    seek(index+1,[...rows,pick],nextLog);
+    if(found||visits>30000)return;
+   }
+   if(count-index>need)seek(index+1,rows,logPrice);
+  };
+  seek(0,[],0);
+ }
  const MAX_STATES=comparison?120:384,EXACT_LIMIT=comparison?480:1536,MAX_TRANSITIONS=comparison?120000:1200000;
  let dp=Array.from({length:targetLegs},()=>[]);dp[0]=[{logPrice:0,score:0,prev:null,pick:null}];
  const unpack=state=>{const rows=[];for(let s=state;s?.pick;s=s.prev)rows.push(s.pick);return rows.reverse();};
@@ -1609,7 +1637,7 @@ function renderFilteredParlays(){
  const intro='<section class="card" id="filteredParlaySuggestions"><h3>Best '+riskParlayLegs+'-leg parlays within selected risk range</h3><p><b>Whole-parlay target: '+esc(bounds)+'</b></p><p class="mu">'+(mode==='same'?'Same-game: select a matchup with Build here; legs can be correlated.':'Multi-game: one selection per game.')+' The product of all '+riskParlayLegs+' leg prices must fit the target. Individual picks are not filtered by this range. Only known future kickoffs qualify. Model-derived reference lines can favor Under because yardage is right-skewed; this is not proof of a sportsbook edge. Check each real Over/Under line and price.</p>';
  if(!pool.length)return intro+'<p role="status">'+esc(filteredParlayEmptyReason())+'</p></section>';
  const result=searchCombinedParlays(pool);
- if(!result.best)return intro+'<p>No complete '+riskParlayLegs+'-leg match found within the combined-odds range'+(result.truncated?' in the bounded search':'')+'. '+(result.groupCount<riskParlayLegs?'Too few compatible games or markets. ':'')+'Adjust the combined range or Legs.</p></section>';
+ if(!result.best)return intro+'<p role="status">'+(result.groupCount<riskParlayLegs?'Only '+result.groupCount+' compatible '+(mode==='same'?'markets':'games')+' available for '+riskParlayLegs+' legs. Broaden the game or pick filters.':result.truncated?'Search limit reached without finding a complete '+riskParlayLegs+'-leg parlay in this range. The search was incomplete; this does not prove no qualifying option exists. Adjust the range or eligible games.':'No qualifying '+riskParlayLegs+'-leg combination found within the selected odds range. Adjust the range or eligible games.')+'</p></section>';
  const titles={best:'Best model-ranked match found',lower:'Lower combined odds',higher:'Higher combined odds'};
  return intro+Object.entries(titles).map(([kind,title])=>{
   const plan=result[kind];if(!plan)return '';
@@ -1627,7 +1655,8 @@ function renderRiskComparisonParlays(){
  let html='<section class="card" id="riskParlayComparison" aria-label="Best 3 through 6 leg risk-based parlay comparison"><h3>Best 3-, 4-, 5- and 6-leg parlays</h3><p class="mu">Compares all four leg counts regardless of the number selected above. Each option uses the same risk-based matchup, availability and correlation analysis, plus the selected combined-odds range. A missing option means no qualifying combination was found; existing slips remain unchanged.</p>';
  for(const legCount of [3,4,5,6]){
   const result=searchCombinedParlays(pool,legCount,{comparison:true});
-  if(!result.best){html+='<article class="filtered-parlay-card" data-risk-comparison="'+legCount+'"><h4>'+legCount+' legs</h4><p class="mu">No qualifying '+legCount+'-leg option within this risk range'+(result.truncated?' in the bounded search':'')+'. Adjust the range, week or game filters.</p></article>';continue;}
+  if(!result.best){const reason=result.groupCount<legCount?'Only '+result.groupCount+' compatible '+(mode==='same'?'markets':'games')+' are available; '+legCount+' distinct selections are needed.':result.truncated?'The bounded search stopped before finding a '+legCount+'-leg option. It is inconclusive, not proof that none exists.':'No qualifying '+legCount+'-leg option within this combined-odds range.';
+   html+='<article class="filtered-parlay-card" data-risk-comparison="'+legCount+'"><h4>'+legCount+' legs</h4><p class="mu">'+reason+' Adjust the range, week or game filters.</p></article>';continue;}
   const best=result.best,risk=best.scenario||parlayJointScenario(best.rows);
   riskComparisonPlans[legCount]={context,rows:best.rows,price:best.price};
   html+='<article class="filtered-parlay-card" data-risk-comparison="'+legCount+'" style="border:1px solid var(--bd);padding:12px;border-radius:10px;margin:10px 0"><h4>'+legCount+'-leg recommendation · '+am(best.price)+' combined estimated odds</h4><p class="mu">Joint HIT scenario estimate '+(risk.joint*100).toFixed(1)+'% · Independence estimate '+(risk.independent*100).toFixed(1)+'%. Both are uncalibrated comparison estimates, not sportsbook probabilities.</p><ol>'+best.rows.map(r=>'<li><b>'+esc(r.text)+'</b> · '+esc(r.matchup)+' · '+esc(String(r.odds))+' illustrative/entered odds</li>').join('')+'</ol><button type="button" class="btn alt" onclick="useRiskComparisonPlan('+legCount+')">Use '+legCount+'-leg option in new draft</button>'+(result.truncated?'<p class="mu">Bounded search: best combination found, not guaranteed globally optimal.</p>':'')+'</article>';
