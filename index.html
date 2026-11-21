@@ -790,7 +790,7 @@ html{scroll-padding-top:175px}#topAccountPanel,#myParlays,#savedParlaySlips,#bui
   <label for="riskParlayThrough"><b>Through</b> <input id="riskParlayThrough" type="number" inputmode="numeric" step="1" placeholder="+2000"/></label>
   <button class="btn" id="riskParlayApply" type="button">Show best parlays</button>
  </div>
- <p class="mu">Choose 2–8 legs and a combined American-odds range (e.g., +500 through +2000). Blank means no limit. These settings only change the suggested parlays—not your current slip, saved picks, or sportsbook odds.</p>
+ <p class="mu">Choose 2–8 legs and a combined American-odds range (e.g., +500 through +1500). Blank means no limit. <b>These Risk Parlays settings are separate from the sidebar odds filter</b>; use Quick view to copy the sidebar range here, or set it directly above. The effective range appears with each recommendation group. Your current slip, saved picks, and sportsbook odds are unchanged.</p>
  <p class="mu" aria-live="polite" role="status" id="riskParlayStatus"></p>
 </div>
 <div id="bestRiskParlayResults" aria-live="polite"></div>
@@ -1450,10 +1450,23 @@ function syncRiskParlayInputs(){
  const input=$('riskParlayLegs');if(!input)return;
  input.value=String(riskParlayLegs);$('riskParlayFrom').value=riskParlayFrom;$('riskParlayThrough').value=riskParlayThrough;
 }
+function riskParlayControlsPending(){
+ const count=$('riskParlayLegs'),from=$('riskParlayFrom'),through=$('riskParlayThrough');
+ return !!count&&!!from&&!!through&&(
+  Number(count.value)!==riskParlayLegs||from.value.trim()!==riskParlayFrom||through.value.trim()!==riskParlayThrough);
+}
+function markRiskParlayPending(){
+ if(!riskParlayControlsPending())return;
+ const target=$('bestRiskParlayResults');
+ if(target)target.innerHTML='<div class="card mu" role="status">Risk settings changed. Apply the new leg count and combined-odds range to see current recommendations; previous results are hidden.</div>';
+ $('riskParlayStatus').textContent='Risk settings have changed. Press Show best parlays or finish editing a field to apply them.';
+ filteredParlayPlans={};
+ if(typeof riskComparisonPlans!=='undefined')riskComparisonPlans={};
+}
 function applyRiskParlaySettings(){
  const count=Number($('riskParlayLegs').value),from=$('riskParlayFrom').value.trim(),through=$('riskParlayThrough').value.trim();
  const error=!Number.isInteger(count)||count<2||count>8?'Choose between 2 and 8 legs.':validateOddsRange(from,through);
- if(error){$('riskParlayStatus').textContent=error;return false;}
+ if(error){$('riskParlayStatus').textContent=error;const target=$('bestRiskParlayResults');if(target)target.innerHTML='<div class="card warn" role="status">Invalid combined-odds range. Correct the settings before viewing recommendations.</div>';filteredParlayPlans={};if(typeof riskComparisonPlans!=='undefined')riskComparisonPlans={};return false;}
  riskParlayLegs=count;riskParlayFrom=from;riskParlayThrough=through;
  $('riskParlayStatus').textContent='Showing '+count+'-leg options; combined odds '+(from||'unbounded')+' through '+(through||'unbounded')+'. Your existing slips are unchanged.';
  renderRiskBasedParlays();return true;
@@ -1644,22 +1657,30 @@ function renderFilteredParlays(){
   const rows=plan.rows;filteredParlayPlans[kind]={context,rows,combined:plan.price};
   const risk=plan.scenario||parlayJointScenario(rows);
   const scenarioText='<p class="mu">Scenario-adjusted joint HIT estimate: '+(risk.joint*100).toFixed(1)+'% · Independent estimate: '+(risk.independent*100).toFixed(1)+'%. '+(risk.correlated?'Includes conservative same-game pace/team scenarios.':'Different games are treated independently.')+' Uncalibrated, not a verified winning probability.</p>';
-  return '<article class="filtered-parlay-card" data-filter-parlay="'+kind+'" data-combined-decimal="'+plan.price+'" style="border:1px solid var(--bd);border-radius:10px;padding:12px;margin:10px 0"><h4 style="margin:0 0 6px">'+title+' · '+riskParlayLegs+' legs</h4><p><b>Combined odds: '+am(plan.price)+' ('+plan.price.toFixed(3)+'x) · within target</b></p>'+scenarioText+'<ol style="padding-left:22px">'+rows.map(x=>'<li style="margin:7px 0"><b>'+esc(x.text)+'</b><div class="mu">'+esc(x.matchup)+' · '+x.odds+' · '+esc(x.source)+'</div></li>').join('')+'</ol><button type="button" class="btn alt" onclick="loadFilteredParlay(\''+kind+'\')">Use in new slip</button></article>';
+  return '<article class="filtered-parlay-card" data-filter-parlay="'+kind+'" data-combined-decimal="'+plan.price+'" style="border:1px solid var(--bd);border-radius:10px;padding:12px;margin:10px 0"><h4 style="margin:0 0 6px">'+title+' · '+riskParlayLegs+' legs</h4><p><b>Combined odds: '+am(plan.price)+' ('+plan.price.toFixed(3)+'x) · within target</b></p>'+scenarioText+parlayIllustrativeValueNotice(risk,plan.price)+'<ol style="padding-left:22px">'+rows.map(x=>'<li style="margin:7px 0"><b>'+esc(x.text)+'</b><div class="mu">'+esc(x.matchup)+' · '+x.odds+' · '+esc(x.source)+'</div></li>').join('')+'</ol><button type="button" class="btn alt" onclick="loadFilteredParlay(\''+kind+'\')">Use in new slip</button></article>';
  }).join('')+'<p class="mu">'+(result.truncated?'Bounded search: these are the best matches found, not a guarantee of a global optimum. ':'')+'Rankings use uncalibrated model estimates. Combined odds multiply displayed leg prices for illustration; sportsbook and same-game pricing can differ. No combined winning probability is claimed.</p></section>';
 }
 
 let riskComparisonPlans={};
+function parlayIllustrativeValueNotice(risk,price){
+ if(!Number.isFinite(price)||price<=1||!Number.isFinite(risk?.joint))return '<p class="warn">Insufficient model data to compare this parlay with an illustrative break-even rate.</p>';
+ const hit=Math.max(0,Math.min(1,risk.joint)),breakEven=1/price,expectedNet=hit*price-1,below=expectedNet<0;
+ return '<p class="mu'+(below?' warn':'')+'" data-risk-value="'+(below?'below-break-even':'unverified-above-break-even')+'"><b>'+(below?'⚠ Estimated HIT probability is below break-even.':'Illustrative model probability is above break-even (unverified).')+'</b> Model HIT '+(hit*100).toFixed(1)+'% · illustrative break-even '+(breakEven*100).toFixed(1)+'% · estimated net '+(expectedNet>=0?'+':'')+(expectedNet*100).toFixed(1)+'% per $1. These uncalibrated estimates are not verified betting value; confirm actual sportsbook prices.</p>';
+}
 function renderRiskComparisonParlays(){
  riskComparisonPlans={};
  const pool=filteredParlayCandidates(),context=filteredParlayContext();
- let html='<section class="card" id="riskParlayComparison" aria-label="Best 3 through 6 leg risk-based parlay comparison"><h3>Best 3-, 4-, 5- and 6-leg parlays</h3><p class="mu">Compares all four leg counts regardless of the number selected above. Each option uses the same risk-based matchup, availability and correlation analysis, plus the selected combined-odds range. A missing option means no qualifying combination was found; existing slips remain unchanged.</p>';
+ let html='<section class="card" id="riskParlayComparison" aria-label="Best 3 through 6 leg risk-based parlay comparison"><h3>Best 3-, 4-, 5- and 6-leg parlays</h3><p><b>Active whole-parlay odds range: '+esc(riskParlayFrom||'unbounded')+' through '+esc(riskParlayThrough||'unbounded')+'</b></p><p class="mu">Compares all four leg counts regardless of the number selected above. Each option uses the same risk-based matchup, availability and correlation analysis, plus the active combined-odds range. A missing option can also mean an incomplete bounded search; existing slips remain unchanged.</p>';
  for(const legCount of [3,4,5,6]){
   const result=searchCombinedParlays(pool,legCount,{comparison:true});
   if(!result.best){const reason=result.groupCount<legCount?'Only '+result.groupCount+' compatible '+(mode==='same'?'markets':'games')+' are available; '+legCount+' distinct selections are needed.':result.truncated?'The bounded search stopped before finding a '+legCount+'-leg option. It is inconclusive, not proof that none exists.':'No qualifying '+legCount+'-leg option within this combined-odds range.';
    html+='<article class="filtered-parlay-card" data-risk-comparison="'+legCount+'"><h4>'+legCount+' legs</h4><p class="mu">'+reason+' Adjust the range, week or game filters.</p></article>';continue;}
   const best=result.best,risk=best.scenario||parlayJointScenario(best.rows);
+  if(!combinedOddsInRange(best.price,riskParlayFrom,riskParlayThrough)){
+   html+='<article class="filtered-parlay-card" data-risk-comparison="'+legCount+'"><h4>'+legCount+' legs</h4><p class="warn">A candidate was rejected because its combined odds fell outside the active range. Refresh the risk settings.</p></article>';continue;
+  }
   riskComparisonPlans[legCount]={context,rows:best.rows,price:best.price};
-  html+='<article class="filtered-parlay-card" data-risk-comparison="'+legCount+'" style="border:1px solid var(--bd);padding:12px;border-radius:10px;margin:10px 0"><h4>'+legCount+'-leg recommendation · '+am(best.price)+' combined estimated odds</h4><p class="mu">Joint HIT scenario estimate '+(risk.joint*100).toFixed(1)+'% · Independence estimate '+(risk.independent*100).toFixed(1)+'%. Both are uncalibrated comparison estimates, not sportsbook probabilities.</p><ol>'+best.rows.map(r=>'<li><b>'+esc(r.text)+'</b> · '+esc(r.matchup)+' · '+esc(String(r.odds))+' illustrative/entered odds</li>').join('')+'</ol><button type="button" class="btn alt" onclick="useRiskComparisonPlan('+legCount+')">Use '+legCount+'-leg option in new draft</button>'+(result.truncated?'<p class="mu">Bounded search: best combination found, not guaranteed globally optimal.</p>':'')+'</article>';
+  html+='<article class="filtered-parlay-card" data-risk-comparison="'+legCount+'" data-combined-decimal="'+best.price+'" style="border:1px solid var(--bd);padding:12px;border-radius:10px;margin:10px 0"><h4>'+legCount+'-leg recommendation · '+am(best.price)+' combined estimated odds</h4><p class="mu">Joint HIT scenario estimate '+(risk.joint*100).toFixed(1)+'% · Independence estimate '+(risk.independent*100).toFixed(1)+'%. Both are uncalibrated comparison estimates, not sportsbook probabilities.</p>'+parlayIllustrativeValueNotice(risk,best.price)+'<ol>'+best.rows.map(r=>'<li><b>'+esc(r.text)+'</b> · '+esc(r.matchup)+' · '+esc(String(r.odds))+' illustrative/entered odds</li>').join('')+'</ol><button type="button" class="btn alt" onclick="useRiskComparisonPlan('+legCount+')">Use '+legCount+'-leg option in new draft</button>'+(result.truncated?'<p class="mu">Bounded search: best combination found, not guaranteed globally optimal.</p>':'')+'</article>';
  }
  return html+'</section>';
 }
@@ -1685,6 +1706,7 @@ function useRiskComparisonPlan(legCount){
 }
 function renderRiskBasedParlays(){
  const target=$('bestRiskParlayResults');if(!target)return;
+ if(riskParlayControlsPending()){markRiskParlayPending();return;}
  if(SEASON!==MODEL_SEASON){target.innerHTML='<div class="card warn">Suggestions require updated season-specific model inputs.</div>';filteredParlayPlans={};return;}
  if(!Array.isArray(WKS[wk])||!WKS[wk].length){target.innerHTML='<div class="card mu">No verified schedule loaded for Week '+wk+'. Refresh the schedule before requesting parlays.</div>';filteredParlayPlans={};return;}
  target.innerHTML=renderFilteredParlays()+renderRiskComparisonParlays();
@@ -2403,6 +2425,10 @@ function load(){if(SEASON!==MODEL_SEASON)return;mode="multi";focus=null;legs=win
 function loadSG(id,s){if(SEASON!==MODEL_SEASON)return;mode="same";focus=id;N=Math.max(N,2);N=Math.min(N,3);legs=[{gid:id,mkt:"ml",side:s},{gid:id,mkt:"sp",side:s}];N=Math.max(N,2);draw();scrollTo({top:0,behavior:"smooth"})}
 syncRiskParlayInputs();
 $('riskParlayApply').addEventListener('click',applyRiskParlaySettings);
+for(const id of ['riskParlayLegs','riskParlayFrom','riskParlayThrough']){
+ $(id).addEventListener('input',markRiskParlayPending);
+ $(id).addEventListener('change',()=>{if(riskParlayControlsPending())applyRiskParlaySettings();});
+}
 for(const id of ['riskParlayFrom','riskParlayThrough'])$(id).addEventListener('keydown',event=>{if(event.key==='Enter'){event.preventDefault();applyRiskParlaySettings();}});
 plays();
 function setWk(w){syncActiveSlip();wk=Number(w);try{phase3LocalStorage.setItem(HEADER_WEEK_KEY,String(wk));}catch(e){}performanceSelectedWeek=wk;games=WKS[wk]||[];legs=[];focus=null;$("wk").value=wk;$("wkTop").value=wk;$("wkn").textContent=liveWeeks.has(wk)?"Updated schedule / scores":wk===CUR?"Bundled snapshot":"Bundled completed games";draw();plays();renderPerformance();renderSaved();renderAdvanced()}
