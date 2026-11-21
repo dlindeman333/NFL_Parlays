@@ -54,4 +54,4 @@ for(const kind of ['rcp','rec']){
   'adding future game data cannot change earlier-week predictions');
 }
 assert.throws(()=>backtestPlayerProps([fixtures[0],fixtures[0]]),/Duplicate player-week/);
-console.log('Player prop distribution and synthetic walk-forward regression: passed; real historical calibration requires user-supplied completed player-week data.');
+console.log('Player prop distribution and synthetic walk-forward regression: passed; authentic calibration is evaluated separately with source provenance.');
