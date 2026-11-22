@@ -6,6 +6,8 @@ The capture mode requires a production-only service credential and Chromium.
 import argparse
 import json
 import os
+import time
+from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime, timezone, timedelta
 from pathlib import Path
 from urllib.request import Request, urlopen
@@ -16,6 +18,10 @@ MODEL_SEASON = 2026
 PRODUCTION = 'https://wpvuunwtyxycqfjwuzkn.supabase.co'
 WINDOW_MIN = timedelta(minutes=30)
 WINDOW_MAX = timedelta(minutes=35)
+# Warm the ephemeral CI runner before the five-minute capture window starts.
+# This does not broaden the permitted time of a database INSERT.
+PREP_MAX = timedelta(minutes=50)
+MAX_WAIT_SECONDS = 20 * 60
 ROOT = Path(__file__).resolve().parent
 TOP_N = 12
 SUPPORTED_STATS = {'passing_yards', 'rushing_yards', 'receiving_yards', 'receptions', 'touchdowns'}
@@ -42,36 +48,95 @@ def fetch(url, *, service=False):
         return json.load(r)
 
 
-def schedule(now=None):
-    now = now or datetime.now(timezone.utc)
-    result = []
-    for week in range(1, 19):
+def within_capture_window(kickoff, now):
+    """Use the same inclusive bounds at discovery and immediately before POST."""
+    if kickoff.tzinfo is None or now.tzinfo is None:
+        return False
+    return WINDOW_MIN <= kickoff - now <= WINDOW_MAX
+
+
+def schedule(now=None, *, max_lead=WINDOW_MAX):
+    now = now if now is not None else datetime.now(timezone.utc)
+    if not WINDOW_MIN <= max_lead <= PREP_MAX:
+        raise ValueError('Unexpected pregame preparation window')
+
+    def fetch_week(week):
         url = f'https://site.api.espn.com/apis/site/v2/sports/football/nfl/scoreboard?dates={SEASON}&seasontype=2&week={week}&limit=100'
-        data = fetch(url)
-        for e in data.get('events', []):
-            comp = (e.get('competitions') or [{}])[0]
-            teams = {x.get('homeAway'): x.get('team', {}).get('abbreviation') for x in comp.get('competitors', [])}
-            kickoff = datetime.fromisoformat(e['date'].replace('Z', '+00:00'))
-            if not WINDOW_MIN <= kickoff - now <= WINDOW_MAX:
-                continue
-            if e.get('status', {}).get('type', {}).get('state') != 'pre':
-                continue
-            result.append({'week': week, 'id': str(e['id']), 'a': teams.get('away'), 'h': teams.get('home'), 'kickoff': kickoff.isoformat()})
+        return week, fetch(url)
+
+    result = []
+    # Four workers minimize 18-week ESPN lookup latency without a burst of 18
+    # requests. If any request fails, the preflight fails closed.
+    with ThreadPoolExecutor(max_workers=4) as pool:
+        for week, data in pool.map(fetch_week, range(1, 19)):
+            for e in data.get('events', []):
+                comp = (e.get('competitions') or [{}])[0]
+                teams = {x.get('homeAway'): x.get('team', {}).get('abbreviation') for x in comp.get('competitors', [])}
+                kickoff = datetime.fromisoformat(e['date'].replace('Z', '+00:00'))
+                if not WINDOW_MIN <= kickoff - now <= max_lead:
+                    continue
+                if e.get('status', {}).get('type', {}).get('state') != 'pre':
+                    continue
+                result.append({'week': week, 'id': str(e['id']), 'a': teams.get('away'), 'h': teams.get('home'), 'kickoff': kickoff.isoformat()})
     return result
 
 
-def check_window():
-    """Output the GitHub Actions eligibility flag without reading cloud data."""
-    if SEASON != MODEL_SEASON:
-        raise RuntimeError(f'Pregame capture is disabled for season {SEASON}; model inputs require validation')
-    events = schedule()
-    eligible = bool(events)
+def emit_eligibility(eligible):
     output = os.environ.get('GITHUB_OUTPUT')
     if output:
         with open(output, 'a', encoding='utf-8') as fp:
             fp.write('eligible=' + str(eligible).lower() + '\n')
-    print(f'Pregame window: {len(events)} eligible game(s) 30–35 minutes from kickoff; '
-          + ('capture may proceed' if eligible else 'no capture needed'))
+
+
+def check_window(*, preparation=False):
+    """Output the GitHub Actions eligibility flag without reading cloud data."""
+    if SEASON != MODEL_SEASON:
+        raise RuntimeError(f'Pregame capture is disabled for season {SEASON}; model inputs require validation')
+    events = schedule(max_lead=PREP_MAX) if preparation else schedule()
+    eligible = bool(events)
+    emit_eligibility(eligible)
+    window = '30–50 minute preparation' if preparation else '30–35 minute capture'
+    print(f'{window} window: {len(events)} eligible game(s); '
+          + ('runner may prepare' if preparation and eligible else
+             'capture may proceed' if eligible else 'no eligible game'))
+    return eligible
+
+
+def wait_for_window(*, clock=None, sleeper=None):
+    """Read-only preparation; revalidate the *strict* window after warming CI."""
+    if SEASON != MODEL_SEASON:
+        raise RuntimeError(f'Pregame capture disabled for unvalidated season {SEASON}')
+    clock = clock or (lambda: datetime.now(timezone.utc))
+    sleeper = sleeper or time.sleep
+    now = clock()
+    upcoming = schedule(now, max_lead=PREP_MAX)
+    if not upcoming:
+        emit_eligibility(False)
+        print('No pregame event remains in the preparation window.')
+        return False
+    # The earliest qualifying game determines when this run may first capture.
+    kickoffs = [datetime.fromisoformat(e['kickoff']) for e in upcoming]
+    target = min(kickoffs) - WINDOW_MAX + timedelta(seconds=1)
+    remaining = max(0, (target - now).total_seconds())
+    if remaining > MAX_WAIT_SECONDS:
+        emit_eligibility(False)
+        print('Preparation would exceed the bounded wait; no capture attempted.')
+        return False
+    wait_budget = MAX_WAIT_SECONDS
+    while remaining > 0:
+        # Wall clocks can jump. A separate sleep budget guarantees a bound even
+        # if time stops advancing or is moved backward during preparation.
+        if wait_budget <= 0:
+            emit_eligibility(False)
+            print('Preparation wait exhausted; no capture attempted.')
+            return False
+        delay = min(remaining, 30, wait_budget)
+        sleeper(delay)
+        wait_budget -= delay
+        remaining = max(0, (target - clock()).total_seconds())
+    eligible = bool(schedule(clock()))
+    emit_eligibility(eligible)
+    print('Strict pregame recheck:', 'eligible for guarded capture' if eligible else 'no eligible games; skip capture')
     return eligible
 
 
@@ -172,7 +237,7 @@ def main():
             # Browser startup and model evaluation can take several minutes.
             # The database independently enforces the 30-minute minimum.
             kickoff = datetime.fromisoformat(e['kickoff'])
-            if not WINDOW_MIN <= kickoff - datetime.now(timezone.utc) <= WINDOW_MAX:
+            if not within_capture_window(kickoff, datetime.now(timezone.utc)):
                 print('Skipped', e['id'], ': capture window elapsed during processing')
                 continue
             row = {'season': SEASON, 'week': e['week'], 'game_id': e['id'],
@@ -197,8 +262,18 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('--check-window', action='store_true',
                         help='Read-only kickoff-window check for scheduled capture')
+    parser.add_argument('--check-prep-window', action='store_true',
+                        help='Read-only 30–50 minute runner preparation check')
+    parser.add_argument('--wait-for-window', action='store_true',
+                        help='Wait at most 20 minutes then recheck 30–35 minute window')
     args = parser.parse_args()
+    if sum((args.check_window, args.check_prep_window, args.wait_for_window)) > 1:
+        parser.error('Select only one read-only window mode')
     if args.check_window:
         check_window()
+    elif args.check_prep_window:
+        check_window(preparation=True)
+    elif args.wait_for_window:
+        wait_for_window()
     else:
         main()
