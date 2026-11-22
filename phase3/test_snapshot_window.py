@@ -33,6 +33,67 @@ class CaptureWindowChecks(unittest.TestCase):
         self.assertEqual(feed.call_count, 18)
         self.assertTrue(all(e['a'] == 'BUF' and e['h'] == 'MIA' for e in found))
 
+    def test_preparation_early_but_capture_still_strict(self):
+        events = [self.event('preparing', 45), self.event('too-early', 51),
+                  self.event('ready', 34), self.event('too-late', 29),
+                  self.event('in-progress', 45, 'in')]
+        def feed(url, **kwargs):
+            return {'events': events if 'week=11' in url else []}
+        with patch.object(snapshots, 'fetch', side_effect=feed):
+            self.assertEqual([e['id'] for e in snapshots.schedule(self.now)], ['ready'])
+            self.assertEqual([e['id'] for e in snapshots.schedule(self.now, max_lead=snapshots.PREP_MAX)],
+                             ['preparing', 'ready'])
+        self.assertTrue(snapshots.within_capture_window(self.now+timedelta(minutes=35), self.now))
+        self.assertTrue(snapshots.within_capture_window(self.now+timedelta(minutes=30), self.now))
+        self.assertFalse(snapshots.within_capture_window(self.now+timedelta(minutes=45), self.now))
+        self.assertFalse(snapshots.within_capture_window(self.now+timedelta(minutes=29), self.now))
+
+    def test_read_only_wait_starts_preparation_early_and_rechecks(self):
+        current = [self.now]
+        wakeups = []
+        def advance(seconds):
+            wakeups.append(seconds)
+            current[0] += timedelta(seconds=seconds)
+        def feed(url, **kwargs):
+            return {'events': [self.event('ready', 45)] if 'week=11' in url else []}
+        with tempfile.TemporaryDirectory() as directory, \
+             patch.dict(os.environ, {'GITHUB_OUTPUT': str(Path(directory)/'github_output')}, clear=True), \
+             patch.object(snapshots, 'fetch', side_effect=feed), \
+             patch.object(snapshots, 'credentials', side_effect=AssertionError('cloud access')):
+            self.assertTrue(snapshots.wait_for_window(clock=lambda: current[0], sleeper=advance))
+            self.assertEqual((Path(directory)/'github_output').read_text(), 'eligible=true\n')
+        self.assertGreater(len(wakeups), 1)
+        self.assertLessEqual(max(wakeups), 30)
+        self.assertTrue(snapshots.within_capture_window(self.now + timedelta(minutes=45), current[0]))
+
+    def test_window_wait_fails_closed_if_event_changes_state(self):
+        event = {'id': 'event', 'kickoff': (self.now + timedelta(minutes=45)).isoformat()}
+        current = [self.now]
+        def advance(seconds):
+            current[0] += timedelta(seconds=seconds)
+        with patch.object(snapshots, 'schedule', side_effect=[[event], []]) as schedule, \
+             patch.object(snapshots, 'credentials', side_effect=AssertionError('cloud access')):
+            self.assertFalse(snapshots.wait_for_window(clock=lambda: current[0], sleeper=advance))
+        self.assertEqual(schedule.call_count, 2)
+
+    def test_wait_budget_fails_closed_if_clock_stops(self):
+        event = {'id': 'event', 'kickoff': (self.now + timedelta(minutes=45)).isoformat()}
+        delays = []
+        with patch.object(snapshots, 'schedule', return_value=[event]) as schedule:
+            self.assertFalse(snapshots.wait_for_window(clock=lambda: self.now, sleeper=delays.append))
+        self.assertEqual(sum(delays), snapshots.MAX_WAIT_SECONDS)
+        self.assertEqual(schedule.call_count, 1)
+
+    def test_preparation_flag_uses_only_read_only_schedule(self):
+        with tempfile.TemporaryDirectory() as directory:
+            output = Path(directory) / 'github_output'
+            with patch.dict(os.environ, {'GITHUB_OUTPUT': str(output)}, clear=True), \
+                 patch.object(snapshots, 'schedule', return_value=[{'id': 'game'}]) as schedule, \
+                 patch.object(snapshots, 'credentials', side_effect=AssertionError('cloud access')):
+                self.assertTrue(snapshots.check_window(preparation=True))
+                schedule.assert_called_once_with(max_lead=snapshots.PREP_MAX)
+            self.assertEqual(output.read_text(), 'eligible=true\n')
+
     def test_check_window_needs_no_database_credential_or_browser(self):
         with tempfile.TemporaryDirectory() as directory:
             output = Path(directory) / 'github_output'
