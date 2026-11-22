@@ -671,12 +671,28 @@ html{scroll-padding-top:175px}#topAccountPanel,#myParlays,#savedParlaySlips,#bui
    background:#123e73!important;border:1px solid #75a5dc!important;
    border-radius:12px!important;box-shadow:0 4px 12px #061b3a40!important;
  }
- #stickySkipNavigation.skip-native-drawer>summary{display:none!important;}
+ /* The native details disclosure also collapses the PC/landscape Skip To row. */
+ #stickySkipNavigation.skip-native-drawer>summary{
+   display:flex!important;align-items:center!important;justify-content:center!important;
+   width:max-content!important;min-height:36px!important;margin:0 0 8px auto!important;
+   padding:6px 12px!important;border-radius:8px!important;font-size:13px!important;
+ }
+ #stickySkipNavigation.skip-native-drawer>summary>span:first-child{font-size:0!important;}
+ #stickySkipNavigation.skip-native-drawer[open]>summary>span:first-child::after{
+   content:'▼ Collapse Skip To';font-size:13px!important;
+ }
+ #stickySkipNavigation.skip-native-drawer:not([open])>summary>span:first-child::after{
+   content:'▶ Show Skip To';
+ }
+ #stickySkipNavigation.skip-native-drawer>summary .skip-drawer-hint{display:none!important;}
+ #stickySkipNavigation.skip-native-drawer>summary:focus-visible{outline:3px solid #ffdc65!important;outline-offset:2px;}
  #stickySkipNavigation.skip-native-drawer #skipNavLinks{
    display:grid!important;grid-template-columns:repeat(11,minmax(0,1fr))!important;
    width:100%!important;max-height:none!important;overflow:visible!important;
    gap:7px!important;padding:0!important;
  }
+ #stickySkipNavigation.skip-native-drawer:not([open])>summary{margin-bottom:0!important;}
+ #stickySkipNavigation.skip-native-drawer:not([open]) #skipNavLinks{display:none!important;}
  #stickySkipNavigation.skip-native-drawer #skipNavLinks>a{
    min-width:0!important;min-height:46px!important;padding:9px 5px!important;
    font-size:clamp(11px,.83vw,14px)!important;line-height:1.17!important;
@@ -5053,8 +5069,13 @@ recovery.onclick=async()=>{recovery.disabled=true;recoveryStatus.textContent='Ve
  const drawer=document.getElementById('stickySkipNavigation');
  if(!drawer)return;
  const desktop=window.matchMedia('(min-width:701px)');
+ let desktopExpanded=true;
+ drawer.addEventListener('toggle',()=>{
+   // Respect the user's PC choice, including when rotating between layouts.
+   if(desktop.matches)desktopExpanded=drawer.open;
+ });
  function syncNavPlacement(){
-   if(desktop.matches)drawer.open=true; // Keep the PC shortcut row visible.
+   if(desktop.matches)drawer.open=desktopExpanded; // Default expanded; allow manual collapse.
    else drawer.open=false; // Keep the approved collapsible iPhone drawer.
  }
  syncNavPlacement();
