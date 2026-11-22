@@ -13,6 +13,9 @@ with sync_playwright() as p:
     browser=p.chromium.launch(executable_path=executable) if executable else p.chromium.launch()
     for mobile in (False,True):
         context=browser.new_context(viewport={'width':390 if mobile else 1365,'height':844},is_mobile=mobile,has_touch=mobile,service_workers='block')
+        # Pin the historical model season in this throwaway browser context;
+        # otherwise next year's CI would disable the 2026-only model by design.
+        context.add_init_script("localStorage.setItem('nflp-production-isolated-v1:nflp-selected-season-v1','2026')")
         errors=[]; writes=[]
         def route(request_route):
             request=request_route.request
@@ -37,6 +40,24 @@ with sync_playwright() as p:
         # This test deliberately has no authenticated account. Reveal the local
         # UI only for layout checks; it does NOT prove cloud sign-in or RLS.
         page.evaluate("document.body.classList.remove('phase3-privacy-locked')")
+        # The packaged app contains only Week 9/10 schedules. This test blocks
+        # all outside network access, so Week 11 must initially show the honest
+        # missing-schedule guard. Supply isolated, future-dated SYNTHETIC Week
+        # 11 games before asking the app to generate any risk recommendations.
+        # No live schedule or user/cloud data is injected or saved.
+        page.evaluate("setWk(11)")
+        assert 'No verified schedule loaded for Week 11' in page.locator('#bestRiskParlayResults').inner_text()
+        page.evaluate("""() => {
+          if(!Array.isArray(WKS[10])||WKS[10].length<6)throw Error('Bundled fixtures missing');
+          const kickoff=new Date(Date.now()+48*60*60*1000).toISOString();
+          WKS[11]=WKS[10].slice(0,8).map((game,index)=>({
+            ...game,id:'synthetic-w11-'+index,week:11,date:kickoff,sc:null
+          }));
+          setWk(11);
+        }""")
+        assert page.evaluate("WKS[11].length===8 && WKS[11].every(g => !g.sc && Date.parse(g.date)>Date.now())")
+        assert page.locator('#filteredParlaySuggestions h3').inner_text().startswith('Best 3-leg')
+        assert page.locator('#riskParlayComparison').count()==1
         # The Best risk-based parlays section sits AFTER Potential Plays, and
         # its shortcut lands at the leg/odds selectors (not halfway down picks).
         assert page.locator('#bestRiskParlayControls').count()==1
@@ -60,10 +81,19 @@ with sync_playwright() as p:
         assert page.locator('#riskParlayComparison').count()==1
         for leg_count in (3,4,5,6):
             assert page.locator(f'[data-risk-comparison="{leg_count}"]').count()==1
+        assert 'Active whole-parlay odds range: 500 through 2000' in page.locator('#riskParlayComparison').inner_text()
+        assert not page.locator('#riskParlayHideBelowBreakEven').is_checked()
+        page.locator('#riskParlayHideBelowBreakEven').check()
+        assert 'Experimental break-even filter ON' in page.locator('#riskParlayComparison').inner_text()
+        assert page.locator('#ln').inner_text()==before,'value filter must not change the active slip'
+        page.locator('#riskParlayHideBelowBreakEven').uncheck()
+        assert 'Show all qualifying odds results' in page.locator('#riskParlayComparison').inner_text()
         if mobile:
             assert page.evaluate('document.documentElement.scrollWidth<=window.innerWidth+2')
             assert page.evaluate("""() => [...document.querySelectorAll('#bestRiskParlayControls input,#bestRiskParlayControls select,#bestRiskParlayControls button')]
               .every(e => e.getBoundingClientRect().left>=-2&&e.getBoundingClientRect().right<=window.innerWidth+2)""")
+        assert not errors,errors
+        assert not writes,'browser smoke must never write to a production backend'
         print(('Mobile' if mobile else 'Desktop')+' feature smoke passed; no runtime errors or live writes')
         context.close()
     browser.close()
