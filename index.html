@@ -1793,7 +1793,7 @@ function pick(gid,mkt,side){if(!teamMarketAllowed(mkt)&&/^td[a-z]$/.test(String(
   if(!makeSelectionRoom(next.length))return false;
   if(mode==='same'&&!focus)focus=game.id;
   legs=[...next,freezeNewPlayerLeg(game.id,mkt,side)];draw();
-  aiSelectionFeedback('Added to Current parlay: '+legs.length+' of '+N+' legs. Save the parlay when finished.');return true;
+  aiSelectionFeedback('Added to Current parlay: '+legs.length+' legs selected. Suggestions filter: '+N+' legs. Save when ready.');return true;
 }
 const SLIPS_KEY="nflp-draft-slips-v3";let slips=[],activeSlip=0,slipSeq=1;
 try{const obj=JSON.parse(phase3LocalStorage.getItem(SLIPS_KEY)||"null");if(obj&&Array.isArray(obj.slips)&&obj.slips.length){slips=obj.slips;activeSlip=obj.active||0;slipSeq=obj.seq||1}}catch(e){}
@@ -1862,10 +1862,12 @@ let initializedSlips=false;function switchSlip(id){if(initializedSlips)syncActiv
 function beginSavedParlayEdit(id){
  const original=savedById(id);if(!original)return;
  if(original.status!=='open'){$('savedActionStatus').textContent='Reopen this parlay before editing selections.';return;}
+ const selectedLegFilter=N;
  duplicateSavedToDraft(id);
  const draft=slips.find(s=>s.id===activeSlip);draft.editSavedId=original.id;draft.editSavedBase=JSON.stringify(original);draft.name='Editing '+(original.name||'parlay');
  legs=original.legs.map((l,i)=>({...((original.draftLegs?.length===original.legs.length?original.draftLegs[i]:null)||{}),custom:true,t:l.t,m:l.m,o:l.o}));
- N=Math.min(8,Math.max(N,legs.length+2));draft.N=N;draw();persistDraftSlips();
+ // Editing a saved slip does not change the active suggestions filter.
+ N=selectedLegFilter;draft.N=N;draw();persistDraftSlips();
  $('save').textContent='Save parlay changes';$('msg').textContent='Editing '+(original.name||'saved parlay')+'. Add selections, then Save parlay changes.';
  const section=document.getElementById('uiActiveParlay');if(section){section.open=true;section.scrollIntoView({behavior:'smooth',block:'start'});}
 }
@@ -1880,8 +1882,8 @@ function draw(){
  const headerWeek=document.getElementById("headerWeekLabel");if(headerWeek)headerWeek.textContent="NFL "+SEASON+" · Week "+wk;
  refreshPlayerMarkets();
  const currentDraft=slips.find(s=>s.id===activeSlip);$('save').textContent=currentDraft?.editSavedId!=null?'Save parlay changes':'Save parlay';if($('activeLegTarget'))$('activeLegTarget').textContent=String(N);
-  if(mode==="multi")$("hint").textContent=legs.length>N?"Remove "+(legs.length-N)+" selected leg(s) to match the new target.":legs.length===N?"Slip is full.":"Multi-game: choose "+N+" picks across games (multiple picks per game allowed).";
-  else $("hint").textContent=focus?"Same game: pick up to "+N+" legs (one per market) in the highlighted game.":"Same game: tap a game’s “Build here” tag, then pick its markets.";
+  if(mode==="multi")$("hint").textContent=legs.length>N?"You have "+legs.length+" selected legs, above the "+N+"-leg suggestions filter. Saving is allowed.":legs.length===N?"Matches the "+N+"-leg suggestions filter. You can add more legs or save now.":"Multi-game: "+N+"-leg suggestions filter. Add up to 8 valid legs and save with any count.";
+  else $("hint").textContent=focus?"Same game: choose up to 8 valid legs from the highlighted game. The "+N+"-leg suggestions filter does not limit saving.":"Same game: tap a game’s “Build here” tag, then pick its markets.";
   $("ln").textContent=N;
   document.querySelectorAll("#mode button").forEach(b=>b.classList.toggle("on",b.dataset.m===mode));
   syncActiveSlip();renderSlipTabs();
@@ -1912,14 +1914,13 @@ function draw(){
     for(const warning of prebetWarnings){const item=document.createElement('li');item.textContent=warning;list.appendChild(item)}
     panel.appendChild(list);$('slip').appendChild(panel);
   }
-  const full=legs.length===N;
-  $("b1").innerHTML=`${legs.length}/${N} legs<small>${full?"Parlay ready":legs.length>N?"Remove "+(legs.length-N)+" leg(s) of your choice":"Add "+(N-legs.length)+" more"}</small>`;
+  $("b1").innerHTML=`${legs.length} legs<small>${N}-leg suggestions filter · ${legs.length?"Save anytime":"Add a pick to start"}</small>`;
   $("b2").innerHTML=legs.length?`${am(D)} · ${D.toFixed(2)}x<small>$${st} pays $${(st*D).toFixed(2)}</small>`:`—<small></small>`;
 }
 function validateDraftForBet(selections,weekGames,requiredLegs,slipMode){
  const warnings=[];
  if(!Array.isArray(selections)||!selections.length)return warnings;
- if(selections.length!==requiredLegs)warnings.push(`Slip has ${selections.length} of ${requiredLegs} required legs.`);
+ // Leg-count differences are informational at Save, not pre-bet violations.
  const byId=new Map((weekGames||[]).map(g=>[String(g.id),g]));
  const seen=new Set(),byMarket=new Map(),gameIds=new Set();
  for(const leg of selections){
@@ -1970,16 +1971,16 @@ function showSameGameReminder(){
 }
 function setFocus(id){if(focus!==id){focus=id;legs=legs.filter(l=>l.gid===id)}draw();plays()}
 $("mode").onclick=e=>{const m=e.target.dataset.m;if(!m)return;mode=m;legs=[];focus=null;draw();plays();if(m==="same")showSameGameReminder()};
-$("lm").onclick=()=>{N=Math.max(2,N-1);draw();plays();if(legs.length>N)$("msg").textContent="Choose which "+(legs.length-N)+" leg(s) to remove using the ✕ or trash buttons. Your selections have been preserved.";};
+$("lm").onclick=()=>{N=Math.max(2,N-1);draw();plays();if(legs.length>N)$("msg").textContent="Your "+legs.length+" selected legs are preserved. The "+N+"-leg suggestions filter does not limit saving.";};
 $("lp").onclick=()=>{N=Math.min(8,N+1);draw();plays()};
 $("stake").oninput=draw;
-// Individual additions from AI and game cards share the same capacity policy.
+// Individual additions from AI and game cards share the eight-leg safety cap.
+// They never silently change the suggestions filter to match the draft count.
 function aiSelectionFeedback(message){
  for(const id of ['advStatus','recommendationActionStatus','msg']){const el=$(id);if(el)el.textContent=message;}
 }
 function makeSelectionRoom(count=legs.length){
  if(count>=8){aiSelectionFeedback('Selection not added: maximum 8 legs. Remove a leg from Current parlay first.');return false;}
- if(count>=N)N=count+1;
  return true;
 }
 // recommendations
@@ -2474,8 +2475,9 @@ $("save").onclick=()=>{
  if(editId!=null&&(editIndex<0||JSON.stringify(saved[editIndex])!==draft.editSavedBase)){$("msg").textContent="Saved parlay changed or was deleted. Your draft is preserved. Reopen the current saved record before updating.";return;}
 
  if(!legs.length){$("msg").textContent="Add at least one valid selection before saving.";return}
- if(legs.length>N){$("msg").textContent="Remove "+(legs.length-N)+" leg(s) of your choice before saving.";return}
- // The leg-count target is a filter, not a minimum required to save.
+ if(legs.length>8){$("msg").textContent="A maximum of 8 legs can be saved. Remove the extra legs before saving.";return}
+ // The leg-count selection filters suggestions; it is neither a minimum nor a
+ // maximum for a saved parlay. Genuine selection validation remains enforced.
  // Reject invalid selections, completed games, duplicate legs, and opposing markets.
  const currentGames=new Map(games.map(g=>[String(g.id),g]));
  const seenSelections=new Set(),marketSides=new Map(),selectedGameIds=new Set();
@@ -2505,7 +2507,7 @@ $("save").onclick=()=>{
    seenSelections.add(selectionKey);marketSides.set(marketKey,String(leg.side));selectedGameIds.add(String(leg.gid));
  }
  if(mode==='same'&&selectedGameIds.size>1){$("msg").textContent="Cannot save: same-game slips must contain selections from one game.";return}
- const fewerLegs=legs.length<N;
+ const differentLegCount=legs.length!==N;
  // Persistent, accessible notice: the transient #msg is overwritten after saving.
  let legNotice=document.getElementById('phase3LegFilterNotice');
  if(!legNotice){
@@ -2516,8 +2518,8 @@ $("save").onclick=()=>{
    legNotice.style.cssText='margin:8px 0;padding:9px 12px;border:1px solid #8aa4c2;border-radius:8px;font-size:14px;';
    $("save").parentElement.insertAdjacentElement('afterend',legNotice);
  }
- legNotice.hidden=!fewerLegs;
- if(fewerLegs)legNotice.textContent=`Info: ${legs.length} selected vs ${N}-leg filter. You can save this parlay without changing the filter.`;
+ legNotice.hidden=!differentLegCount;
+ if(differentLegCount)legNotice.textContent=`Info: ${legs.length} selected vs ${N}-leg suggestions filter. You can save this parlay without changing the filter.`;
  const st=Math.max(0,+$("stake").value||0);let D=1;
  const L=legs.map(l=>{const x=legOf(l);D*=x.d;return{t:x.txt,m:x.g.a+" @ "+x.g.h,o:am(x.d)}});
  const proposedName=prompt(editId!=null?'Save changes to this parlay. Name:':'Optional parlay name (up to 80 characters). Leave blank for Untitled Parlay:',editId!=null?saved[editIndex].name||'':'');
@@ -2532,7 +2534,7 @@ $("save").onclick=()=>{
  $("msg").textContent=original?'Updated saved parlay with '+L.length+' legs.':'Saved '+L.length+' legs. The active draft is now empty. Use Edit / add legs on the saved card to extend it.';
  // Keep the explanatory notice visible after the save completes.
  if(legNotice){legNotice.hidden=true;}
- if(fewerLegs)window.alert(`Parlay saved successfully!\n\nYou saved ${L.length} legs while your filter is set to ${N}.\n\nYour filter was not changed.`);
+ if(differentLegCount)window.alert(`Parlay saved successfully!\n\nYou saved ${L.length} legs while your suggestions filter is set to ${N}.\n\nYour filter was not changed.`);
 };
 function setS(id,k,v){const s=saved.find(x=>x.id===id);if(!s)return;
  if(k==="status"){s.status=v;s.amt=v==="won"?+(s.stake*(s.dec-1)).toFixed(2):v==="lost"?s.stake:0}else s.amt=Math.abs(+v||0);
