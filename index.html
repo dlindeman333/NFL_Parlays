@@ -1480,11 +1480,12 @@ function markRiskParlayPending(){
  $('riskParlayStatus').textContent='Risk settings have changed. Press Show best parlays or finish editing a field to apply them.';
  filteredParlayPlans={};
  if(typeof riskComparisonPlans!=='undefined')riskComparisonPlans={};
+ if(typeof tdComparisonPlans!=='undefined')tdComparisonPlans={};
 }
 function applyRiskParlaySettings(){
  const count=Number($('riskParlayLegs').value),from=$('riskParlayFrom').value.trim(),through=$('riskParlayThrough').value.trim();
  const error=!Number.isInteger(count)||count<2||count>8?'Choose between 2 and 8 legs.':validateOddsRange(from,through);
- if(error){$('riskParlayStatus').textContent=error;const target=$('bestRiskParlayResults');if(target)target.innerHTML='<div class="card warn" role="status">Invalid combined-odds range. Correct the settings before viewing recommendations.</div>';filteredParlayPlans={};if(typeof riskComparisonPlans!=='undefined')riskComparisonPlans={};return false;}
+ if(error){$('riskParlayStatus').textContent=error;const target=$('bestRiskParlayResults');if(target)target.innerHTML='<div class="card warn" role="status">Invalid combined-odds range. Correct the settings before viewing recommendations.</div>';filteredParlayPlans={};if(typeof riskComparisonPlans!=='undefined')riskComparisonPlans={};if(typeof tdComparisonPlans!=='undefined')tdComparisonPlans={};return false;}
  riskParlayLegs=count;riskParlayFrom=from;riskParlayThrough=through;
  $('riskParlayStatus').textContent='Showing '+count+'-leg options; combined odds '+(from||'unbounded')+' through '+(through||'unbounded')+'. Your existing slips are unchanged.';
  renderRiskBasedParlays();return true;
@@ -1498,10 +1499,11 @@ function scrollToRiskParlaySettings(){
  window.scrollTo({top:Math.max(0,window.scrollY+target.getBoundingClientRect().top-offset),behavior:'smooth'});
 }
 function filteredParlayContext(){return JSON.stringify([SEASON,wk,mode,riskParlayLegs,focus,tf,pf,gameQuery,riskParlayFrom,riskParlayThrough,riskParlayHideBelowBreakEven,regularOnly,supportedTeamOnly,playerDataRevision,teamPointsRevision]);}
-function filteredParlayCandidates(){
+function filteredParlayCandidates(onlyAnytimeTD=false){
  refreshPlayerMarkets();if(SEASON!==MODEL_SEASON||mode==='same'&&!focus)return [];
  const now=Date.now();return games.filter(g=>!g.sc&&vis(g)&&(mode!=='same'||g.id===focus)&&Number.isFinite(Date.parse(g.date||''))&&Date.parse(g.date)>now)
- .flatMap(g=>gamePickCandidates(g,true)).filter(x=>filterHas(pf,x.family));
+ .flatMap(g=>gamePickCandidates(g,true)).filter(x=>onlyAnytimeTD?
+   x.player?.k==='td'&&x.mkt==='p'+x.player.i&&x.side==='o':filterHas(pf,x.family));
 }
 function chooseFilteredParlay(pool,kind,targetLegs=riskParlayLegs){
  const sorted=[...pool].sort((a,b)=>(kind==='lower'?a.decimal-b.decimal:kind==='higher'?b.decimal-a.decimal:kind==='value'?(b.probability*b.decimal-a.probability*a.decimal):b.probability-a.probability)||b.probability-a.probability||a.key.localeCompare(b.key));
@@ -1739,12 +1741,61 @@ function useRiskComparisonPlan(legCount){
  switchSlip(id);persistDraftSlips();$('msg').textContent='Created '+name+' as a separate draft. Verify sportsbook lines and odds before saving.';
  $('uiActiveParlay')?.scrollIntoView({block:'nearest',behavior:'smooth'});
 }
+// Player Anytime TDs only (not team TD totals). This is a separate 3–6-leg
+// comparison, independent of the recommendation-leg and Pick Types filters.
+let tdComparisonPlans={};
+function renderAnytimeTDComparison(){
+ tdComparisonPlans={};
+ const pool=filteredParlayCandidates(true),context=filteredParlayContext();
+ let html='<section class="card" id="anytimeTdParlayComparison" aria-label="Best 3 through 6 leg anytime touchdown parlays"><h3>Best Anytime TD parlays · 3, 4, 5 &amp; 6 legs</h3><p><b>Whole-parlay odds range: '+esc(riskParlayFrom||'unbounded')+' through '+esc(riskParlayThrough||'unbounded')+'</b> · '+(riskParlayHideBelowBreakEven?'Experimental break-even filter ON':'All qualifying odds results shown')+'</p><p class="mu">Individual player Anytime TD picks only (no team TD totals). Four independent leg counts, regardless of the selected recommendation leg count or Pick Types checkbox. Week, matchup, player eligibility, injuries, and Same/Multi-game filters still apply. One player per leg; Multi-game uses one player per game. Ranking uses uncalibrated estimated joint HIT × illustrative/entered combined payout with conservative same-game scenarios. These are not verified sportsbook probabilities, odds or betting value; check actual anytime TD markets and prices.</p>';
+ for(const legCount of [3,4,5,6]){
+  const result=searchCombinedParlays(pool,legCount,{comparison:true});
+  if(!result.best&&riskParlayHideBelowBreakEven&&result.informationalBest){
+   const example=result.informationalBest,risk=example.scenario||parlayJointScenario(example.rows);
+   html+='<article class="filtered-parlay-card" data-td-comparison="'+legCount+'" data-risk-info-only="true"><h4>'+legCount+' Anytime TD legs · informational only</h4><p class="mu">The strongest searched in-range TD combination did not pass the optional experimental break-even filter. '+(result.truncated?'Search incomplete; another candidate may exist.':'')+' Turn off the filter to see odds-qualifying suggestions.</p><p class="mu">Combined illustrative odds: '+esc(am(example.price))+'</p>'+parlayIllustrativeValueNotice(risk,example.price)+'<ol>'+example.rows.map(r=>'<li>'+esc(r.text)+' · '+esc(r.matchup)+'</li>').join('')+'</ol><p class="mu"><b>Not eligible to add while the filter is enabled.</b></p></article>';continue;
+  }
+  if(!result.best){
+   const reason=result.groupCount<legCount?'Only '+result.groupCount+' compatible player Anytime TD '+(mode==='same'?'markets':'games')+' available; '+legCount+' distinct legs are required.':result.truncated?'The bounded search stopped without finding a complete option; another may exist.':riskParlayHideBelowBreakEven?'No searched TD option met both the selected odds range and the experimental break-even filter.':'No '+legCount+'-leg Anytime TD option found within the selected whole-parlay odds range. TD parlay prices often exceed general parlay ranges.';
+   html+='<article class="filtered-parlay-card" data-td-comparison="'+legCount+'"><h4>'+legCount+' Anytime TD legs</h4><p class="mu" role="status">'+reason+' Review the week, matchup, or odds settings.</p></article>';continue;
+  }
+  const best=result.best,risk=best.scenario||parlayJointScenario(best.rows);
+  if(best.rows.some(r=>r.player?.k!=='td'||r.side!=='o'||r.mkt!=='p'+r.player.i)||!combinedOddsInRange(best.price,riskParlayFrom,riskParlayThrough)||riskParlayHideBelowBreakEven&&risk.joint*best.price<1-1e-10){
+   html+='<article class="filtered-parlay-card" data-td-comparison="'+legCount+'"><h4>'+legCount+' Anytime TD legs</h4><p class="warn">An invalid or out-of-range suggestion was rejected. Refresh the risk settings.</p></article>';continue;
+  }
+  tdComparisonPlans[legCount]={context,rows:best.rows,price:best.price};
+  html+='<article class="filtered-parlay-card" data-td-comparison="'+legCount+'" data-combined-decimal="'+best.price+'" style="border:1px solid var(--bd);padding:12px;border-radius:10px;margin:10px 0"><h4>'+legCount+'-leg Anytime TD recommendation · '+esc(am(best.price))+' combined estimated odds</h4><p class="mu">Scenario joint HIT '+(risk.joint*100).toFixed(1)+'% · independent estimate '+(risk.independent*100).toFixed(1)+'%. Uncalibrated comparison estimates only.</p>'+parlayIllustrativeValueNotice(risk,best.price)+'<ol>'+best.rows.map(r=>'<li><b>'+esc(r.text)+'</b> · '+esc(r.matchup)+' · '+esc(String(r.odds))+' '+esc(r.source)+'</li>').join('')+'</ol><button type="button" class="btn alt" onclick="useAnytimeTDComparisonPlan('+legCount+')">Use '+legCount+'-leg Anytime TD option in new draft</button>'+(result.truncated?'<p class="mu">Bounded search: best found, not guaranteed globally optimal.</p>':'')+'</article>';
+ }
+ return html+'</section>';
+}
+function useAnytimeTDComparisonPlan(legCount){
+ const count=Number(legCount),plan=tdComparisonPlans[count];
+ if(![3,4,5,6].includes(count)||!plan||plan.context!==filteredParlayContext()||plan.rows.length!==count){
+  $('msg').textContent='Anytime TD recommendations changed. Regenerate options before creating a draft.';renderRiskBasedParlays();return;
+ }
+ const fresh=new Map(filteredParlayCandidates(true).map(r=>[r.key,r]));
+ if(plan.rows.some(r=>{const current=fresh.get(r.key);return !current||current.text!==r.text||current.odds!==r.odds||current.player?.k!=='td'||current.side!=='o'||current.mkt!=='p'+current.player.i;})){
+  $('msg').textContent='An Anytime TD player, price, matchup or kickoff changed. Regenerate recommendations first.';renderRiskBasedParlays();return;
+ }
+ const combined=plan.rows.reduce((product,r)=>product*r.decimal,1);
+ if(!combinedOddsInRange(combined,riskParlayFrom,riskParlayThrough)){
+  $('msg').textContent='The Anytime TD combination is outside the selected odds range.';renderRiskBasedParlays();return;
+ }
+ if(riskParlayHideBelowBreakEven&&parlayJointScenario(plan.rows).joint*combined<1-1e-10){
+  $('msg').textContent='This Anytime TD combination no longer passes the experimental break-even filter.';renderRiskBasedParlays();return;
+ }
+ const selections=plan.rows.map(r=>({gid:r.gid,mkt:r.mkt,side:r.side,custom:true,t:r.text,m:r.matchup,o:String(r.odds)}));
+ const name='Anytime TD '+count+'-leg comparison';
+ syncActiveSlip();const id=Math.max(slipSeq,...slips.map(s=>Number(s.id)||0))+1;slipSeq=id;
+ slips.push({id,name,wk,mode,N,stake:Number($('stake').value)||10,legs:selections,focus:mode==='same'?focus:null});
+ switchSlip(id);persistDraftSlips();$('msg').textContent='Created '+name+' as a separate draft. The '+N+'-leg suggestions filter is unchanged; verify real Anytime TD lines and odds before saving.';
+ $('uiActiveParlay')?.scrollIntoView({block:'nearest',behavior:'smooth'});
+}
 function renderRiskBasedParlays(){
  const target=$('bestRiskParlayResults');if(!target)return;
  if(riskParlayControlsPending()){markRiskParlayPending();return;}
- if(SEASON!==MODEL_SEASON){target.innerHTML='<div class="card warn">Suggestions require updated season-specific model inputs.</div>';filteredParlayPlans={};return;}
- if(!Array.isArray(WKS[wk])||!WKS[wk].length){target.innerHTML='<div class="card mu">No verified schedule loaded for Week '+wk+'. Refresh the schedule before requesting parlays.</div>';filteredParlayPlans={};return;}
- target.innerHTML=renderFilteredParlays()+renderRiskComparisonParlays();
+ if(SEASON!==MODEL_SEASON){target.innerHTML='<div class="card warn">Suggestions require updated season-specific model inputs.</div>';filteredParlayPlans={};riskComparisonPlans={};tdComparisonPlans={};return;}
+ if(!Array.isArray(WKS[wk])||!WKS[wk].length){target.innerHTML='<div class="card mu">No verified schedule loaded for Week '+wk+'. Refresh the schedule before requesting parlays.</div>';filteredParlayPlans={};riskComparisonPlans={};tdComparisonPlans={};return;}
+ target.innerHTML=renderFilteredParlays()+renderRiskComparisonParlays()+renderAnytimeTDComparison();
 }
 function loadFilteredParlay(kind){
  const plan=filteredParlayPlans[kind];
