@@ -55,6 +55,33 @@ def within_capture_window(kickoff, now):
     return WINDOW_MIN <= kickoff - now <= WINDOW_MAX
 
 
+def authentic_snapshot(row):
+    """Only a server-timestamped, correctly timed v3 capture counts as complete."""
+    try:
+        created = datetime.fromisoformat(row['created_at'].replace('Z', '+00:00'))
+        kickoff = datetime.fromisoformat(row['kickoff_at'].replace('Z', '+00:00'))
+        return within_capture_window(kickoff, created)
+    except (KeyError, AttributeError, TypeError, ValueError):
+        return False
+
+
+def missing_captures(events, existing):
+    """Preserve v2 history; refuse silently ignoring an invalid v3 collision."""
+    indexed = {(int(row['week']), str(row['game_id'])): row for row in existing}
+    pending = []
+    for event in events:
+        row = indexed.get((event['week'], str(event['id'])))
+        if row is None:
+            pending.append(event)
+        elif (not authentic_snapshot(row)
+              or datetime.fromisoformat(row['kickoff_at'].replace('Z', '+00:00'))
+              != datetime.fromisoformat(event['kickoff'].replace('Z', '+00:00'))):
+            raise RuntimeError('Invalid v3 capture already exists for week '
+                               f"{event['week']} game {event['id']}; manual review required. "
+                               'Immutable rows must never be overwritten.')
+    return pending
+
+
 def schedule(now=None, *, max_lead=WINDOW_MAX):
     now = now if now is not None else datetime.now(timezone.utc)
     if not WINDOW_MIN <= max_lead <= PREP_MAX:
@@ -182,11 +209,12 @@ def main():
         print('No games 30–35 minutes from kickoff; nothing to capture.')
         return
     base, key = credentials()
-    existing = fetch(base + f'/rest/v1/nfl_prediction_snapshots_v2?select=week,game_id&season=eq.{SEASON}', service=True)
-    seen = {(int(x['week']), x['game_id']) for x in existing}
-    pending = [e for e in events if (e['week'], e['id']) not in seen]
+    # The historical v2 primary key was occupied by captures days ahead of games.
+    # It is immutable and remains untouched. New strictly timed captures use v3.
+    existing = fetch(base + f'/rest/v1/nfl_prediction_snapshots_v3?select=week,game_id,created_at,kickoff_at&season=eq.{SEASON}', service=True)
+    pending = missing_captures(events, existing)
     if not pending:
-        print('All eligible games already have immutable snapshots.')
+        print('All eligible games already have verified 30–35-minute v3 captures.')
         return
     stats = fetch(base + f'/rest/v1/nfl_stat_exports?select=csv_text,generated_at&season=eq.{SEASON}&limit=1', service=True)
     if not stats or not stats[0].get('csv_text'):
@@ -244,14 +272,18 @@ def main():
                    'away_team': result['away_team'], 'home_team': result['home_team'],
                    'kickoff_at': e['kickoff'], 'model_version': 'browser-model-2026-phase3-top12-v1',
                    'picks': filtered}
-            request = Request(base + '/rest/v1/nfl_prediction_snapshots_v2?on_conflict=season,week,game_id',
+            request = Request(base + '/rest/v1/nfl_prediction_snapshots_v3?on_conflict=season,week,game_id',
                               data=json.dumps(row).encode(), method='POST',
                               headers={'apikey': key, 'Authorization': 'Bearer '+key,
                                        'Content-Type': 'application/json',
-                                       'Prefer': 'resolution=ignore-duplicates,return=minimal'})
+                                       'Prefer': 'resolution=ignore-duplicates,return=representation'})
             try:
                 with urlopen(request, timeout=40) as r:
-                    print('Archived Top 12 week', e['week'], result['away_team'], '@', result['home_team'],
+                    saved = json.load(r)
+                    if len(saved) != 1 or not authentic_snapshot(saved[0]):
+                        raise RuntimeError('New v3 capture was not verified after INSERT; '
+                                           'possible duplicate or unexpected timestamp')
+                    print('Archived verified Top 12 v3 week', e['week'], result['away_team'], '@', result['home_team'],
                           len(filtered), 'picks; HTTP', r.status)
             except HTTPError as err:
                 raise RuntimeError(f'Prediction snapshot upload HTTP {err.code}: {err.read().decode()[:500]}') from err

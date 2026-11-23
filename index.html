@@ -2593,7 +2593,11 @@ $("save").onclick=()=>{
  if(proposedName===null)return;
  const parlayName=proposedName.trim().slice(0,80);
  const original=editIndex>=0?saved[editIndex]:null;
- const record={...(original||{}),id:original?original.id:Date.now(),name:parlayName,wk,mode,stake:st,dec:D,legs:L,draftLegs:legs.map(l=>({...l})),status:original?original.status:'open',amt:original?original.amt:0};
+ // Record the season for NEW saved slips so future read-only reports can
+ // distinguish seasons. Never infer/relabel an older slip's unknown season.
+ const record={...(original||{}),id:original?original.id:Date.now(),name:parlayName,
+  season:original?original.season:SEASON,wk,mode,stake:st,dec:D,legs:L,
+  draftLegs:legs.map(l=>({...l})),status:original?original.status:'open',amt:original?original.amt:0};
  if(original)saved[editIndex]=record;else saved.unshift(record);
  if(!persist()){if(original)saved[editIndex]=original;else saved.shift();return;}
  if(draft){delete draft.editSavedId;delete draft.editSavedBase;}
@@ -4237,6 +4241,15 @@ window.phase3ExportRecoveryData=async()=>{
   local,cloud:remote?{updated_at:remote.updated_at,payload:personalCloudValues(remote.payload)}:null,
   note:'App data only; no full database backup or credentials.'};
 };
+// Read-only, owner-verified snapshot for CSV reporting. It performs no sync,
+// mutation, account migration or local-storage write.
+window.phase3ReadSavedParlaysForCsv=async()=>{
+ const uid=await userId();
+ if(!safe6Active(uid))throw Error('Sign in to your account to export saved parlays');
+ const records=trialData(snapshot()).saved;
+ if(!safe6Active(uid))throw Error('Account changed while reading saved parlays');
+ return JSON.parse(JSON.stringify(records));
+};
 // A timestamp at least 30 minutes early is necessary but not sufficient:
 // records captured days before kickoff are not authentic 30–35-minute forecasts.
 window.phase3AuthenticPregameSnapshot=record=>{
@@ -4249,16 +4262,16 @@ window.phase3TrackUpcomingPredictions=async(season,week)=>{
  const uid=await userId();if(!safe6Active(uid))throw Error('Account ownership mismatch');
  const jwt=await token();
  const cutoff=new Date(Date.now()+30*60*1000).toISOString();
- const snapshots=await api('/rest/v1/nfl_prediction_snapshots_v2?select=season,week,game_id,created_at,kickoff_at&season=eq.'+season+'&week=eq.'+week+'&kickoff_at=gte.'+encodeURIComponent(cutoff));
+ const snapshots=await api('/rest/v1/nfl_prediction_snapshots_v3?select=season,week,game_id,created_at,kickoff_at&season=eq.'+season+'&week=eq.'+week+'&kickoff_at=gte.'+encodeURIComponent(cutoff));
  if(!safe6Active(uid))throw Error('Account changed');
  if(!Array.isArray(snapshots))throw Error('Cloud prediction archive unavailable');
  const eligible=snapshots.filter(window.phase3AuthenticPregameSnapshot);
  if(!eligible.length)throw Error('No authentic 30–35-minute pregame predictions available for this week. Try again after capture automation runs.');
  const rows=eligible.map(r=>({user_id:uid,season:r.season,week:r.week,game_id:r.game_id}));
- await api('/rest/v1/nfl_prediction_subscriptions_v2?on_conflict=user_id,season,week,game_id',{
+ await api('/rest/v1/nfl_prediction_subscriptions_v3?on_conflict=user_id,season,week,game_id',{
   method:'POST',headers:{Authorization:'Bearer '+jwt,Prefer:'resolution=ignore-duplicates,return=minimal'},body:JSON.stringify(rows)});
  if(!safe6Active(uid))throw Error('Account changed after request; inspect history before retrying');
- const verified=await api('/rest/v1/nfl_prediction_subscriptions_v2?select=user_id,game_id&user_id=eq.'+encodeURIComponent(uid)+'&season=eq.'+season+'&week=eq.'+week,{headers:{Authorization:'Bearer '+jwt}});
+ const verified=await api('/rest/v1/nfl_prediction_subscriptions_v3?select=user_id,game_id&user_id=eq.'+encodeURIComponent(uid)+'&season=eq.'+season+'&week=eq.'+week,{headers:{Authorization:'Bearer '+jwt}});
  if(!safe6Active(uid)||!Array.isArray(verified)||verified.some(r=>r.user_id!==uid)||rows.some(r=>!verified.some(v=>v.game_id===r.game_id)))throw Error('Tracking readback did not match');
  return rows.length;
 };
@@ -4266,47 +4279,53 @@ window.phase3ReadOwnPredictionHistory=async()=>{
  if(!auth)return null;
  const uid=await userId();if(!safe6Active(uid))throw Error('Account ownership mismatch');
  const jwt=await token();
- const subscriptions=await api('/rest/v1/nfl_prediction_subscriptions_v2?select=user_id,season,week,game_id,tracked_at,nfl_prediction_snapshots_v2(picks,created_at,kickoff_at,away_team,home_team)&user_id=eq.'+encodeURIComponent(uid)+'&order=tracked_at.desc&limit=100',{headers:{Authorization:'Bearer '+jwt}});
- if(!safe6Active(uid)||!Array.isArray(subscriptions)||subscriptions.some(r=>r.user_id!==uid))throw Error('History account mismatch');
+ const [oldSubscriptions,newSubscriptions]=await Promise.all([
+  api('/rest/v1/nfl_prediction_subscriptions_v2?select=user_id,season,week,game_id,tracked_at,nfl_prediction_snapshots_v2(picks,created_at,kickoff_at,away_team,home_team)&user_id=eq.'+encodeURIComponent(uid)+'&order=tracked_at.desc&limit=100',{headers:{Authorization:'Bearer '+jwt}}),
+  api('/rest/v1/nfl_prediction_subscriptions_v3?select=user_id,season,week,game_id,tracked_at,nfl_prediction_snapshots_v3(picks,created_at,kickoff_at,away_team,home_team)&user_id=eq.'+encodeURIComponent(uid)+'&order=tracked_at.desc&limit=100',{headers:{Authorization:'Bearer '+jwt}})
+ ]);
+ if(!safe6Active(uid)||![oldSubscriptions,newSubscriptions].every(a=>Array.isArray(a)&&a.every(r=>r.user_id===uid)))throw Error('History account mismatch');
  // The original snapshots and grades are already cloud-published and shared.
  // Read them automatically: missing the short pregame subscription window must
  // not make verified predictions disappear from a signed-in user's history.
  // This adds no per-user write and never imports browser-only estimates.
- const archive=await api('/rest/v1/nfl_prediction_snapshots_v2?select=season,week,game_id,created_at,kickoff_at,away_team,home_team,picks&season=eq.'+Number(SEASON)+'&order=week.desc,created_at.desc&limit=1000');
- if(!safe6Active(uid)||!Array.isArray(archive))throw Error('Cloud archive unavailable or account changed');
+ const [oldArchive,newArchive]=await Promise.all([
+  api('/rest/v1/nfl_prediction_snapshots_v2?select=season,week,game_id,created_at,kickoff_at,away_team,home_team,picks&season=eq.'+Number(SEASON)+'&order=week.desc,created_at.desc&limit=1000'),
+  api('/rest/v1/nfl_prediction_snapshots_v3?select=season,week,game_id,created_at,kickoff_at,away_team,home_team,picks&season=eq.'+Number(SEASON)+'&order=week.desc,created_at.desc&limit=1000')
+ ]);
+ if(!safe6Active(uid)||![oldArchive,newArchive].every(Array.isArray))throw Error('Cloud archive unavailable or account changed');
  const keyed=new Map();
  const keyOf=r=>[Number(r.season),Number(r.week),String(r.game_id)].join('|');
- for(const row of subscriptions){
-  const original=row.nfl_prediction_snapshots_v2;
+ for(const [version,subscriptions] of [['v2',oldSubscriptions],['v3',newSubscriptions]])for(const row of subscriptions){
+  const original=row['nfl_prediction_snapshots_'+version];
   if(!original||!Array.isArray(original.picks)||!window.phase3AuthenticPregameSnapshot(original))continue;
-  keyed.set(keyOf(row),{...row,original,archive_only:false,updated_at:row.tracked_at});
+  keyed.set(keyOf(row),{...row,source:version,original,archive_only:false,updated_at:row.tracked_at});
  }
- for(const original of archive){
+ for(const [version,archive] of [['v2',oldArchive],['v3',newArchive]])for(const original of archive){
   if(!original||!Array.isArray(original.picks)||!Number.isInteger(Number(original.week))||!Number.isInteger(Number(original.season)))continue;
   // Apply the same provenance rule to shared archives and account subscriptions.
   if(!window.phase3AuthenticPregameSnapshot(original))continue;
   const key=keyOf(original);
-  if(!keyed.has(key))keyed.set(key,{season:original.season,week:original.week,game_id:original.game_id,original,
-   archive_only:true,updated_at:original.created_at});
+  if(!keyed.has(key)||version==='v3'&&keyed.get(key).source!=='v3')keyed.set(key,{season:original.season,week:original.week,game_id:original.game_id,
+   source:version,original,archive_only:true,updated_at:original.created_at});
  }
  const rows=[...keyed.values()].sort((a,b)=>Date.parse(b.original.kickoff_at)-Date.parse(a.original.kickoff_at));
  const seasons=[...new Set(rows.map(r=>Number(r.season)))];let grades=[];
- for(const season of seasons){
+ for(const season of seasons)for(const version of ['v2','v3']){
   // PostgREST installations may cap rows per response even if a larger limit
   // is requested. Read bounded pages so full-season grades remain complete.
   for(let offset=0;offset<10000;offset+=1000){
-   const values=await api('/rest/v1/nfl_prediction_grades_v2?select=season,week,game_id,pick_key,outcome,actual_value&season=eq.'+season+'&order=week.desc,game_id,pick_key&limit=1000&offset='+offset);
+   const values=await api('/rest/v1/nfl_prediction_grades_'+version+'?select=season,week,game_id,pick_key,outcome,actual_value&season=eq.'+season+'&order=week.desc,game_id,pick_key&limit=1000&offset='+offset);
    if(!Array.isArray(values))throw Error('Unexpected grade response');
-   grades.push(...values);if(values.length<1000)break;
+   grades.push(...values.map(v=>({...v,source:version})));if(values.length<1000)break;
   }
  }
  if(!safe6Active(uid))throw Error('Account changed while reading grades');
  return rows.map(r=>({...r,tracking_id:r.season+' W'+r.week+' '+r.original.away_team+' @ '+r.original.home_team,
   payload:{status:'verified_pregame',capture_evidence:{created_at:r.original.created_at},picks:r.original.picks,
-   original_grades:(()=>{const a=grades.filter(g=>Number(g.season)===Number(r.season)&&Number(g.week)===Number(r.week)&&String(g.game_id)===String(r.game_id));
+   original_grades:(()=>{const a=grades.filter(g=>g.source===r.source&&Number(g.season)===Number(r.season)&&Number(g.week)===Number(r.week)&&String(g.game_id)===String(r.game_id));
     return r.original.picks.map((_,i)=>{const matching=a.filter(g=>new RegExp('^v1:'+i+':[a-f0-9]{64}$').test(String(g.pick_key||'')));
      return matching.length===1?{outcome:matching[0].outcome,actual_value:matching[0].actual_value}:{outcome:'pending',actual_value:null};});})(),
-   grade_summary:(()=>{const a=grades.filter(g=>Number(g.season)===Number(r.season)&&Number(g.week)===Number(r.week)&&String(g.game_id)===String(r.game_id));return a.filter(g=>g.outcome==='hit').length+' hits / '+a.filter(g=>g.outcome==='miss').length+' misses / '+Math.max(0,r.original.picks.length-a.length)+' pending';})()}}));
+   grade_summary:(()=>{const a=grades.filter(g=>g.source===r.source&&Number(g.season)===Number(r.season)&&Number(g.week)===Number(r.week)&&String(g.game_id)===String(r.game_id));return a.filter(g=>g.outcome==='hit').length+' hits / '+a.filter(g=>g.outcome==='miss').length+' misses / '+Math.max(0,r.original.picks.length-a.length)+' pending';})()}}));
 };
 settings();auth=authLoad();authControls(false);
 privacyGate('Personal parlays are locked until account sign-in is verified.');
@@ -4509,10 +4528,14 @@ window.addEventListener('online',()=>{if(safe6Running)safe6Cycle()});
    (graded.length?'<div style="overflow-x:auto"><table class="performance-table"><thead><tr><th>Pick</th><th>Outcome</th><th>Detail</th><th>Saved</th></tr></thead><tbody>'+graded.map(x=>'<tr><td>'+esc(x.p.label||x.p.team+' '+x.p.market)+'</td><td>'+(x.result===true?'HIT':x.result===false?'MISS':'Ungraded')+'</td><td>'+esc(x.reason)+'</td><td>'+new Date(x.p.snapshot_at).toLocaleString()+'</td></tr>').join('')+'</tbody></table></div>':'<p class="mu">No archived picks for this week.</p>');
  }
  async function loadSnapshots(){
-  try{const raw=await get('nfl_prediction_snapshots_v2?select=season,week,game_id,away_team,home_team,created_at,kickoff_at,picks&season=eq.'+SEASON+'&order=created_at.asc&limit=500');
-   const all=Array.isArray(raw)?raw:[];
-   snapshots=all.filter(window.phase3AuthenticPregameSnapshot);
-   const excluded=all.length-snapshots.length;
+  try{const [oldRows,newRows]=await Promise.all(['v2','v3'].map(version=>
+   get('nfl_prediction_snapshots_'+version+'?select=season,week,game_id,away_team,home_team,created_at,kickoff_at,picks&season=eq.'+SEASON+'&order=created_at.asc&limit=500')));
+   if(![oldRows,newRows].every(Array.isArray))throw Error('Archive response invalid');
+   const latest=new Map();
+   for(const row of [...oldRows,...newRows].filter(window.phase3AuthenticPregameSnapshot))
+    latest.set([row.season,row.week,row.game_id].join('|'),row); // v3 wins a shared game key.
+   snapshots=[...latest.values()];
+   const excluded=oldRows.length+newRows.length-[...oldRows,...newRows].filter(window.phase3AuthenticPregameSnapshot).length;
    const banner=document.getElementById('archivedPerformance');if(banner)banner.dataset.excludedPregame=String(excluded);
    cardArchiveState='ready';renderSnapshots();paintGameHitRates()}
   catch(e){cardArchiveState='error';snapshots=[];paintGameHitRates();$('archivedPerformance').innerHTML='<b>Archived pregame prediction accuracy</b><p class="mu">'+esc(e.message)+'</p>'}
@@ -4744,7 +4767,7 @@ window.addEventListener('online',()=>{if(safe6Running)safe6Cycle()});
  function renderCards(valid,snapshotMap,limit,missingSnapshots){
   const visible=valid.slice(0,limit);
   const cards=visible.map(grade=>{
-   const snapshot=snapshotMap.get(keyOf(grade));
+   const snapshot=snapshotMap.get(grade.source+'|'+keyOf(grade));
    const matchup=snapshot&&snapshot.away_team&&snapshot.home_team?String(snapshot.away_team)+' @ '+String(snapshot.home_team):'Matchup unavailable';
    const pick=originalPick(grade,snapshot);
    const outcome=String(grade.outcome).toUpperCase();
@@ -4767,12 +4790,16 @@ window.addEventListener('online',()=>{if(safe6Running)safe6Cycle()});
   try{
    const season=Number(document.getElementById('seasonSelect')?.value||2026);
    if(!Number.isInteger(season)||season<2020||season>2100)throw new Error('Invalid selected season');
-   const gradesRequest=readTable('nfl_prediction_grades_v2?select=season,week,game_id,pick_key,outcome,actual_value,grading_note,stats_source,graded_at&season=eq.'+season+'&order=week.desc,graded_at.desc&limit=1000');
-   const snapshotsRequest=readTable('nfl_prediction_snapshots_v2?select=season,week,game_id,away_team,home_team,created_at,kickoff_at,picks&season=eq.'+season+'&limit=1000').catch(()=>null);
-   const [rows,snapshots]=await Promise.all([gradesRequest,snapshotsRequest]);
-   if(snapshots===null){status.textContent='Cloud snapshot provenance unavailable; official grades cannot be verified.';results.textContent='No verified grading totals shown until the original capture timestamps can be read.';return;}
-   const snapshotMap=new Map(snapshots.filter(s=>Number(s.season)===season&&window.phase3AuthenticPregameSnapshot(s)).map(s=>[keyOf(s),s]));
-   const valid=rows.filter(r=>Number(r.season)===season&&Number.isInteger(Number(r.week))&&Number(r.week)>=1&&Number(r.week)<=22&&typeof r.pick_key==='string'&&/^v1:\d+:[a-f0-9]{64}$/.test(r.pick_key)&&['hit','miss','push','pending','ungraded','void'].includes(r.outcome)&&snapshotMap.has(keyOf(r)));
+   const archives=await Promise.all(['v2','v3'].map(async version=>{
+    const [grades,snapshots]=await Promise.all([
+     readTable('nfl_prediction_grades_'+version+'?select=season,week,game_id,pick_key,outcome,actual_value,grading_note,stats_source,graded_at&season=eq.'+season+'&order=week.desc,graded_at.desc&limit=1000'),
+     readTable('nfl_prediction_snapshots_'+version+'?select=season,week,game_id,away_team,home_team,created_at,kickoff_at,picks&season=eq.'+season+'&limit=1000')]);
+    return {version,grades,snapshots};
+   }));
+   if(archives.some(a=>!Array.isArray(a.snapshots)||!Array.isArray(a.grades))){status.textContent='Cloud snapshot provenance unavailable; official grades cannot be verified.';results.textContent='No verified grading totals shown until the original capture timestamps can be read.';return;}
+   const rows=archives.flatMap(a=>a.grades.map(r=>({...r,source:a.version})));
+   const snapshotMap=new Map(archives.flatMap(a=>a.snapshots.filter(s=>Number(s.season)===season&&window.phase3AuthenticPregameSnapshot(s)).map(s=>[a.version+'|'+keyOf(s),s])));
+   const valid=rows.filter(r=>Number(r.season)===season&&Number.isInteger(Number(r.week))&&Number(r.week)>=1&&Number(r.week)<=22&&typeof r.pick_key==='string'&&/^v1:\d+:[a-f0-9]{64}$/.test(r.pick_key)&&['hit','miss','push','pending','ungraded','void'].includes(r.outcome)&&snapshotMap.has(r.source+'|'+keyOf(r)));
    const final=valid.filter(r=>['hit','miss','push'].includes(r.outcome));
    const hits=final.filter(r=>r.outcome==='hit').length;
    const misses=final.filter(r=>r.outcome==='miss').length;
@@ -4787,7 +4814,7 @@ window.addEventListener('online',()=>{if(safe6Running)safe6Cycle()});
     if(more)more.addEventListener('click',()=>{limit+=50;redraw();});
    };
    redraw();
-  }catch(e){status.textContent='Cloud grades could not be loaded: '+e.message+'. No records were changed.';results.textContent='';}
+  }catch(e){status.textContent='Cloud snapshot provenance unavailable or grades could not be loaded: '+e.message+'. No records were changed.';results.textContent='No verified grading totals shown until both archive versions can be read.';}
   finally{inFlight=false;refresh.disabled=false;}
  }
  refresh.addEventListener('click',load);
@@ -5157,4 +5184,253 @@ recovery.onclick=async()=>{recovery.disabled=true;recoveryStatus.textContent='Ve
  button.textContent='Save optional local Top 12 backup';
  const auto=legacy.querySelector('.phase4-auto-controls p.mu');
  if(auto)auto.textContent='Optional app-open local backup: up to 12 player picks per game during the 30-35 minute window while this tab is active. Official cloud capture runs independently; these local records are never promoted to verified cloud forecasts.';
-})();</script></body></html>
+})();</script>
+<script id="phase3PredictionCsvExport">
+(function(){
+ 'use strict';
+ const panel=document.getElementById('advPerformancePanel');
+ if(!panel)return;
+ const FIELDS=['season','week','record_type','source','source_detail','game_id','matchup','player_or_team',
+  'prediction','market','side','line','model_probability','actual_value','outcome','outcome_provenance',
+  'captured_at_utc','kickoff_at_utc','parlay_id','parlay_name','leg_number','leg_count',
+  'stake_usd','estimated_combined_decimal_odds','final_score','notes'];
+ const $=id=>document.getElementById(id);
+ const inWeek=w=>Number.isInteger(Number(w))&&Number(w)>=1&&Number(w)<=18;
+ function validCapture(s){
+  const lead=Date.parse(s?.kickoff_at)-Date.parse(s?.created_at);
+  return Array.isArray(s?.picks)&&Number.isFinite(lead)&&lead>=1800000&&lead<=2100000;
+ }
+ function protectCsv(v){
+  if(v==null)return '';
+  let value=String(v);
+  // Excel/Sheets can interpret untrusted names, labels and notes as formulas.
+  if(typeof v!=='number'&&/^[\s\u0000-\u001f]*[=+@-]/.test(value))value="'"+value;
+  return value.replace(/\r\n?/g,'\n');
+ }
+ function csv(rows){
+  const cell=v=>'"'+protectCsv(v).replace(/"/g,'""')+'"';
+  return '\ufeff'+[FIELDS,...rows.map(row=>FIELDS.map(field=>row[field]??''))]
+   .map(row=>row.map(cell).join(',')).join('\r\n')+'\r\n';
+ }
+ function officialRows(archives){
+  const selected=new Map(),excluded=[];
+  for(const {version,snapshots} of archives){
+   for(const snapshot of snapshots){
+    if(!inWeek(snapshot?.week)||!validCapture(snapshot)){
+     excluded.push({version,game_id:snapshot?.game_id});continue;
+    }
+    const key=[snapshot.season,snapshot.week,String(snapshot.game_id)].join('|');
+    // Prefer v3 for a game with authentic records in both archives.
+    if(!selected.has(key)||version==='v3')selected.set(key,{version,snapshot});
+   }
+  }
+  const rows=[];
+  for(const {version,snapshot:s} of selected.values()){
+   const grades=(archives.find(x=>x.version===version)?.grades||[])
+    .filter(g=>Number(g.season)===Number(s.season)&&Number(g.week)===Number(s.week)&&String(g.game_id)===String(s.game_id));
+   for(let i=0;i<s.picks.length;i++){
+    const p=s.picks[i];if(!p||typeof p!=='object'||Array.isArray(p))continue;
+    const matching=grades.filter(g=>new RegExp('^v1:'+i+':[a-f0-9]{64}$').test(String(g.pick_key||'')));
+    const g=matching.length===1?matching[0]:null;
+    const supplied=typeof p.pick_key==='string'?p.pick_key:typeof p.key==='string'?p.key:null;
+    const verified=!!g&&(!supplied||supplied===g.pick_key)&&['hit','miss','push'].includes(g.outcome);
+    const outcome=verified?g.outcome.toUpperCase():'PENDING';
+    const name=String(p.player_name||p.team||(p.market==='ml'?(p.side==='h'?s.home_team:s.away_team):'')||'');
+    const line=Number.isFinite(Number(p.line))&&p.line!==null?Number(p.line):'';
+    const selection=String(p.label||(p.market==='ml'?name+' moneyline':
+      [name,p.side==='u'?'Under':p.side==='o'?'Over':'',line,p.stat||p.market||''].filter(x=>String(x)!=='').join(' ')));
+    rows.push({season:Number(s.season),week:Number(s.week),record_type:'INDIVIDUAL_PICK',
+     source:'OFFICIAL_TOP12_'+version.toUpperCase(),source_detail:'Verified 30-35-minute immutable cloud snapshot',
+     game_id:String(s.game_id),matchup:String(s.away_team)+' @ '+String(s.home_team),player_or_team:name,
+     prediction:selection,market:String(p.stat||p.market||''),side:String(p.side||''),line,
+     model_probability:Number.isFinite(Number(p.probability))?Number(p.probability):'',
+     actual_value:verified&&g.actual_value!=null?g.actual_value:'',outcome,
+     outcome_provenance:verified?'OFFICIAL_CLOUD_GRADE':'UNAVAILABLE_OR_PENDING_GRADE',
+     captured_at_utc:s.created_at,kickoff_at_utc:s.kickoff_at,
+     notes:verified?String(g.grading_note||''):matching.length>1?'Conflicting grade records; requires review':'No matching final cloud grade'});
+   }
+  }
+  return {rows,excludedCount:excluded.length};
+ }
+ function savedRows(parlays,season,{includeUnattributed=false}={}){
+  const rows=[];let unknownSeason=0;
+  for(const s of parlays){
+   if(!s||!inWeek(s.wk)||!Array.isArray(s.legs)||!s.legs.length)continue;
+   const known=Number.isInteger(Number(s.season))&&s.season!=null;
+   if(known&&Number(s.season)!==season)continue;
+   if(!known){unknownSeason++;if(!includeUnattributed)continue;}
+   const base={season:known?Number(s.season):'',week:Number(s.wk),source:'USER_SAVED_PARLAY',
+    source_detail:known?'User-recorded parlay outcome':'Legacy saved slip: original season unavailable',
+    parlay_id:String(s.id??''),parlay_name:String(s.name||'Untitled Parlay'),leg_count:s.legs.length,
+    stake_usd:Number.isFinite(Number(s.stake))?Number(s.stake):'',
+    estimated_combined_decimal_odds:Number.isFinite(Number(s.dec))?Number(s.dec):''};
+   const status=String(s.status||'open').toLowerCase();
+   rows.push({...base,record_type:'PARLAY_SUMMARY',outcome:status==='won'?'MANUAL_WON':status==='lost'?'MANUAL_LOST':'OPEN',
+    outcome_provenance:'USER_RECORDED_NOT_SPORTSBOOK_VERIFIED',
+    notes:'Overall outcome marked by user. It does not identify which individual legs won.'});
+   s.legs.forEach((l,i)=>rows.push({...base,record_type:'PARLAY_LEG',leg_number:i+1,
+    matchup:String(l.m||''),prediction:String(l.t||''),source_detail:'Original saved selection; no independent leg grading',
+    outcome:'UNVERIFIED',outcome_provenance:'NO_VERIFIED_LEG_RESULT',
+    notes:'Do not infer a leg HIT/MISS from the overall manually marked parlay status.'}));
+  }
+  return {rows,unknownSeason};
+ }
+ function retrospectiveRows(season,modelSeason,weeks,completedGames,buildRows,makeName){
+  if(season!==modelSeason)return [];
+  const rows=[];
+  for(const w of weeks){
+   const games=completedGames(w);
+   for(const {g,x,result,reason} of buildRows(games,'combined')){
+    rows.push({season,week:w,record_type:'INDIVIDUAL_PICK',source:'RETROSPECTIVE_MODEL',
+     source_detail:'Recomputed from historical data, NOT an archived pregame forecast',
+     game_id:String(g.id||''),matchup:String(g.a)+' @ '+String(g.h),
+     prediction:makeName(g,x),market:String(x.m||''),side:String(x.s||''),
+     model_probability:Number.isFinite(Number(x.p))?Number(x.p):'',
+     outcome:result===true?'HIT':result===false?'MISS':'PENDING',
+     outcome_provenance:'MODEL_GENERATED_HISTORICAL_BACKTEST',
+     kickoff_at_utc:g.date||'',final_score:Array.isArray(g.sc)?g.a+' '+g.sc[0]+' - '+g.h+' '+g.sc[1]:'',
+     notes:String(reason||'')});
+   }
+  }
+  return rows;
+ }
+ function completedFromEspn(payload){
+  const events=payload?.events;
+  // A truncated/single-game scoreboard must never prove an entire NFL week is final.
+  return Array.isArray(events)&&events.length>=12&&
+   new Set(events.map(e=>String(e?.id||''))).size===events.length&&
+   events.every(e=>e?.status?.type?.completed===true);
+ }
+ // These pure helpers are exposed only for offline read-only regression checks.
+ window.phase3PredictionCsvCore=Object.freeze({FIELDS,csv,validCapture,officialRows,savedRows,retrospectiveRows,completedFromEspn});
+
+ const section=document.createElement('section');section.className='card';section.id='predictionResultsCsv';
+ section.setAttribute('aria-label','Export prediction results as CSV');
+ section.innerHTML='<h3 style="margin:0 0 8px">Export prediction results (CSV)</h3>'+
+  '<p class="mu">Download individual AI picks and user-saved parlay results. Official pregame picks, retrospective model evaluations and manually recorded parlay outcomes are labeled separately. Nothing is written to Supabase or saved parlays.</p>'+
+  '<div class="tools prediction-csv-controls">'+
+  '<label>Season <select id="predictionCsvSeason"></select></label>'+
+  '<label>Weeks <select id="predictionCsvScope"><option value="completed">All fully completed weeks</option><option value="specific">Specific week</option></select></label>'+
+  '<label>Week <select id="predictionCsvWeek"></select></label>'+
+  '<label>Include <select id="predictionCsvKind"><option value="both">Individual picks + saved parlays</option><option value="individual">Individual picks only</option><option value="parlays">Saved parlays only</option></select></label>'+
+  '<button type="button" class="btn" id="predictionCsvDownload">Download CSV report</button></div>'+
+  '<label class="mu" style="display:block;margin:8px 0"><input type="checkbox" id="predictionCsvUnknownSeason"> Include legacy saved slips with unknown season (clearly labeled; off by default)</label>'+
+  '<p class="mu" role="status" aria-live="polite" id="predictionCsvStatus">Choose a season and week range, then download.</p>'+
+  '<p class="mu">Only verified 30-35-minute snapshots count as official predictions. Complete-week selection requires every scheduled game in the week to be final. Saved parlay WON/LOST is user-recorded; individual saved legs cannot be automatically verified from that status.</p>';
+ const grades=$('cloudOfficialGrades');
+ if(grades?.parentElement===panel)grades.after(section);else panel.insertBefore(section,panel.firstChild);
+ const seasons=$('predictionCsvSeason'),scope=$('predictionCsvScope'),week=$('predictionCsvWeek'),kind=$('predictionCsvKind');
+ const button=$('predictionCsvDownload'),status=$('predictionCsvStatus');
+ for(let y=currentNFLSeason()+1;y>=2020;y--){const opt=document.createElement('option');opt.value=String(y);opt.textContent=String(y);seasons.append(opt)}
+ seasons.value=String(SEASON);
+ for(let n=1;n<=18;n++){const opt=document.createElement('option');opt.value=String(n);opt.textContent='Week '+n;week.append(opt)}
+ week.value=String(inWeek(wk)?wk:1);
+ function sync(){week.disabled=scope.value!=='specific';$('predictionCsvUnknownSeason').disabled=kind.value==='individual'}
+ scope.addEventListener('change',sync);kind.addEventListener('change',sync);sync();
+
+ async function readAll(table,season){
+  const all=[];
+  for(let offset=0;offset<10000;offset+=1000){
+   const order=table.includes('grades')?'week.asc,game_id.asc,pick_key.asc':'week.asc,game_id.asc';
+   const path='/rest/v1/'+table+'?select=*&season=eq.'+season+'&order='+order+'&limit=1000&offset='+offset;
+   const response=await fetch(CLOUD_URL+path,{method:'GET',headers:{apikey:CLOUD_PUBLIC_KEY,Authorization:'Bearer '+CLOUD_PUBLIC_KEY,Accept:'application/json'},cache:'no-store'});
+   if(!response.ok){
+    const detail=await response.text().catch(()=> '');
+    // v3 is an optional *unapplied* migration. A confirmed missing v3 table
+    // should not prevent exporting genuinely valid legacy v2 records.
+    if(response.status===404&&table.endsWith('_v3')&&
+       /PGRST205|PGRST106|schema cache|does not exist|could not find the table/i.test(detail))return null;
+    throw Error(table+' unavailable (HTTP '+response.status+'). Verify the archive schema and read policies before exporting.');
+   }
+   const values=await response.json();if(!Array.isArray(values))throw Error('Invalid '+table+' response');
+   all.push(...values);if(values.length<1000)return all;
+  }
+  throw Error(table+' exceeds the 10,000-row read bound. No partial CSV created.');
+ }
+ async function readArchives(season){
+  const sources=await Promise.all(['v2','v3'].map(async version=>{
+   const [snapshots,grades]=await Promise.all([
+    readAll('nfl_prediction_snapshots_'+version,season),readAll('nfl_prediction_grades_'+version,season)]);
+   if((snapshots===null)!==(grades===null))throw Error('Partial '+version+' archive schema; cannot establish grading provenance.');
+   return {version,snapshots,grades};
+  }));
+  return sources.filter(s=>s.snapshots!==null);
+ }
+ async function completedWeeks(season,candidates){
+  const done=new Set(),weeks=[...candidates].filter(inWeek).map(Number).sort((a,b)=>a-b);
+  for(let i=0;i<weeks.length;i+=4){
+   await Promise.all(weeks.slice(i,i+4).map(async w=>{
+    const address='https://site.api.espn.com/apis/site/v2/sports/football/nfl/scoreboard?dates='+season+'&seasontype=2&week='+w+'&limit=100';
+    const response=await fetch(address,{method:'GET',cache:'no-store'});
+    if(!response.ok)throw Error('Cannot verify whether Week '+w+' is finished (schedule HTTP '+response.status+'). No incomplete export created.');
+    const data=await response.json();if(completedFromEspn(data))done.add(w);
+   }));
+  }
+  return done;
+ }
+ function retrospectiveCompletedGames(w){
+  if(typeof WKS==='undefined'||typeof hasCompletedPlayerStats!=='function')return [];
+  return (WKS[w]||[]).filter(g=>Array.isArray(g.sc)&&hasCompletedPlayerStats(g));
+ }
+ button.addEventListener('click',async()=>{
+  button.disabled=true;status.textContent='Preparing read-only prediction report…';
+  try{
+   const year=Number(seasons.value),selected=Number(week.value),allWeeks=scope.value==='completed';
+   if(!Number.isInteger(year)||year<2020||year>currentNFLSeason()+1||!inWeek(selected))throw Error('Choose a valid season and week.');
+   const includeIndividuals=kind.value!=='parlays',includeParlays=kind.value!=='individual';
+   let official={rows:[],excludedCount:0},retrospective=[],parlays={rows:[],unknownSeason:0},savedCopy=null;
+   const notes=[];
+   if(includeIndividuals){
+    const archives=await readArchives(year);
+    if(!archives.some(a=>a.version==='v3'))notes.push('Optional v3 archive not installed; report uses valid v2 captures only.');
+    official=officialRows(archives);
+    const retrospectiveWeeks=year===MODEL_SEASON?Object.keys(WKS).map(Number).filter(inWeek):[];
+    retrospective=retrospectiveRows(year,MODEL_SEASON,retrospectiveWeeks,retrospectiveCompletedGames,performanceRows,performancePickName);
+   }
+   if(includeParlays){
+    try{
+     if(typeof window.phase3ReadSavedParlaysForCsv!=='function')throw Error('Account export is unavailable');
+     savedCopy=await window.phase3ReadSavedParlaysForCsv();
+     parlays=savedRows(savedCopy,year,{includeUnattributed:$('predictionCsvUnknownSeason').checked});
+    }catch(err){
+     if(kind.value==='parlays')throw Error('Sign in to your own account before exporting saved parlays: '+err.message);
+     notes.push('Saved parlays omitted: sign in to your own account.');
+    }
+   }
+   let rows=[...official.rows,...retrospective,...parlays.rows];
+   if(allWeeks){
+    const allowed=await completedWeeks(year,new Set(rows.map(r=>Number(r.week))));
+    rows=rows.filter(r=>allowed.has(Number(r.week)));
+   }else rows=rows.filter(r=>Number(r.week)===selected);
+   if(savedCopy){
+    // Account sign-out, account switch or a concurrent saved-parlay edit during
+    // the async reads must abort rather than export another account's content.
+    const current=await window.phase3ReadSavedParlaysForCsv();
+    if(JSON.stringify(current)!==JSON.stringify(savedCopy))throw Error('Signed-in account or saved parlays changed; retry the report.');
+   }
+   if(!rows.length)throw Error('No eligible predictions or saved parlays match these filters. No empty CSV was downloaded.');
+   const scopeName=allWeeks?'All_Completed_Weeks':'Week_'+selected;
+   const filename='NFL_Prediction_Results_'+year+'_'+scopeName+'.csv';
+   const content=csv(rows);
+   downloadFile(new Blob([content],{type:'text/csv;charset=utf-8'}),filename);
+   const counts={official:rows.filter(r=>r.source.startsWith('OFFICIAL_TOP12_')).length,
+    model:rows.filter(r=>r.source==='RETROSPECTIVE_MODEL').length,
+    saved:rows.filter(r=>r.source==='USER_SAVED_PARLAY').length};
+   status.textContent='CSV requested: '+rows.length+' rows ('+counts.official+' official snapshot pick rows, '+counts.model+' retrospective model rows, '+counts.saved+' saved parlay rows). '+
+    official.excludedCount+' outside-window archive record(s) excluded. '+
+    (parlays.unknownSeason&&!$('predictionCsvUnknownSeason').checked?parlays.unknownSeason+' older saved slip(s) without a known season excluded. ':'')+
+    notes.join(' ')+' On iPhone Safari, check Files > Downloads.';
+  }catch(err){status.textContent='CSV not downloaded: '+(err&&err.message||String(err))+'. No source data was changed.';}
+  finally{button.disabled=false;}
+ });
+})();
+</script>
+<style id="phase3PredictionCsvExportStyles">
+#predictionResultsCsv{margin-top:12px;scroll-margin-top:90px}
+.prediction-csv-controls{display:flex;align-items:flex-end;gap:10px;flex-wrap:wrap}
+.prediction-csv-controls label{display:flex;flex-direction:column;gap:5px;min-width:135px;flex:1 1 135px}
+.prediction-csv-controls select{min-height:44px;width:100%;max-width:100%;border:1px solid var(--bd);background:var(--card);color:var(--tx);border-radius:8px;padding:8px}
+.prediction-csv-controls button{min-height:44px;flex:1 1 180px}
+@media(max-width:700px){.prediction-csv-controls{display:grid;grid-template-columns:repeat(2,minmax(0,1fr))}.prediction-csv-controls label{min-width:0}.prediction-csv-controls label:nth-child(4){grid-column:1/-1}.prediction-csv-controls button{grid-column:1/-1}}
+</style>
+</body></html>
