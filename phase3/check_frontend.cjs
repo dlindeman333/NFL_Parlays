@@ -1,5 +1,7 @@
 const fs=require('fs'),vm=require('vm'),assert=require('assert');
-const html=fs.readFileSync(__dirname+'/../index.html','utf8');
+const path=require('path');
+const packaged=path.join(__dirname,'../UPLOAD_TO_GITHUB/index.html');
+const html=fs.readFileSync(fs.existsSync(packaged)?packaged:path.join(__dirname,'../index.html'),'utf8');
 let checks=0;
 for(const match of html.matchAll(/<script\b[^>]*>([\s\S]*?)<\/script>/gi))new vm.Script(match[1]);
 checks++;
@@ -87,21 +89,24 @@ assert(vm.runInContext("teamPointsOverProbability(games[0],'a',23.5)",teamContex
 assert(html.includes('teamPointsLine:line')&&html.includes('verifiedTeamPointsLine(g,t)'));
 checks++;
 const bridge=html.slice(html.indexOf('window.phase3AuthenticPregameSnapshot='),html.indexOf('\nsettings();auth=',html.indexOf('window.phase3TrackUpcomingPredictions=async')));
-let active=true,writeCount=0,subscribed=true,archiveRecords;
+let active=true,writeCount=0,subscribed=true,archiveRecords,legacyArchive=[];
 const uid='00000000-0000-0000-0000-000000000001';
 const snapshot={season:2026,week:10,game_id:'123',kickoff_at:'2099-01-01T00:00:00Z',created_at:'2098-12-31T23:28:00Z',away_team:'BUF',home_team:'MIA',picks:[{label:'BUF moneyline'}]};
 archiveRecords=[snapshot];
 let mutateDuringPost=false,subscriptionSnapshot=snapshot;
 const context={window:{},auth:{},SEASON:2026,Date,Set,Map,Number,Array,Error,encodeURIComponent,userId:async()=>uid,safe6Active:id=>active&&id===uid,token:async()=>'mock',api:async(path,options={})=>{
  if(options.method==='POST'){
-  assert(path.startsWith('/rest/v1/nfl_prediction_subscriptions_v2?'));
+  assert(path.startsWith('/rest/v1/nfl_prediction_subscriptions_v3?'));
   assert.equal(options.headers.Authorization,'Bearer mock');
   const rows=JSON.parse(options.body);assert(rows.every(r=>r.user_id===uid));writeCount++;
   if(mutateDuringPost)active=false;return [];
  }
- if(path.includes('nfl_prediction_snapshots_v2?'))return archiveRecords;
- if(path.includes('nfl_prediction_grades_v2?'))return [{season:2026,week:10,game_id:'123',outcome:'hit'}];
- if(path.includes('nfl_prediction_subscriptions_v2?'))return subscribed?[{user_id:uid,season:2026,week:10,game_id:'123',tracked_at:'2098-12-31T23:28:00Z',nfl_prediction_snapshots_v2:subscriptionSnapshot}]:[];
+ if(path.includes('nfl_prediction_snapshots_v3?'))return archiveRecords;
+ if(path.includes('nfl_prediction_snapshots_v2?'))return legacyArchive;
+ if(path.includes('nfl_prediction_grades_v3?'))return [{season:2026,week:10,game_id:'123',outcome:'hit'}];
+ if(path.includes('nfl_prediction_grades_v2?'))return [];
+ if(path.includes('nfl_prediction_subscriptions_v3?'))return subscribed?[{user_id:uid,season:2026,week:10,game_id:'123',tracked_at:'2098-12-31T23:28:00Z',nfl_prediction_snapshots_v3:subscriptionSnapshot}]:[];
+ if(path.includes('nfl_prediction_subscriptions_v2?'))return [];
  throw Error('Unexpected backend route');
 }};
 vm.createContext(context);vm.runInContext(bridge,context);
@@ -125,6 +130,14 @@ vm.createContext(context);vm.runInContext(bridge,context);
  assert.equal(await context.window.phase3TrackUpcomingPredictions(2026,10),1);assert.equal(writeCount,2);checks++;
  subscriptionSnapshot=late;
  assert.equal((await context.window.phase3ReadOwnPredictionHistory()).length,1);checks++;
+ // Previously valid v2 history is retained; when both are valid for the same
+ // game, the separately verified v3 capture is the canonical new archive.
+ legacyArchive=[{...snapshot,picks:[{label:'Previously verified v2 pick'}]}];
+ archiveRecords=[{...snapshot,picks:[{label:'Fresh verified v3 pick'}]}];subscribed=false;
+ assert.equal((await context.window.phase3ReadOwnPredictionHistory())[0].payload.picks[0].label,'Fresh verified v3 pick');checks++;
+ archiveRecords=[];
+ assert.equal((await context.window.phase3ReadOwnPredictionHistory())[0].payload.picks[0].label,'Previously verified v2 pick');checks++;
+ legacyArchive=[];archiveRecords=[snapshot];subscribed=true;
  archiveRecords=[snapshot];subscriptionSnapshot=snapshot;subscribed=true;
  active=false;await assert.rejects(()=>context.window.phase3TrackUpcomingPredictions(2026,10),/ownership/);assert.equal(writeCount,2);checks++;
  await assert.rejects(()=>context.window.phase3ReadOwnPredictionHistory(),/ownership/);checks++;
@@ -144,8 +157,9 @@ vm.createContext(context);vm.runInContext(bridge,context);
  const gradeContext={window:{phase3AuthenticPregameSnapshot:context.window.phase3AuthenticPregameSnapshot},
   document:{getElementById:id=>gradeElements[id]||null},
   fetch:async(url,options)=>{if(options.method&&options.method!=='GET')cloudWrites++;
-   if(url.includes('nfl_prediction_snapshots_v2?')&&gradeArchiveError)return {ok:false,status:503};
-   return {ok:true,json:async()=>url.includes('nfl_prediction_grades_v2?')?gradeRows:gradeArchive};}};
+   if(url.includes('nfl_prediction_snapshots_v3?')&&gradeArchiveError)return {ok:false,status:503};
+   return {ok:true,json:async()=>url.includes('nfl_prediction_grades_v3?')?gradeRows:
+    url.includes('nfl_prediction_snapshots_v3?')?gradeArchive:[]};}};
  vm.runInNewContext(gradeScript,gradeContext);
  await gradeCallbacks['cloudOfficialGradesRefresh:click']();
  assert.match(gradeElements.cloudOfficialGradesStatus.textContent,/1 eligible of 2 grade records/);
@@ -158,5 +172,6 @@ vm.createContext(context);vm.runInContext(bridge,context);
  assert.match(gradeElements.cloudOfficialGradesStatus.textContent,/provenance unavailable/);
  assert.match(gradeElements.cloudOfficialGradesResults.textContent,/No verified grading totals/);
  assert.equal(cloudWrites,0);checks++;
+ require('./test_prediction_csv.cjs');
  console.log(checks+' focused frontend checks passed (VM/mocked backend; not live RLS proof)');
 })().catch(e=>{console.error(e);process.exitCode=1});

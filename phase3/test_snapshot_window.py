@@ -133,11 +133,44 @@ class CaptureWindowChecks(unittest.TestCase):
 
     def test_existing_immutable_snapshot_is_never_replaced(self):
         event={'week':11,'id':'123','a':'BUF','h':'MIA','kickoff':self.now.isoformat()}
+        record={'week':11,'game_id':'123','kickoff_at':event['kickoff'],
+                'created_at':(self.now-timedelta(minutes=32)).isoformat()}
         with patch.object(snapshots,'schedule',return_value=[event]), \
              patch.object(snapshots,'credentials',return_value=(snapshots.PRODUCTION,'synthetic')), \
-             patch.object(snapshots,'fetch',return_value=[{'week':11,'game_id':'123'}]) as fetch:
+             patch.object(snapshots,'fetch',return_value=[record]) as fetch:
             self.assertIsNone(snapshots.main())
             self.assertEqual(fetch.call_count,1)  # No data or writer invoked.
+            self.assertIn('/nfl_prediction_snapshots_v3?',fetch.call_args.args[0])
+
+    def test_week_11_old_v2_snapshot_does_not_block_new_v3_capture(self):
+        game={'week':11,'id':'1122','kickoff':'2026-11-22T18:00:00+00:00'}
+        # The 11/14 v2 record is irrelevant: the new writer only reads v3.
+        self.assertEqual(snapshots.missing_captures([game], []),[game])
+        self.assertFalse(snapshots.authentic_snapshot({
+            'created_at':'2026-11-14T22:13:23+00:00','kickoff_at':game['kickoff']}))
+        valid={'week':11,'game_id':'1122','created_at':'2026-11-22T17:27:00+00:00',
+               'kickoff_at':game['kickoff']}
+        self.assertTrue(snapshots.authentic_snapshot(valid))
+        self.assertEqual(snapshots.missing_captures([game],[valid]),[])
+
+    def test_invalid_or_duplicate_v3_row_fails_closed_without_overwrite(self):
+        game={'week':11,'id':'1122','kickoff':'2026-11-22T18:00:00+00:00'}
+        early={'week':11,'game_id':'1122','created_at':'2026-11-14T22:13:23Z',
+               'kickoff_at':game['kickoff']}
+        with self.assertRaisesRegex(RuntimeError,'Immutable rows must never be overwritten'):
+            snapshots.missing_captures([game],[early])
+        wrong={'week':11,'game_id':'1122','created_at':'2026-11-22T17:27:00Z',
+               'kickoff_at':'2026-11-22T18:01:00+00:00'}
+        with self.assertRaisesRegex(RuntimeError,'manual review required'):
+            snapshots.missing_captures([game],[wrong])
+
+    def test_time_limits_are_strict_and_timezone_aware(self):
+        kickoff='2026-11-22T18:00:00+00:00'
+        for minutes,expected in ((29.99,False),(30,True),(32.5,True),(35,True),(35.01,False)):
+            row={'created_at':(datetime.fromisoformat(kickoff)-timedelta(minutes=minutes)).isoformat(),
+                 'kickoff_at':kickoff}
+            self.assertEqual(snapshots.authentic_snapshot(row),expected)
+        self.assertFalse(snapshots.authentic_snapshot({'created_at':'not-a-date','kickoff_at':kickoff}))
 
     def test_top12_filters_injuries_before_cap_and_preserves_rank(self):
         candidates=[{'market':'player','stat':'receptions','side':'o','line':4.5,

@@ -117,39 +117,48 @@ def grade(pick, snapshot, event, records):
     return ('hit' if won else 'miss',actual)
 
 def grade_all(season):
-    snapshots=rest(f'nfl_prediction_snapshots_v2?select=*&season=eq.{season}&limit=1000')
     stats=rest(f'nfl_stat_exports?select=csv_text&season=eq.{season}&limit=1')
     if not stats: raise ValueError('No stats export for grading')
     records=list(csv.DictReader(io.StringIO(stats[0]['csv_text'])))
-    existing=rest(f'nfl_prediction_grades_v2?select=week,game_id,pick_key&season=eq.{season}&limit=10000')
-    seen={(r['week'],r['game_id'],r['pick_key']) for r in existing}
     count=0
-    for week in sorted({s['week'] for s in snapshots}):
-        url=f'https://site.api.espn.com/apis/site/v2/sports/football/nfl/scoreboard?dates={season}&seasontype=2&week={week}&limit=100'
-        with urlopen(url,timeout=45) as response: events={str(e['id']):e for e in json.load(response).get('events',[])}
-        pending=[]
-        for snapshot in (s for s in snapshots if s['week']==week):
-            if not authentic_capture_window(snapshot): continue
-            for index,pick in enumerate(snapshot['picks']):
-                key=pick_key(pick,index)
-                if (week,snapshot['game_id'],key) in seen: continue
-                outcome=grade(pick,snapshot,events.get(snapshot['game_id'],{}),records)
-                if not outcome: continue
-                pending.append({'season':season,'week':week,'game_id':snapshot['game_id'],
-                                'pick_key':key,'outcome':outcome[0],'actual_value':outcome[1],
-                                'grading_note':'Final game + exact weekly statistics; equality is a miss',
-                                'stats_source':'ESPN final scoreboard + nflverse weekly stats'})
-        if pending:
-            written=rest('nfl_prediction_grades_v2?on_conflict=season,week,game_id,pick_key',pending,'ignore-duplicates')
-            count+=len(written)
-    print('New final grades:',count,'(missing/ambiguous statistics remain pending)')
+    schedule_cache={}
+    for version in ('v2','v3'):
+        # Preserve the old audit trail. Only independently verified v2 rows
+        # and new v3 captures can produce authentic grades in their own tables.
+        snapshots=rest(f'nfl_prediction_snapshots_{version}?select=*&season=eq.{season}&limit=1000')
+        existing=rest(f'nfl_prediction_grades_{version}?select=week,game_id,pick_key&season=eq.{season}&limit=10000')
+        seen={(r['week'],r['game_id'],r['pick_key']) for r in existing}
+        for week in sorted({s['week'] for s in snapshots}):
+            if week not in schedule_cache:
+                url=f'https://site.api.espn.com/apis/site/v2/sports/football/nfl/scoreboard?dates={season}&seasontype=2&week={week}&limit=100'
+                with urlopen(url,timeout=45) as response:
+                    schedule_cache[week]={str(e['id']):e for e in json.load(response).get('events',[])}
+            events=schedule_cache[week]
+            pending=[]
+            for snapshot in (s for s in snapshots if s['week']==week):
+                if not authentic_capture_window(snapshot): continue
+                for index,pick in enumerate(snapshot['picks']):
+                    key=pick_key(pick,index)
+                    if (week,snapshot['game_id'],key) in seen: continue
+                    outcome=grade(pick,snapshot,events.get(snapshot['game_id'],{}),records)
+                    if not outcome: continue
+                    pending.append({'season':season,'week':week,'game_id':snapshot['game_id'],
+                                    'pick_key':key,'outcome':outcome[0],'actual_value':outcome[1],
+                                    'grading_note':'Final game + exact weekly statistics; equality is a miss',
+                                    'stats_source':'ESPN final scoreboard + nflverse weekly stats'})
+            if pending:
+                written=rest(f'nfl_prediction_grades_{version}?on_conflict=season,week,game_id,pick_key',pending,'ignore-duplicates')
+                count+=len(written)
+    print('New final grades:',count,'(v2 history preserved; v3 verified captures; missing or ambiguous stats pending)')
 
 if __name__=='__main__':
     import argparse
     parser=argparse.ArgumentParser(); parser.add_argument('task',choices=['preflight','injuries','grade'])
     args=parser.parse_args(); season=int(os.environ.get('NFL_SEASON','2026'))
     if args.task=='preflight':
-        for table in ('nfl_stat_exports','nfl_prediction_snapshots_v2','nfl_prediction_grades_v2','nfl_injury_reports_v2','nfl_prediction_subscriptions_v2'):
+        for table in ('nfl_stat_exports','nfl_prediction_snapshots_v2','nfl_prediction_grades_v2',
+                      'nfl_prediction_snapshots_v3','nfl_prediction_grades_v3','nfl_prediction_subscriptions_v3',
+                      'nfl_injury_reports_v2','nfl_prediction_subscriptions_v2'):
             rest(table+'?select=*&limit=0')
         print('Production URL, credentials and required tables verified; no data changed')
     elif args.task=='injuries': refresh_injuries(season)

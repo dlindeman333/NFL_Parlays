@@ -82,16 +82,41 @@ class FeatureChecks(unittest.TestCase):
         writes=[]
         def database(path,rows=None,conflict=None):
             if path.startswith('nfl_prediction_snapshots_v2?'):return snapshots
+            if path.startswith('nfl_prediction_snapshots_v3?'):return []
             if path.startswith('nfl_stat_exports?'):return [{'csv_text':'season,week,team\n'}]
             if path.startswith('nfl_prediction_grades_v2?on_conflict='):
                 writes.extend(rows)
                 return rows
             if path.startswith('nfl_prediction_grades_v2?'):return []
+            if path.startswith('nfl_prediction_grades_v3?'):return []
             raise AssertionError('Unexpected database route: '+path)
         # Mock both the feed and the database. Never touch production data.
         with patch.object(automation,'rest',side_effect=database), \
              patch.object(automation,'urlopen',return_value=io.BytesIO(json.dumps({'events':events}).encode())):
             automation.grade_all(2026)
         self.assertEqual({r['game_id'] for r in writes},{'start','middle','end'})
+
+    def test_v3_grade_reads_new_capture_and_writes_only_v3_grades(self):
+        kickoff=datetime(2026,11,27,20,0,tzinfo=timezone.utc)
+        correct={**self.snapshot,'game_id':'fresh-v3',
+                 'kickoff_at':kickoff.isoformat(),
+                 'created_at':(kickoff-timedelta(minutes=32)).isoformat(),
+                 'picks':[{'market':'ml','side':'a'}]}
+        historical={**correct,'created_at':(kickoff-timedelta(days=8)).isoformat()}
+        written=[]
+        def database(path,rows=None,conflict=None):
+            if path.startswith('nfl_stat_exports?'):return [{'csv_text':'season,week,team\n'}]
+            if path.startswith('nfl_prediction_snapshots_v2?'):return [historical]
+            if path.startswith('nfl_prediction_snapshots_v3?'):return [correct]
+            if path.startswith('nfl_prediction_grades_v2?'):return []
+            if path.startswith('nfl_prediction_grades_v3?on_conflict='):
+                written.extend(rows);return rows
+            if path.startswith('nfl_prediction_grades_v3?'):return []
+            raise AssertionError('Unexpected database route: '+path)
+        with patch.object(automation,'rest',side_effect=database), \
+             patch.object(automation,'urlopen',return_value=io.BytesIO(json.dumps({'events':[{**self.event,'id':'fresh-v3'}]}).encode())):
+            automation.grade_all(2026)
+        self.assertEqual(len(written),1)
+        self.assertEqual(written[0]['game_id'],'fresh-v3')
 
 if __name__=='__main__':unittest.main()
