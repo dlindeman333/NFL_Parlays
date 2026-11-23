@@ -5387,9 +5387,31 @@ recovery.onclick=async()=>{recovery.disabled=true;recoveryStatus.textContent='Ve
   }
   return done;
  }
+ // The performance panel has already reconciled final scores with completed
+ // player-week statistics. Reuse its verified game set when available, so the
+ // CSV agrees with the retrospective cards shown to the user.
+ function performanceReadyGames(){
+  const rows=typeof performanceContexts!=='undefined'?performanceContexts.season?.games:null;
+  return Array.isArray(rows)?rows.filter(g=>inWeek(g.week)&&Array.isArray(g.sc)):[];
+ }
  function retrospectiveCompletedGames(w){
+  const displayed=performanceReadyGames();
+  if(displayed.length)return displayed.filter(g=>Number(g.week)===Number(w));
   if(typeof WKS==='undefined'||typeof hasCompletedPlayerStats!=='function')return [];
   return (WKS[w]||[]).filter(g=>Array.isArray(g.sc)&&hasCompletedPlayerStats(g));
+ }
+ async function waitForInitialReportData(){
+  // The cloud statistics load starts shortly after page open, and the live
+  // schedule refresh runs concurrently. A quick tap must not silently export
+  // zero retrospective rows before these read-only inputs become available.
+  for(let tries=0;tries<15;tries++){
+   const stats=String($('autoStatsStatus')?.textContent||'');
+   const schedule=String($('dataState')?.textContent||'');
+   if(!/Cloud NFL statistics:\s*checking/i.test(stats)&&
+      !/Loading \d{4} weeks|Refreshing NFL schedule/i.test(schedule))return;
+   status.textContent='Waiting for initial NFL statistics and schedule to finish loading…';
+   await new Promise(resolve=>setTimeout(resolve,1000));
+  }
  }
  button.addEventListener('click',async()=>{
   clearCsvDownload();button.disabled=true;status.textContent='Preparing read-only prediction report…';
@@ -5400,10 +5422,12 @@ recovery.onclick=async()=>{recovery.disabled=true;recoveryStatus.textContent='Ve
    let official={rows:[],excludedCount:0},retrospective=[],parlays={rows:[],unknownSeason:0},savedCopy=null;
    const notes=[];
    if(includeIndividuals){
+    if(year===MODEL_SEASON)await waitForInitialReportData();
     const archives=await readArchives(year);
     if(!archives.some(a=>a.version==='v3'))notes.push('Optional v3 archive not installed; report uses valid v2 captures only.');
     official=officialRows(archives);
-    const retrospectiveWeeks=year===MODEL_SEASON?Object.keys(WKS).map(Number).filter(inWeek):[];
+    const retrospectiveWeeks=year===MODEL_SEASON?[...new Set([
+     ...Object.keys(WKS).map(Number),...performanceReadyGames().map(g=>Number(g.week))])].filter(inWeek):[];
     retrospective=retrospectiveRows(year,MODEL_SEASON,retrospectiveWeeks,retrospectiveCompletedGames,performanceRows,performancePickName);
    }
    if(includeParlays){
@@ -5417,8 +5441,11 @@ recovery.onclick=async()=>{recovery.disabled=true;recoveryStatus.textContent='Ve
     }
    }
    let rows=[...official.rows,...retrospective,...parlays.rows];
+   const candidateCount=rows.length;
+   let completedWeekCount=null;
    if(allWeeks){
     const allowed=await completedWeeks(year,new Set(rows.map(r=>Number(r.week))));
+    completedWeekCount=allowed.size;
     rows=rows.filter(r=>allowed.has(Number(r.week)));
    }else rows=rows.filter(r=>Number(r.week)===selected);
    if(savedCopy){
@@ -5427,7 +5454,11 @@ recovery.onclick=async()=>{recovery.disabled=true;recoveryStatus.textContent='Ve
     const current=await window.phase3ReadSavedParlaysForCsv();
     if(JSON.stringify(current)!==JSON.stringify(savedCopy))throw Error('Signed-in account or saved parlays changed; retry the report.');
    }
-   if(!rows.length)throw Error('No eligible predictions or saved parlays match these filters. No empty CSV was downloaded.');
+   if(!rows.length)throw Error('No eligible predictions or saved parlays match these filters. '+
+    'Candidates before week filtering: '+candidateCount+' ('+official.rows.length+' official, '+
+    retrospective.length+' retrospective, '+parlays.rows.length+' saved-parlay rows). '+
+    (allWeeks?'Fully completed matching weeks: '+completedWeekCount+'. ':'')+
+    'Verify that NFL statistics and the schedule have loaded, or try a specific completed week. No empty CSV was downloaded.');
    const scopeName=allWeeks?'All_Completed_Weeks':'Week_'+selected;
    const filename='NFL_Prediction_Results_'+year+'_'+scopeName+'.csv';
    const content=csv(rows);
