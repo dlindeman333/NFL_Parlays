@@ -3504,6 +3504,13 @@ function authControls(verified){
 // Public browser key only. Never embed a Supabase secret/service_role key.
 const CLOUD_URL='https://wpvuunwtyxycqfjwuzkn.supabase.co';
 const CLOUD_PUBLIC_KEY='sb_publishable_DK_yNahtv5ErUXtAzjTxCw_p4EowVj3';
+// The CSV exporter runs in another script scope. Give it a strictly read-only
+// archive transport without duplicating cloud credentials or exposing auth.
+window.phase3FetchCsvArchive=path=>{
+ if(typeof path!=='string'||!/^\/rest\/v1\/nfl_prediction_(?:snapshots|grades)_v[23]\?/.test(path))
+  throw Error('Unsupported prediction archive CSV read');
+ return fetch(CLOUD_URL+path,{method:'GET',headers:{apikey:CLOUD_PUBLIC_KEY,Accept:'application/json'},cache:'no-store'});
+};
 function authLoad(){
  try{
   const saved=phase3LocalStorage.getItem(prefix+'auth')||phase3SessionStorage.getItem(prefix+'auth');
@@ -5316,6 +5323,7 @@ recovery.onclick=async()=>{recovery.disabled=true;recoveryStatus.textContent='Ve
   '<button type="button" class="btn" id="predictionCsvDownload">Download CSV report</button></div>'+
   '<label class="mu" style="display:block;margin:8px 0"><input type="checkbox" id="predictionCsvUnknownSeason"> Include legacy saved slips with unknown season (clearly labeled; off by default)</label>'+
   '<p class="mu" role="status" aria-live="polite" id="predictionCsvStatus">Choose a season and week range, then download.</p>'+
+  '<p class="mu" id="predictionCsvSaveFallback" hidden></p>'+
   '<p class="mu">Only verified 30-35-minute snapshots count as official predictions. Complete-week selection requires every scheduled game in the week to be final. Saved parlay WON/LOST is user-recorded; individual saved legs cannot be automatically verified from that status.</p>';
  const grades=$('cloudOfficialGrades');
  if(grades?.parentElement===panel)grades.after(section);else panel.insertBefore(section,panel.firstChild);
@@ -5327,13 +5335,24 @@ recovery.onclick=async()=>{recovery.disabled=true;recoveryStatus.textContent='Ve
  week.value=String(inWeek(wk)?wk:1);
  function sync(){week.disabled=scope.value!=='specific';$('predictionCsvUnknownSeason').disabled=kind.value==='individual'}
  scope.addEventListener('change',sync);kind.addEventListener('change',sync);sync();
+ const fallback=$('predictionCsvSaveFallback');
+ let lastCsvUrl=null;
+ function clearCsvDownload(){
+  if(lastCsvUrl)URL.revokeObjectURL(lastCsvUrl);
+  lastCsvUrl=null;fallback.replaceChildren();fallback.hidden=true;
+ }
+ // A previously exported account's saved slips must not remain downloadable
+ // after sign-out or account change. Navigation destroys the document/URL.
+ document.addEventListener('phase3-account-signed-out',clearCsvDownload);
+ document.addEventListener('phase3-account-verified',clearCsvDownload);
 
  async function readAll(table,season){
   const all=[];
   for(let offset=0;offset<10000;offset+=1000){
    const order=table.includes('grades')?'week.asc,game_id.asc,pick_key.asc':'week.asc,game_id.asc';
    const path='/rest/v1/'+table+'?select=*&season=eq.'+season+'&order='+order+'&limit=1000&offset='+offset;
-   const response=await fetch(CLOUD_URL+path,{method:'GET',headers:{apikey:CLOUD_PUBLIC_KEY,Authorization:'Bearer '+CLOUD_PUBLIC_KEY,Accept:'application/json'},cache:'no-store'});
+   if(typeof window.phase3FetchCsvArchive!=='function')throw Error('Prediction archive reader unavailable. Reload the app.');
+   const response=await window.phase3FetchCsvArchive(path);
    if(!response.ok){
     const detail=await response.text().catch(()=> '');
     // v3 is an optional *unapplied* migration. A confirmed missing v3 table
@@ -5373,7 +5392,7 @@ recovery.onclick=async()=>{recovery.disabled=true;recoveryStatus.textContent='Ve
   return (WKS[w]||[]).filter(g=>Array.isArray(g.sc)&&hasCompletedPlayerStats(g));
  }
  button.addEventListener('click',async()=>{
-  button.disabled=true;status.textContent='Preparing read-only prediction report…';
+  clearCsvDownload();button.disabled=true;status.textContent='Preparing read-only prediction report…';
   try{
    const year=Number(seasons.value),selected=Number(week.value),allWeeks=scope.value==='completed';
    if(!Number.isInteger(year)||year<2020||year>currentNFLSeason()+1||!inWeek(selected))throw Error('Choose a valid season and week.');
@@ -5412,14 +5431,21 @@ recovery.onclick=async()=>{recovery.disabled=true;recoveryStatus.textContent='Ve
    const scopeName=allWeeks?'All_Completed_Weeks':'Week_'+selected;
    const filename='NFL_Prediction_Results_'+year+'_'+scopeName+'.csv';
    const content=csv(rows);
-   downloadFile(new Blob([content],{type:'text/csv;charset=utf-8'}),filename);
+   const blob=new Blob([content],{type:'text/csv;charset=utf-8'});
+   const link=document.createElement('a');
+   lastCsvUrl=URL.createObjectURL(blob);
+   link.href=lastCsvUrl;link.download=filename;link.textContent='Tap here to save the CSV if it did not download';
+   fallback.append(link);fallback.hidden=false;
+   // Desktop normally downloads immediately; an explicit second tap works
+   // when mobile Safari blocks a download after asynchronous archive reads.
+   link.click();
    const counts={official:rows.filter(r=>r.source.startsWith('OFFICIAL_TOP12_')).length,
     model:rows.filter(r=>r.source==='RETROSPECTIVE_MODEL').length,
     saved:rows.filter(r=>r.source==='USER_SAVED_PARLAY').length};
    status.textContent='CSV requested: '+rows.length+' rows ('+counts.official+' official snapshot pick rows, '+counts.model+' retrospective model rows, '+counts.saved+' saved parlay rows). '+
     official.excludedCount+' outside-window archive record(s) excluded. '+
     (parlays.unknownSeason&&!$('predictionCsvUnknownSeason').checked?parlays.unknownSeason+' older saved slip(s) without a known season excluded. ':'')+
-    notes.join(' ')+' On iPhone Safari, check Files > Downloads.';
+    notes.join(' ')+' If no file appears, use the save link below. On iPhone Safari, check Files > Downloads.';
   }catch(err){status.textContent='CSV not downloaded: '+(err&&err.message||String(err))+'. No source data was changed.';}
   finally{button.disabled=false;}
  });
