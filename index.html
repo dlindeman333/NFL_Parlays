@@ -3260,6 +3260,38 @@ function performancePickName(g,x){
  }
  return `${m} ${s}`;
 }
+// CSV-only descriptive fields for the same selections and matched statistics
+// used by gradeDetail. These do not calculate or change HIT/MISS outcomes.
+function performancePickExportFields(g,x){
+ const m=String(x.m||''),s=String(x.s||'');
+ const direction=s==='o'?'Over':s==='u'?'Under':s==='h'?'Home':'Away';
+ const finite=v=>typeof v==='number'&&Number.isFinite(v)?v:'';
+ const team=t=>t==='h'?g.h:g.a;
+ const base={market_code:m,selection_direction:direction};
+ if(m==='ml')return {...base,pick_category:'Team',player_or_team:team(s),market:'Moneyline'};
+ if(m==='sp')return {...base,pick_category:'Team',player_or_team:team(s),market:'Spread (model)',
+  line:finite(s==='a'?g.sp:-g.sp),actual_value:finite(s==='a'?g.sc?.[0]-g.sc?.[1]:g.sc?.[1]-g.sc?.[0])};
+ if(m==='tot')return {...base,pick_category:'Team',player_or_team:'Game total',market:'Total points (model)',
+  line:finite(g.tot),actual_value:finite(g.sc?.[0]+g.sc?.[1])};
+ const teamTotal=/^teamtot([ah])$/.exec(m);
+ if(teamTotal){const t=teamTotal[1];return {...base,pick_category:'Team',player_or_team:team(t),
+  market:'Team points total',line:finite(verifiedTeamPointsLine(g,t)),actual_value:finite(g.sc?.[t==='a'?0:1])};}
+ const teamBox=/^(td|ps|ru)([ah])$/.exec(m);
+ if(teamBox){const [,kind,t]=teamBox,labels={td:'Team touchdowns',ps:'Team passing yards',ru:'Team rushing yards'};
+  return {...base,pick_category:'Team',player_or_team:team(t),market:labels[kind],line:finite(PN[kind]?.[1]),
+   actual_value:finite(findBox(g)?.[t]?.[kind])};}
+ const p=playerForMarket(m);
+ if(p){
+  const markets={td:'Anytime touchdown',ps:'Passing yards',ru:'Rushing yards',rec:'Receiving yards',rcp:'Receptions'};
+  const fields={ps:'passing_yards',ru:'rushing_yards',rec:'receiving_yards',rcp:'receptions',td:'touchdowns'};
+  const matched=matchingPlayerRow(g,p).row,stat=matched?.[fields[p.k]];
+  const line=p.k==='td'?'':pstat(p,g)?.line;
+  return {...base,pick_category:'Player',player_or_team:p.n,position:String(matched?.position||p.position||''),
+   market:markets[p.k]||'Player prop',selection_direction:p.k==='td'?'Anytime touchdown':direction,
+   line:finite(line),actual_value:finite(stat)};
+ }
+ return {...base,pick_category:'Other',market:'Other market'};
+}
 const performanceContexts={};
 let performanceActive=null,performanceFilter='all',performanceSummaryFilter='all',performanceSelectedWeek=null;
 function openPerformanceDetails(period,kind){
@@ -5197,10 +5229,12 @@ recovery.onclick=async()=>{recovery.disabled=true;recoveryStatus.textContent='Ve
  'use strict';
  const panel=document.getElementById('advPerformancePanel');
  if(!panel)return;
- const FIELDS=['season','week','record_type','source','source_detail','game_id','matchup','player_or_team',
-  'prediction','market','side','line','model_probability','actual_value','outcome','outcome_provenance',
+ const FIELDS=['season','week','record_type','source','source_detail','pick_category','game_id','matchup','player_or_team','position',
+  'prediction','market','market_code','side','selection_direction','line','model_probability','actual_value','outcome','outcome_provenance',
   'captured_at_utc','kickoff_at_utc','parlay_id','parlay_name','leg_number','leg_count',
-  'stake_usd','estimated_combined_decimal_odds','final_score','notes'];
+  'stake_usd','estimated_combined_decimal_odds','final_score','notes',
+  'pick_count','hit_count','miss_count','push_count','pending_count','hit_rate_pct',
+  'parlays_won_count','parlays_lost_count','parlays_open_count'];
  const $=id=>document.getElementById(id);
  const inWeek=w=>Number.isInteger(Number(w))&&Number(w)>=1&&Number(w)<=18;
  function validCapture(s){
@@ -5218,6 +5252,19 @@ recovery.onclick=async()=>{recovery.disabled=true;recoveryStatus.textContent='Ve
   const cell=v=>'"'+protectCsv(v).replace(/"/g,'""')+'"';
   return '\ufeff'+[FIELDS,...rows.map(row=>FIELDS.map(field=>row[field]??''))]
    .map(row=>row.map(cell).join(',')).join('\r\n')+'\r\n';
+ }
+ function readableMarket(value){
+  const raw=String(value||'').trim(),key=raw.toLowerCase().replace(/[\s-]+/g,'_');
+  const names={ml:'Moneyline',moneyline:'Moneyline',sp:'Spread',spread:'Spread',
+   tot:'Total points',total:'Total points',team_total:'Team points total',
+   passing_yards:'Passing yards',pass_yards:'Passing yards',rushing_yards:'Rushing yards',
+   receiving_yards:'Receiving yards',receptions:'Receptions',receiving_receptions:'Receptions',
+   anytime_touchdown:'Anytime touchdown',touchdowns:'Touchdowns',td:'Anytime touchdown'};
+  return names[key]||raw.replace(/_/g,' ').replace(/\b[a-z]/g,c=>c.toUpperCase());
+ }
+ function selectionDirection(side){
+  return ({o:'Over',u:'Under',h:'Home',a:'Away',over:'Over',under:'Under',home:'Home',away:'Away'})
+   [String(side||'').toLowerCase()]||String(side||'');
  }
  function officialRows(archives){
   const selected=new Map(),excluded=[];
@@ -5246,10 +5293,13 @@ recovery.onclick=async()=>{recovery.disabled=true;recoveryStatus.textContent='Ve
     const line=Number.isFinite(Number(p.line))&&p.line!==null?Number(p.line):'';
     const selection=String(p.label||(p.market==='ml'?name+' moneyline':
       [name,p.side==='u'?'Under':p.side==='o'?'Over':'',line,p.stat||p.market||''].filter(x=>String(x)!=='').join(' ')));
+    const marketCode=String(p.stat||p.market||'');
     rows.push({season:Number(s.season),week:Number(s.week),record_type:'INDIVIDUAL_PICK',
      source:'OFFICIAL_TOP12_'+version.toUpperCase(),source_detail:'Verified 30-35-minute immutable cloud snapshot',
-     game_id:String(s.game_id),matchup:String(s.away_team)+' @ '+String(s.home_team),player_or_team:name,
-     prediction:selection,market:String(p.stat||p.market||''),side:String(p.side||''),line,
+     pick_category:p.player_name?'Player':'Team',game_id:String(s.game_id),
+     matchup:String(s.away_team)+' @ '+String(s.home_team),player_or_team:name,
+     position:String(p.position||''),prediction:selection,market:readableMarket(marketCode),market_code:marketCode,
+     side:String(p.side||''),selection_direction:selectionDirection(p.side),line,
      model_probability:Number.isFinite(Number(p.probability))?Number(p.probability):'',
      actual_value:verified&&g.actual_value!=null?g.actual_value:'',outcome,
      outcome_provenance:verified?'OFFICIAL_CLOUD_GRADE':'UNAVAILABLE_OR_PENDING_GRADE',
@@ -5267,31 +5317,38 @@ recovery.onclick=async()=>{recovery.disabled=true;recoveryStatus.textContent='Ve
    if(known&&Number(s.season)!==season)continue;
    if(!known){unknownSeason++;if(!includeUnattributed)continue;}
    const base={season:known?Number(s.season):'',week:Number(s.wk),source:'USER_SAVED_PARLAY',
+    pick_category:'Saved parlay',
     source_detail:known?'User-recorded parlay outcome':'Legacy saved slip: original season unavailable',
     parlay_id:String(s.id??''),parlay_name:String(s.name||'Untitled Parlay'),leg_count:s.legs.length,
     stake_usd:Number.isFinite(Number(s.stake))?Number(s.stake):'',
     estimated_combined_decimal_odds:Number.isFinite(Number(s.dec))?Number(s.dec):''};
    const status=String(s.status||'open').toLowerCase();
-   rows.push({...base,record_type:'PARLAY_SUMMARY',outcome:status==='won'?'MANUAL_WON':status==='lost'?'MANUAL_LOST':'OPEN',
+   rows.push({...base,record_type:'PARLAY_SUMMARY',market:'Saved parlay',
+    outcome:status==='won'?'MANUAL_WON':status==='lost'?'MANUAL_LOST':'OPEN',
     outcome_provenance:'USER_RECORDED_NOT_SPORTSBOOK_VERIFIED',
     notes:'Overall outcome marked by user. It does not identify which individual legs won.'});
-   s.legs.forEach((l,i)=>rows.push({...base,record_type:'PARLAY_LEG',leg_number:i+1,
+   s.legs.forEach((l,i)=>rows.push({...base,record_type:'PARLAY_LEG',market:'Saved parlay leg',leg_number:i+1,
     matchup:String(l.m||''),prediction:String(l.t||''),source_detail:'Original saved selection; no independent leg grading',
     outcome:'UNVERIFIED',outcome_provenance:'NO_VERIFIED_LEG_RESULT',
     notes:'Do not infer a leg HIT/MISS from the overall manually marked parlay status.'}));
   }
   return {rows,unknownSeason};
  }
- function retrospectiveRows(season,modelSeason,weeks,completedGames,buildRows,makeName){
+ function retrospectiveRows(season,modelSeason,weeks,completedGames,buildRows,makeName,describe=()=>({})){
   if(season!==modelSeason)return [];
   const rows=[];
   for(const w of weeks){
    const games=completedGames(w);
    for(const {g,x,result,reason} of buildRows(games,'combined')){
+    const fields=describe(g,x)||{};
     rows.push({season,week:w,record_type:'INDIVIDUAL_PICK',source:'RETROSPECTIVE_MODEL',
      source_detail:'Recomputed from historical data, NOT an archived pregame forecast',
      game_id:String(g.id||''),matchup:String(g.a)+' @ '+String(g.h),
-     prediction:makeName(g,x),market:String(x.m||''),side:String(x.s||''),
+     prediction:makeName(g,x),pick_category:String(fields.pick_category||'Other'),
+     player_or_team:String(fields.player_or_team||''),position:String(fields.position||''),
+     market:String(fields.market||readableMarket(x.m)),market_code:String(x.m||''),
+     side:String(x.s||''),selection_direction:String(fields.selection_direction||selectionDirection(x.s)),
+     line:fields.line??'',actual_value:fields.actual_value??'',
      model_probability:Number.isFinite(Number(x.p))?Number(x.p):'',
      outcome:result===true?'HIT':result===false?'MISS':'PENDING',
      outcome_provenance:'MODEL_GENERATED_HISTORICAL_BACKTEST',
@@ -5301,6 +5358,67 @@ recovery.onclick=async()=>{recovery.disabled=true;recoveryStatus.textContent='Ve
   }
   return rows;
  }
+ // Summary rows annotate the same already-graded details; no grading or database
+ // mutations occur here. Every subtotal remains inside its original source.
+ function withReportSubtotals(details){
+  const groups=new Map();
+  for(const r of details){
+   const key=JSON.stringify([r.season??'',r.week??'',r.source??'']);
+   if(!groups.has(key))groups.set(key,[]);
+   groups.get(key).push(r);
+  }
+  const sorted=[...groups.values()].sort((a,b)=>
+   Number(a[0].season||0)-Number(b[0].season||0)||Number(a[0].week)-Number(b[0].week)||
+   String(a[0].source).localeCompare(String(b[0].source)));
+  const output=[],bySource=new Map();
+  function count(rows){
+   const picks=rows.filter(r=>r.record_type==='INDIVIDUAL_PICK');
+   const hit=picks.filter(r=>r.outcome==='HIT').length,miss=picks.filter(r=>r.outcome==='MISS').length;
+   const parlaySummaries=rows.filter(r=>r.record_type==='PARLAY_SUMMARY');
+   return {pick_count:picks.length,hit_count:hit,miss_count:miss,
+    push_count:picks.filter(r=>r.outcome==='PUSH').length,
+    pending_count:picks.filter(r=>r.outcome==='PENDING').length,
+    hit_rate_pct:hit+miss?Math.round(1000*hit/(hit+miss))/10:'',
+    parlays_won_count:parlaySummaries.filter(r=>r.outcome==='MANUAL_WON').length,
+    parlays_lost_count:parlaySummaries.filter(r=>r.outcome==='MANUAL_LOST').length,
+    parlays_open_count:parlaySummaries.filter(r=>r.outcome==='OPEN').length};
+  }
+  function subtotal(rows,type,label,category='',market=''){
+   const first=rows[0];return {season:first.season,week:type==='SOURCE_TOTAL'?'':first.week,
+    record_type:type,source:first.source,source_detail:'Subtotal — '+String(first.source_detail||''),
+    pick_category:category,market,prediction:label,...count(rows),
+    notes:first.source==='USER_SAVED_PARLAY'?'Parlay status is user-recorded; individual legs are unverified.':
+     'Hit rate = HIT / (HIT + MISS). PUSH and PENDING are excluded from the denominator.'};
+  }
+  for(const group of sorted){
+   const source=group[0].source,sourceKey=JSON.stringify([group[0].season??'',source]);
+   if(!bySource.has(sourceKey))bySource.set(sourceKey,[]);
+   bySource.get(sourceKey).push(...group);
+   if(source==='USER_SAVED_PARLAY'){
+    output.push(...group,subtotal(group,'WEEK_PARLAY_TOTAL','WEEK SAVED-PARLAY TOTAL'));
+    continue;
+   }
+   const markets=new Map();
+   for(const r of group){const key=JSON.stringify([r.pick_category||'Other',r.market||'Other market']);
+    if(!markets.has(key))markets.set(key,[]);markets.get(key).push(r)}
+   for(const entries of [...markets.values()].sort((a,b)=>
+    String(a[0].pick_category).localeCompare(String(b[0].pick_category))||
+    String(a[0].market).localeCompare(String(b[0].market)))){
+    const r=entries[0];output.push(...entries,
+     subtotal(entries,'MARKET_SUBTOTAL','MARKET SUBTOTAL: '+r.pick_category+' / '+r.market,r.pick_category,r.market));
+   }
+   output.push(subtotal(group,'WEEK_SOURCE_TOTAL','WEEK SOURCE TOTAL'));
+  }
+  // All-week reports receive an additional source-level rollup, never a blended
+  // official+retrospective or pick+user-recorded-parlay accuracy figure.
+  for(const rows of bySource.values()){
+   if(new Set(rows.map(r=>String(r.week))).size>1){
+    output.push(subtotal(rows,'SOURCE_TOTAL',rows[0].source==='USER_SAVED_PARLAY'?
+     'ALL-WEEK SAVED-PARLAY TOTAL':'ALL-WEEK SOURCE TOTAL'));
+   }
+  }
+  return output;
+ }
  function completedFromEspn(payload){
   const events=payload?.events;
   // A truncated/single-game scoreboard must never prove an entire NFL week is final.
@@ -5309,12 +5427,12 @@ recovery.onclick=async()=>{recovery.disabled=true;recoveryStatus.textContent='Ve
    events.every(e=>e?.status?.type?.completed===true);
  }
  // These pure helpers are exposed only for offline read-only regression checks.
- window.phase3PredictionCsvCore=Object.freeze({FIELDS,csv,validCapture,officialRows,savedRows,retrospectiveRows,completedFromEspn});
+ window.phase3PredictionCsvCore=Object.freeze({FIELDS,csv,validCapture,officialRows,savedRows,retrospectiveRows,withReportSubtotals,completedFromEspn});
 
  const section=document.createElement('section');section.className='card';section.id='predictionResultsCsv';
  section.setAttribute('aria-label','Export prediction results as CSV');
  section.innerHTML='<h3 style="margin:0 0 8px">Export prediction results (CSV)</h3>'+
-  '<p class="mu">Download individual AI picks and user-saved parlay results. Official pregame picks, retrospective model evaluations and manually recorded parlay outcomes are labeled separately. Nothing is written to Supabase or saved parlays.</p>'+
+  '<p class="mu">Download readable, categorized individual AI picks and user-saved parlay results. Market, week and source subtotals include HIT/MISS counts and hit rates; manually recorded parlay WON/LOST/OPEN totals remain separate. Nothing is written to Supabase or saved parlays.</p>'+
   '<div class="tools prediction-csv-controls">'+
   '<label>Season <select id="predictionCsvSeason"></select></label>'+
   '<label>Weeks <select id="predictionCsvScope"><option value="completed">All fully completed weeks</option><option value="specific">Specific week</option></select></label>'+
@@ -5428,7 +5546,7 @@ recovery.onclick=async()=>{recovery.disabled=true;recoveryStatus.textContent='Ve
     official=officialRows(archives);
     const retrospectiveWeeks=year===MODEL_SEASON?[...new Set([
      ...Object.keys(WKS).map(Number),...performanceReadyGames().map(g=>Number(g.week))])].filter(inWeek):[];
-    retrospective=retrospectiveRows(year,MODEL_SEASON,retrospectiveWeeks,retrospectiveCompletedGames,performanceRows,performancePickName);
+    retrospective=retrospectiveRows(year,MODEL_SEASON,retrospectiveWeeks,retrospectiveCompletedGames,performanceRows,performancePickName,performancePickExportFields);
    }
    if(includeParlays){
     try{
@@ -5461,7 +5579,8 @@ recovery.onclick=async()=>{recovery.disabled=true;recoveryStatus.textContent='Ve
     'Verify that NFL statistics and the schedule have loaded, or try a specific completed week. No empty CSV was downloaded.');
    const scopeName=allWeeks?'All_Completed_Weeks':'Week_'+selected;
    const filename='NFL_Prediction_Results_'+year+'_'+scopeName+'.csv';
-   const content=csv(rows);
+   const reportRows=withReportSubtotals(rows);
+   const content=csv(reportRows);
    const blob=new Blob([content],{type:'text/csv;charset=utf-8'});
    const link=document.createElement('a');
    lastCsvUrl=URL.createObjectURL(blob);
@@ -5473,7 +5592,7 @@ recovery.onclick=async()=>{recovery.disabled=true;recoveryStatus.textContent='Ve
    const counts={official:rows.filter(r=>r.source.startsWith('OFFICIAL_TOP12_')).length,
     model:rows.filter(r=>r.source==='RETROSPECTIVE_MODEL').length,
     saved:rows.filter(r=>r.source==='USER_SAVED_PARLAY').length};
-   status.textContent='CSV requested: '+rows.length+' rows ('+counts.official+' official snapshot pick rows, '+counts.model+' retrospective model rows, '+counts.saved+' saved parlay rows). '+
+   status.textContent='CSV requested: '+rows.length+' detail rows plus '+(reportRows.length-rows.length)+' labeled subtotal rows ('+counts.official+' official snapshot pick rows, '+counts.model+' retrospective model rows, '+counts.saved+' saved parlay rows). '+
     official.excludedCount+' outside-window archive record(s) excluded. '+
     (parlays.unknownSeason&&!$('predictionCsvUnknownSeason').checked?parlays.unknownSeason+' older saved slip(s) without a known season excluded. ':'')+
     notes.join(' ')+' If no file appears, use the save link below. On iPhone Safari, check Files > Downloads.';
