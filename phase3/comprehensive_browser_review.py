@@ -27,3 +27,34 @@ with sync_playwright() as p:
         page.close()
         print(f'PASS: Chromium reporting fixture {width}x{height}')
     browser.close()
+
+# Exercise the actual application entry point, with all external requests blocked.
+from http.server import ThreadingHTTPServer, SimpleHTTPRequestHandler
+from functools import partial
+from threading import Thread
+server=ThreadingHTTPServer(('127.0.0.1',0),partial(SimpleHTTPRequestHandler,directory=str(ROOT.parent)))
+Thread(target=server.serve_forever,daemon=True).start()
+origin=f'http://127.0.0.1:{server.server_port}'
+try:
+    with sync_playwright() as p:
+        browser=p.chromium.launch()
+        for width,height in [(1440,900),(390,844)]:
+            page=browser.new_page(viewport={'width':width,'height':height},accept_downloads=True)
+            page.route('**/*',lambda route:route.continue_() if route.request.url.startswith(origin+'/') else route.abort())
+            page.goto(origin+'/index.html',wait_until='domcontentloaded')
+            assert page.locator('#comprehensiveReviewPanel').is_hidden()
+            assert page.evaluate('typeof window.mountOfflineComprehensiveReview')=='undefined'
+            page.goto(origin+'/index.html?comprehensiveReview=1',wait_until='domcontentloaded')
+            assert page.evaluate("""() => mountOfflineComprehensiveReview({schema_version:4,dashboard:{individual:[],suggested_parlays:[]},workbook_tables:{'AI Performance':[]}})""")==1
+            assert page.locator('#advTrackingResults').count()==1
+            page.evaluate("""() => {document.querySelector('#advPerformancePanel').hidden=false;document.querySelector('#comprehensiveReviewPanel').open=true}""")
+            assert page.locator('#comprehensiveReviewReport section').count()==4
+            with page.expect_download() as download:
+                page.locator('#comprehensiveReviewExport').evaluate('(e)=>e.click()')
+            assert download.value.suggested_filename=='SYNTHETIC_Comprehensive_Review.xlsx'
+            page.close()
+            print(f'PASS: actual application review gate and export {width}x{height}')
+        browser.close()
+finally:
+    server.shutdown()
+    server.server_close()
