@@ -69,6 +69,18 @@ with sync_playwright() as p:
             toggle=page.locator('#skipNavToggle')
             drawer=page.locator('#stickySkipNavigation')
             assert page.evaluate("matchMedia('(max-width:700px)').matches"), 'Expected mobile CSS breakpoint'
+            print('Mobile overflow diagnostics:', json.dumps(page.evaluate("""() => {
+              const w=document.documentElement.clientWidth;
+              return {clientWidth:w,scrollWidth:document.documentElement.scrollWidth,
+                innerWidth,innerHeight,visualWidth:visualViewport.width,
+                visualHeight:visualViewport.height,
+                offenders:[...document.querySelectorAll('body *')].map(e=>{
+                  const r=e.getBoundingClientRect();
+                  return {tag:e.tagName,id:e.id,cls:String(e.className).slice(0,120),
+                    left:r.left,right:r.right,width:r.width,position:getComputedStyle(e).position};
+                }).filter(r=>r.width>0&&(r.right>w+2||r.left< -2))
+                  .sort((a,b)=>b.right-a.right).slice(0,25)};
+            }""")),flush=True)
             def tap_skip():
                 try:
                     toggle.tap(timeout=8000)
