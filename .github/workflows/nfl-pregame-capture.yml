@@ -13,7 +13,7 @@ jobs:
     if: github.repository == 'dlindeman333/NFL_Parlays' && vars.NFL_AUTOMATION_ENABLED == 'true' && vars.NFL_PHASE3_PUBLISH_ENABLED == 'true' && vars.NFL_PHASE3_LAUNCH_APPROVED == 'true'
     runs-on: ubuntu-latest
     # Allow Chromium setup before the 35-minute boundary and a bounded wait.
-    timeout-minutes: 25
+    timeout-minutes: 85
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
@@ -21,9 +21,9 @@ jobs:
           python-version: '3.11'
           cache: 'pip'
           cache-dependency-path: requirements-automation.txt
-      # Standard-library-only preflight. Outside the 30–50 minute preparation
+      # Standard-library-only preflight. Outside the 30–100 minute preparation
       # window, do not install anything or contact the production database.
-      - name: Check read-only 30–50 minute runner preparation window
+      - name: Check read-only 30–100 minute runner preparation window
         id: prep
         env:
           NFL_SEASON: ${{ vars.NFL_SEASON || '2026' }}
@@ -33,18 +33,18 @@ jobs:
         run: |
           python -m pip install playwright
           python -m playwright install --with-deps chromium
+      - name: Verify production boundary and schema before writes
+        if: steps.prep.outputs.eligible == 'true'
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+        run: python phase3/automation.py preflight
       - name: Wait for and recheck the strict 30–35 minute window
         id: window
         if: steps.prep.outputs.eligible == 'true'
         env:
           NFL_SEASON: ${{ vars.NFL_SEASON || '2026' }}
         run: python snapshot_predictions.py --wait-for-window
-      - name: Verify production boundary and schema before writes
-        if: steps.window.outputs.eligible == 'true'
-        env:
-          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
-          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
-        run: python phase3/automation.py preflight
       - name: Capture immutable AI recommendations in the pregame window
         if: steps.window.outputs.eligible == 'true'
         env:
