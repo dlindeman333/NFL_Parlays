@@ -76,7 +76,7 @@ with sync_playwright() as p:
                     return scrollY>100 && Math.abs(nav.top)<2 && Math.abs(quick.top-nav.bottom)<2 &&
                       document.elementFromPoint(toggle.left+12,toggle.top+12)?.closest('#qfCollapseToggle');
                 }""")
-            page.evaluate("window.scrollTo({top:0,behavior:'instant'})")
+            page.evaluate("document.getElementById('stickySkipNavigation').open=true; window.scrollTo({top:0,behavior:'instant'})")
         if mobile:
             account=page.locator('#topAccountPanel')
             toggle=page.locator('#skipNavToggle')
@@ -119,7 +119,7 @@ with sync_playwright() as p:
         page.wait_for_function("""() => {
           const box=document.getElementById('bestRiskParlayControls');
           const nav=document.getElementById('stickySkipNavigation');
-          const expected=window.innerWidth>=701?nav.getBoundingClientRect().height+12:10;
+          const expected=window.innerWidth>=701?nav.getBoundingClientRect().height+document.getElementById('quickFiltersBar').getBoundingClientRect().height+12:10;
           return box&&Math.abs(box.getBoundingClientRect().top-expected)<40;
         }""")
         before=page.locator('#ln').inner_text()
