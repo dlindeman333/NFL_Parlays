@@ -13,6 +13,12 @@ class ReportIntegrationTests(unittest.TestCase):
         self.assertEqual(top['hit_rate'],.5)
         self.assertEqual(len(tables['Suggested Legs']),2)
         self.assertTrue(all(r['snapshot_id']=='p1' for r in tables['Suggested Legs']))
+    def test_pending_parlays(self):
+        rows=[dict(snapshot_id=str(i),kind='same',legs=[{},{}],outcome=o) for i,o in enumerate(['hit','miss',None,'pending'])]
+        total=next(r for r in report_payload([],rows)['suggested_parlays'] if r['kind']=='all')
+        self.assertEqual(total['pending'],2)
+        self.assertEqual(total['graded_decisions'],2)
+        self.assertEqual(total['hit_rate'],.5)
     def test_empty(self):
         self.assertEqual(report_payload([],[])['individual'],[])
     def test_duplicate_parlay(self):
