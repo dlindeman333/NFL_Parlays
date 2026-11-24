@@ -14,3 +14,15 @@ def capture_from_page(page,event,season,reports,now):
     if [key(p) for p in legacy]!=[key(p) for p in snapshot['picks'] if p['legacy_player_top12']]:
         raise RuntimeError('Top 12 parity failure')
     return {'snapshot':snapshot,'unavailable_markets':data['unavailable_markets']}
+
+def attach_suggestions(capture, generated, frozen_by_key, now):
+    """Offline only; require exact generator legs and preserve original snapshot."""
+    from copy import deepcopy
+    from phase3.comprehensive_suggestion_bridge import assemble_suggestions
+    result=deepcopy(capture)
+    snapshot=result['snapshot']
+    if snapshot['suggested_parlays']:
+        raise ValueError('Suggestions already assembled')
+    snapshot['suggested_parlays']=assemble_suggestions(
+        generated,frozen_by_key,now,snapshot['model_version'])
+    return result
