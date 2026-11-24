@@ -1,0 +1,7 @@
+const fs=require('node:fs'),vm=require('node:vm'),assert=require('node:assert/strict');
+const html=fs.readFileSync(require('node:path').join(__dirname,'../index.html'),'utf8');
+const code=html.slice(html.indexOf('function safe6Retryable('),html.indexOf('async function safe6Cycle('));
+const ctx=vm.createContext({});vm.runInContext(code+';this.retry=safe6Retryable;',ctx);
+const cases=[['network read', {safeReadRetry:true},false,true],['revision race',{message:'Cloud changed before write'},false,true],['uncertain write',{safeReadRetry:true},true,false],['revision after write',{message:'Cloud changed before write'},true,false],['ownership',{message:'Account ownership changed'},false,false],['delete/edit',{message:'Deletion/edit conflict; review required'},false,false],['readback mismatch',{message:'Cloud readback mismatch'},true,false],['unknown error',{},false,false]];
+for(const [name,error,attempted,expected] of cases){assert.equal(ctx.retry(error,attempted),expected,name);console.log('PASS '+name);}
+console.log(`${cases.length} retry classification tests passed (not end-to-end).`);
