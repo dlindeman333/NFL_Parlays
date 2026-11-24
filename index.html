@@ -4063,23 +4063,32 @@ function phase3V10Confirm(title,description,approveLabel){
 
 // Explicit reconciliation is the only path that merges divergent saved lists.
 // Existing deletion markers win; conflicting edits require separate review.
-function planSavedReconciliation(deviceValues,cloudValues,partitionValues){
+function planSavedReconciliation(deviceValues,cloudValues,partitionValues,nameSource="device"){
+ if(!["device","cloud"].includes(nameSource))throw Error("Invalid name preference");
  const device=safe6View(deviceValues,'Device'),cloud=safe6View(cloudValues,'Cloud');
  const partition=partitionValues===null?null:safe6View(partitionValues,'Account partition');
  const marks=new Set([...device.deleted,...cloud.deleted]);
  const localIds=new Set(device.saved.map(p=>String(p.id))),cloudIds=new Set(cloud.saved.map(p=>String(p.id)));
  if(partition&&partition.deleted.some(id=>!marks.has(String(id))))throw Error('Account copy has additional deletion markers. Review them before reconciliation.');
  if(partition)for(const p of partition.saved){const id=String(p.id);if(!localIds.has(id)&&!cloudIds.has(id)&&!marks.has(id))throw Error('Account copy has an additional undeleted parlay: '+String(p.name||id)+'. Review it before reconciliation.');}
- const kept=new Map(),removed=new Map();
+ const kept=new Map(),removed=new Map(),renames=[];
+ const equal=(a,b)=>JSON.stringify(safe6StableValue(a))===JSON.stringify(safe6StableValue(b));
+ const withoutName=({name,...rest})=>rest;
  for(const p of [...device.saved,...cloud.saved]){
   const id=String(p.id);
   if(marks.has(id)){removed.set(id,p);continue;}
-  if(kept.has(id)&&JSON.stringify(safe6StableValue(kept.get(id)))!==JSON.stringify(safe6StableValue(p)))throw Error('Different edits share saved ID '+id+'. No reconciliation performed.');
+  if(kept.has(id)&&!equal(kept.get(id),p)){
+   const local=kept.get(id);
+   if(typeof local.name!=='string'||typeof p.name!=='string'||!equal(withoutName(local),withoutName(p)))throw Error('Different edits share saved ID '+id+' ('+String(local.name||'Untitled')+'). No reconciliation performed.');
+   renames.push({id,device:local.name,cloud:p.name,chosen:nameSource==='device'?local.name:p.name});
+   if(nameSource==='device')continue;
+  }
   if(!Array.isArray(p.legs)||!p.legs.length)throw Error('Saved parlay '+id+' has no valid leg list.');
   kept.set(id,p);
  }
  if(device.saved.length&&!kept.size)throw Error('No saved parlays would remain. Review deletion markers before proceeding.');
- return {next:{saved:[...kept.values()],deleted:[...marks].sort()},removed:[...removed.values()]};
+ if(partition)for(const p of partition.saved){const q=kept.get(String(p.id));if(q&&!equal(withoutName(p),withoutName(q)))throw Error('Account copy has different parlay details: '+String(p.name||p.id));}
+ return {next:{saved:[...kept.values()],deleted:[...marks].sort()},removed:[...removed.values()],renames};
 }
 function guardSavedCloudPull(local,cloud){
  const nextIds=new Set(cloud.saved.map(p=>String(p.id))),markers=new Set(cloud.deleted.map(String));
@@ -4097,7 +4106,7 @@ function preserveSavedRecovery(uid,remote,reason){
 }
 const reconcileSavedButton=document.createElement('button');reconcileSavedButton.id='reviewSavedReconciliation';reconcileSavedButton.type='button';reconcileSavedButton.className='btn alt';reconcileSavedButton.textContent='Review saved-parlay reconciliation';
 $('sbSyncNow').parentNode.insertBefore(reconcileSavedButton,$('sbSyncNow'));
-async function reconcileSavedParlays(){
+async function reconcileSavedParlays(nameSource="device"){
  if(!stage1WriteAllowed()){status('Reconciliation is locked outside the production URL.');return;}
  if(busy){status('Another cloud operation is running.');return;}
  busy=true;safe6Running=false;let cloudWritten=false,uid=null;
@@ -4109,14 +4118,14 @@ async function reconcileSavedParlays(){
   const partRaw=phase3LocalStorage.getItem(ACCOUNT_PREFIX+uid),part=partRaw===null?null:JSON.parse(partRaw);
   if(part!==null&&(!part||typeof part!=='object'||Array.isArray(part)))throw Error('Account copy is invalid.');
   const cloudBefore=safe6Canonical(safe6View(personalCloudValues(remote.payload),'Cloud'));
-  const plan=planSavedReconciliation(snapshot(),personalCloudValues(remote.payload),part),expected=safe6Canonical(plan.next);
+  const plan=planSavedReconciliation(snapshot(),personalCloudValues(remote.payload),part,nameSource),expected=safe6Canonical(plan.next);
   const unchanged=()=>{
    if(!safe6Active(uid)||safe6Canonical(safe6View(snapshot(),'Device'))!==before||phase3LocalStorage.getItem(ACCOUNT_PREFIX+uid)!==partRaw)throw Error('Account or device changed during review. Backup retained; retry after inspection.');
   };
   unchanged();preserveSavedRecovery(uid,remote,'Before explicit saved-parlay reconciliation');
   downloadJSON({format:'nfl-saved-reconciliation-backup-v1',uid,exported_at:new Date().toISOString(),storage:fullLocalBackup(),cloud:{updated_at:remote.updated_at,payload:personalCloudValues(remote.payload)}},'nfl-parlay-reconciliation-backup-'+new Date().toISOString().slice(0,10)+'.json');
   const label=p=>String(p.name||'Untitled')+' · '+p.legs.length+' legs · ID '+String(p.id);
-  const text='Verify the backup download before approving.\n\nKEEP / MERGE ('+plan.next.saved.length+'):\n'+(plan.next.saved.map(label).join('\n')||'None')+'\n\nREMOVE FROM THIS DEVICE because already marked deleted ('+plan.removed.length+'):\n'+(plan.removed.map(label).join('\n')||'None')+'\n\nKeep '+plan.next.deleted.length+' deletion markers. This writes the reviewed saved list to your signed-in cloud row and refreshes this device account copy. Drafts stay local and cloud draft data is preserved. Automatic sync remains paused.';
+  const text='Verify the backup download before approving.\n\nKEEP / MERGE ('+plan.next.saved.length+'):\n'+(plan.next.saved.map(label).join('\n')||'None')+'\n\nNAME-ONLY DIFFERENCES ('+plan.renames.length+') — keep '+nameSource+' names:\n'+(plan.renames.map(r=>r.device+' / '+r.cloud+' → '+r.chosen).join('\n')||'None')+'\n\nREMOVE FROM THIS DEVICE because already marked deleted ('+plan.removed.length+'):\n'+(plan.removed.map(label).join('\n')||'None')+'\n\nKeep '+plan.next.deleted.length+' deletion markers. This writes the reviewed saved list to your signed-in cloud row and refreshes this device account copy. Drafts stay local and cloud draft data is preserved. Automatic sync remains paused.';
   if(!await phase3V10Confirm('Review saved-parlay reconciliation',text,'Backup verified — apply reviewed list')){status('Reconciliation canceled. Saved records unchanged; auto-sync paused.');return;}
   unchanged();const fresh=await readRemote(uid);
   if(!fresh||fresh.updated_at!==remote.updated_at||safe6Canonical(safe6View(personalCloudValues(fresh.payload),'Cloud'))!==cloudBefore)throw Error('Cloud changed during review. No reconciliation write attempted.');
@@ -4135,7 +4144,10 @@ async function reconcileSavedParlays(){
  }catch(e){status('Reconciliation stopped: '+e.message+(cloudWritten?' Cloud write occurred; keep sync paused and inspect before retrying.':' No verified cloud write; device saved list was not replaced.'));}
  finally{safe6Running=false;busy=false;}
 }
-reconcileSavedButton.onclick=reconcileSavedParlays;
+reconcileSavedButton.onclick=()=>reconcileSavedParlays('device');
+const reconcileCloudNamesButton=document.createElement('button');reconcileCloudNamesButton.type='button';reconcileCloudNamesButton.className='btn alt';reconcileCloudNamesButton.textContent='Review reconciliation (keep cloud names)';
+reconcileSavedButton.after(reconcileCloudNamesButton);
+reconcileCloudNamesButton.onclick=()=>reconcileSavedParlays('cloud');
 
 async function safe9DeleteSaved(requestedIds=null,cardFeedback=null,cardId=null){
  if(!stage1WriteAllowed()){safe10DeletionFeedback('Cloud deletion is disabled outside the production URL.');return;}
