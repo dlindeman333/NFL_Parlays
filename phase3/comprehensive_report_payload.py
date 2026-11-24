@@ -3,6 +3,8 @@ from phase3.comprehensive_reporting import summarize
 from collections import defaultdict
 
 def report_payload(picks, parlays):
+    picks=list(picks)
+    parlays=list(parlays)
     individual=[dict(category=c,market=m,**counts) for (c,m),counts in sorted(summarize(picks).items())]
     groups=defaultdict(lambda:dict(captured=0,hit=0,miss=0,pending=0))
     seen=set()
