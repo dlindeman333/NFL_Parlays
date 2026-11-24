@@ -1,4 +1,5 @@
 """Exercise identical authenticated TEST report reads on desktop and mobile."""
+import argparse
 import json
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
@@ -77,11 +78,16 @@ def verify_browser_capture(page):
     print('PASS: actual browser model freezes Top 12, same-game and same-kickoff multi-game selections')
 
 
-def main():
+def main(engine):
     with sync_playwright() as playwright:
-        browser = playwright.chromium.launch()
-        for width, height in [(1440, 900), (390, 844)]:
-            context = browser.new_context(viewport={'width': width, 'height': height}, accept_downloads=True)
+        browser = getattr(playwright, engine).launch()
+        profiles = [{'viewport': {'width': 1440, 'height': 900}},
+                    {'viewport': {'width': 390, 'height': 844}}]
+        if engine == 'webkit':
+            profiles = [dict(playwright.devices['iPhone 13'])]
+            profiles[0].pop('default_browser_type', None)
+        for profile in profiles:
+            context = browser.new_context(**profile, accept_downloads=True)
             context.route('**/*', route)
             context.add_init_script("""(() => {
                 if(!location.href.startsWith('https://dlindeman333.github.io/NFL_Parlays_Test/'))return;
@@ -112,12 +118,14 @@ def main():
             page.evaluate("document.dispatchEvent(new Event('phase3-account-signed-out'))")
             assert page.locator('#comprehensiveCloudExport').is_disabled()
             assert not errors, errors
-            if width == 1440:
+            if profile['viewport']['width'] == 1440:
                 verify_browser_capture(page)
             context.close()
         browser.close()
-    print('PASS: authenticated report, scope, export and sign-out at desktop and iPhone widths')
+    print(f'PASS: {engine} authenticated report, scope, export and sign-out')
 
 
 if __name__ == '__main__':
-    main()
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument('--engine', choices=('chromium', 'webkit'), default='chromium')
+    main(parser.parse_args().engine)
