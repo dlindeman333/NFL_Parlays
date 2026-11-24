@@ -1,0 +1,27 @@
+const assert=require('node:assert/strict');
+const fs=require('node:fs');
+const vm=require('node:vm');
+const path=require('node:path');
+function element(){return {children:[],style:{},append(x){this.children.push(x)},replaceChildren(x){this.children=[x]}}}
+const context=vm.createContext({document:{createElement:element,createDocumentFragment:element}});
+for(const file of ['comprehensive_dashboard_review.js','comprehensive_workbook_review.js','comprehensive_view_review.js'])vm.runInContext(fs.readFileSync(path.join(__dirname,file),'utf8'),context);
+const container=element();
+const existing=[['Legacy',[['Original']]]];
+const bundle={schema_version:4,dashboard:{individual:[{category:'top12',market:'all',graded_decisions:4,hit_rate:.75,hit:3,miss:1},{category:'recommended',market:'all',graded_decisions:2,hit_rate:.5,hit:1,miss:1}],suggested_parlays:[]},workbook_tables:{'AI Performance':[{hit:3,hit_rate:.75}],'Suggested Legs':[]}};
+const sheets=context.mountComprehensiveReview(container,bundle,existing);
+assert.equal(sheets.length,3);
+assert.equal(sheets[0],existing[0]);
+assert.equal(existing.length,1);
+assert.equal(sheets[1][1][1][1],.75);
+assert.match(sheets[2][1][0][0],/No authentic/);
+const cards=container.children[0].children;
+assert.equal(cards.length,4);
+assert.equal(cards[0].children[1].textContent,'75.0%');
+assert.equal(cards[0].children[1].style.color,'#24975b');
+assert.equal(cards[1].children[1].style.color,'#b58b16');
+assert.equal(cards[2].children[1].textContent,'Not yet graded');
+assert.throws(()=>context.mountComprehensiveReview(container,{...bundle,schema_version:3},existing),/Invalid/);
+const previous=container.children;
+assert.throws(()=>context.mountComprehensiveReview(container,bundle,[['V4 AI Performance',[]]]),/Duplicate/);
+assert.equal(container.children,previous);
+console.log('PASS: shared view, legacy sheets, numeric rates, empty history, thresholds, invalid version and atomic validation');
