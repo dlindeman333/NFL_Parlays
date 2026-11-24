@@ -20,8 +20,8 @@ WINDOW_MIN = timedelta(minutes=30)
 WINDOW_MAX = timedelta(minutes=35)
 # Warm the ephemeral CI runner before the five-minute capture window starts.
 # This does not broaden the permitted time of a database INSERT.
-PREP_MAX = timedelta(minutes=50)
-MAX_WAIT_SECONDS = 20 * 60
+PREP_MAX = timedelta(minutes=100)
+MAX_WAIT_SECONDS = 70 * 60
 ROOT = Path(__file__).resolve().parent
 TOP_N = 12
 SUPPORTED_STATS = {'passing_yards', 'rushing_yards', 'receiving_yards', 'receptions', 'touchdowns'}
@@ -122,7 +122,7 @@ def check_window(*, preparation=False):
     events = schedule(max_lead=PREP_MAX) if preparation else schedule()
     eligible = bool(events)
     emit_eligibility(eligible)
-    window = '30–50 minute preparation' if preparation else '30–35 minute capture'
+    window = '30–100 minute preparation' if preparation else '30–35 minute capture'
     print(f'{window} window: {len(events)} eligible game(s); '
           + ('runner may prepare' if preparation and eligible else
              'capture may proceed' if eligible else 'no eligible game'))
@@ -239,7 +239,7 @@ def main():
         page.evaluate('(csv) => loadCSV(csv, {persist:false})', stats[0]['csv_text'])
         for e in pending:
             if not e['a'] or not e['h']:
-                continue
+                raise RuntimeError(f"Missing team mapping for {e['id']}")
             result = page.evaluate('''e => {
               const a=normalizeTeam(e.a),h=normalizeTeam(e.h);
               if(!T[a]||!T[h])return null;
@@ -258,16 +258,16 @@ def main():
               return {away_team:a,home_team:h,picks};
             }''', e)
             if not result or not result['picks']:
-                continue
+                raise RuntimeError(f"No model picks for {e['id']}")
             # Filter excluded injuries BEFORE the limit, filling from next-ranked picks.
             filtered=select_top12(result['picks'], reports['records'], e['week'])
-            if not filtered: continue
+            if len(filtered) != TOP_N:
+                raise RuntimeError(f"Expected {TOP_N} eligible picks for {e['id']}; got {len(filtered)}")
             # Browser startup and model evaluation can take several minutes.
             # The database independently enforces the 30-minute minimum.
             kickoff = datetime.fromisoformat(e['kickoff'])
             if not within_capture_window(kickoff, datetime.now(timezone.utc)):
-                print('Skipped', e['id'], ': capture window elapsed during processing')
-                continue
+                raise RuntimeError(f"Capture window elapsed for {e['id']}; no late write")
             row = {'season': SEASON, 'week': e['week'], 'game_id': e['id'],
                    'away_team': result['away_team'], 'home_team': result['home_team'],
                    'kickoff_at': e['kickoff'], 'model_version': 'browser-model-2026-phase3-top12-v1',
@@ -284,7 +284,7 @@ def main():
                         raise RuntimeError('New v3 capture was not verified after INSERT; '
                                            'possible duplicate or unexpected timestamp')
                     print('Archived verified Top 12 v3 week', e['week'], result['away_team'], '@', result['home_team'],
-                          len(filtered), 'picks; HTTP', r.status)
+                          len(filtered), 'picks; server timestamp', saved[0]['created_at'], 'HTTP', r.status)
             except HTTPError as err:
                 raise RuntimeError(f'Prediction snapshot upload HTTP {err.code}: {err.read().decode()[:500]}') from err
         browser.close()
@@ -295,9 +295,9 @@ if __name__ == '__main__':
     parser.add_argument('--check-window', action='store_true',
                         help='Read-only kickoff-window check for scheduled capture')
     parser.add_argument('--check-prep-window', action='store_true',
-                        help='Read-only 30–50 minute runner preparation check')
+                        help='Read-only 30–100 minute runner preparation check')
     parser.add_argument('--wait-for-window', action='store_true',
-                        help='Wait at most 20 minutes then recheck 30–35 minute window')
+                        help='Wait at most 70 minutes then recheck 30–35 minute window')
     args = parser.parse_args()
     if sum((args.check_window, args.check_prep_window, args.wait_for_window)) > 1:
         parser.error('Select only one read-only window mode')
