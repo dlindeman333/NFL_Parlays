@@ -62,7 +62,18 @@ with sync_playwright() as p:
         # its shortcut lands at the leg/odds selectors (not halfway down picks).
         assert page.locator('#bestRiskParlayControls').count()==1
         assert page.evaluate("document.getElementById('uiPlaysSection').compareDocumentPosition(document.getElementById('uiRiskSection')) & Node.DOCUMENT_POSITION_FOLLOWING")
-        if mobile: page.locator('#skipNavToggle').click()
+        if mobile:
+            account=page.locator('#topAccountPanel')
+            toggle=page.locator('#skipNavToggle')
+            drawer=page.locator('#stickySkipNavigation')
+            for expanded in (True,False):
+                if (account.get_attribute('open') is not None)!=expanded:
+                    account.locator(':scope > summary').click()
+                toggle.click()
+                assert drawer.get_attribute('open') is not None
+                toggle.click()
+                assert drawer.get_attribute('open') is None
+            toggle.click()
         page.locator('#skipNavLinks a[href="#bestRiskParlayControls"]').click()
         page.wait_for_function("""() => {
           const box=document.getElementById('bestRiskParlayControls');
