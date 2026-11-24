@@ -28,6 +28,8 @@ jobs:
         run: |
           python -m unittest discover -s phase3 -p 'test_*.py' -v
           node phase3/check_frontend.cjs
+          node phase3/test_saved_sync_merge.cjs
+          node phase3/test_saved_sync_retry.cjs
           node phase3/test_top12_contract.cjs
           node phase3/test_player_props.cjs
           node phase3/test_advanced_optimizer.cjs
