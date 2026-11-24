@@ -104,11 +104,13 @@ console.log(checks+' Prediction Results CSV contract groups passed (synthetic da
 (async()=>{
  const elems={},requests=[],downloads=[];
  const el=id=>elems[id]||(elems[id]={value:'',textContent:'',disabled:false,checked:false,
-  handlers:{},addEventListener(name,handler){this.handlers[name]=handler},append(){},after(){}});
+  handlers:{},addEventListener(name,handler){this.handlers[name]=handler},append(){},after(){},replaceChildren(){}});
  const panel={firstChild:null,insertBefore(node){this.node=node}};
  const fakeDocument={
+  addEventListener(name,handler){this.handlers[name]=handler},handlers:{},
   getElementById:id=>id==='advPerformancePanel'?panel:id==='cloudOfficialGrades'?null:elems[id]||null,
   createElement:tag=>{
+   if(tag==='a')return {click(){downloads.push({blob:blobs.get(this.href),filename:this.download})}};
    if(tag==='option')return {value:'',textContent:''};
    return {className:'',id:'',setAttribute(){},
     set innerHTML(value){this._html=value;for(const match of value.matchAll(/id="([^"]+)"/g))el(match[1]);},
@@ -125,7 +127,10 @@ console.log(checks+' Prediction Results CSV contract groups passed (synthetic da
   if(url.includes('/scoreboard?'))return {ok:true,json:async()=>({events})};
   throw Error('Unexpected read endpoint: '+url);
  };
- const browserContext={window:{},document:fakeDocument,fetch,
+ const blobs=new Map();
+ const browserContext={window:{phase3FetchCsvArchive:path=>fetch(path,{method:'GET'})},document:fakeDocument,fetch,
+  URL:{createObjectURL(blob){const key='blob:'+blobs.size;blobs.set(key,blob);return key},revokeObjectURL(key){blobs.delete(key)}},
+  performancePickExportFields:()=>({}),
   CLOUD_URL:'https://example.invalid',CLOUD_PUBLIC_KEY:'synthetic-read-key',
   currentNFLSeason:()=>2026,SEASON:2026,MODEL_SEASON:2026,wk:11,WKS:{},
   performanceRows:()=>[],performancePickName:()=>'',hasCompletedPlayerStats:()=>false,

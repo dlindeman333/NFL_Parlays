@@ -34,7 +34,7 @@ class CaptureWindowChecks(unittest.TestCase):
         self.assertTrue(all(e['a'] == 'BUF' and e['h'] == 'MIA' for e in found))
 
     def test_preparation_early_but_capture_still_strict(self):
-        events = [self.event('preparing', 45), self.event('too-early', 51),
+        events = [self.event('preparing', 90), self.event('too-early', 101),
                   self.event('ready', 34), self.event('too-late', 29),
                   self.event('in-progress', 45, 'in')]
         def feed(url, **kwargs):

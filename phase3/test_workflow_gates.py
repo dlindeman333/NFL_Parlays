@@ -18,8 +18,8 @@ class ProductionFeatureGateTests(unittest.TestCase):
         self.assertIn('python snapshot_predictions.py --check-prep-window', self.pregame)
         self.assertIn('python snapshot_predictions.py --wait-for-window', self.pregame)
         self.assertIn("if: steps.prep.outputs.eligible == 'true'", self.pregame)
-        self.assertEqual(self.pregame.count("if: steps.window.outputs.eligible == 'true'"), 2)
-        self.assertIn('timeout-minutes: 25', self.pregame)
+        self.assertEqual(self.pregame.count("if: steps.window.outputs.eligible == 'true'"), 1)
+        self.assertIn('timeout-minutes: 85', self.pregame)
 
     def test_stats_continue_while_phase3_writers_are_disabled(self):
         self.assertIn('run: python export_automated.py', self.stats)
