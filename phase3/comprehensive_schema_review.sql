@@ -1,4 +1,4 @@
--- REVIEW ONLY. Not an installed migration. Do not apply to production.
+-- Release candidate migration for NFL-Parlays-Phase3-Test.
 begin;
 create table public.nfl_prediction_snapshots_v4 (
  season integer not null, week integer not null check (week between 1 and 22),
@@ -36,5 +36,30 @@ alter table public.nfl_prediction_snapshots_v4 enable row level security;
 alter table public.nfl_prediction_grades_v4 enable row level security;
 revoke all on public.nfl_prediction_snapshots_v4,public.nfl_prediction_grades_v4 from public,anon,authenticated,service_role;
 grant select,insert on public.nfl_prediction_snapshots_v4,public.nfl_prediction_grades_v4 to service_role;
--- Client grants deliberately deferred until existing subscription/access policy is audited.
+-- Shared report projections contain only model forecasts and public game results.
+-- Personal saved parlays and browser-only tracking are never read by the worker.
+create table public.nfl_prediction_reports_v4 (
+ season integer not null,
+ week integer not null check (week between 0 and 22),
+ generated_at timestamptz not null default clock_timestamp(),
+ bundle jsonb not null check (jsonb_typeof(bundle) = 'object'),
+ primary key(season, week)
+);
+alter table public.nfl_prediction_reports_v4 enable row level security;
+revoke all on public.nfl_prediction_reports_v4 from public,anon,authenticated,service_role;
+grant select on public.nfl_prediction_reports_v4 to authenticated;
+grant select,insert,update on public.nfl_prediction_reports_v4 to service_role;
+create policy nfl_v4_read_reports on public.nfl_prediction_reports_v4
+ for select to authenticated using (
+  (select auth.uid()) is not null
+  and coalesce((select auth.jwt()->>'is_anonymous'),'false') = 'false'
+ );
+create table public.nfl_prediction_injuries_v4 (
+ season integer primary key,
+ fetched_at timestamptz not null,
+ records jsonb not null check (jsonb_typeof(records) = 'array')
+);
+alter table public.nfl_prediction_injuries_v4 enable row level security;
+revoke all on public.nfl_prediction_injuries_v4 from public,anon,authenticated,service_role;
+grant select,insert,update on public.nfl_prediction_injuries_v4 to service_role;
 commit;

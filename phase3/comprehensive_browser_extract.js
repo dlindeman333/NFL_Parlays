@@ -1,5 +1,9 @@
-// Review-only Playwright evaluation function. Not loaded by production index.html.
+// Run the existing browser model for the scheduled capture week.
 (e) => {
+  if(SEASON!==MODEL_SEASON||!Number.isInteger(e.week)||e.week<1||e.week>22)
+    throw Error('Capture model season or week is unavailable');
+  wk=e.week;
+  refreshPlayerMarkets();
   const a=normalizeTeam(e.a), h=normalizeTeam(e.h);
   if (!T[a] || !T[h] || a===h) throw Error('Invalid matchup');
   const g=build([['espn'+e.id,a,h,'Scheduled',null]])[0];

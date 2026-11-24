@@ -18,6 +18,7 @@ jobs:
         with:
           python-version: '3.11'
       - run: python run_comprehensive_review_tests.py
+      - run: python -m unittest discover -s phase3
       - uses: actions/setup-node@v4
         with:
           node-version: '22'
@@ -27,3 +28,12 @@ jobs:
       - run: python -m pip install playwright
       - run: python -m playwright install --with-deps chromium
       - run: python phase3/comprehensive_browser_review.py
+      - run: python phase3/comprehensive_cloud_browser_test.py
+      - run: python phase3/browser_smoke.py
+      - run: |
+          for test in phase3/check_frontend.cjs phase3/test_*.cjs; do
+            case "$test" in
+              *test_comprehensive_xlsx_review.cjs) continue ;;
+            esac
+            node "$test" || exit 1
+          done

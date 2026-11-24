@@ -1,11 +1,12 @@
 """One desktop/mobile browser smoke check using synthetic data; no live writes."""
 import json
 import os
+from urllib.parse import urlsplit
 from datetime import datetime, timezone
 from pathlib import Path
 from playwright.sync_api import sync_playwright
 
-html=(Path(__file__).resolve().parents[1]/'index.html').read_text()
+ROOT=Path(__file__).resolve().parents[1]
 with sync_playwright() as p:
     # CI uses Playwright's installed Chromium; local reviewers may supply an
     # already-installed system Chromium without downloading another browser.
@@ -22,7 +23,7 @@ with sync_playwright() as p:
         def route(request_route):
             request=request_route.request
             if request.url.startswith('https://dlindeman333.github.io/NFL_Parlays/'):
-                return request_route.fulfill(body=html,content_type='text/html')
+                return request_route.fulfill(path=ROOT / urlsplit(request.url).path.split('/NFL_Parlays/',1)[1])
             if '.supabase.co/rest/v1/' in request.url:
                 if request.method!='GET': writes.append(request.url)
                 rows=[]
