@@ -1,5 +1,5 @@
 """Normalize capture rows without inventing lines or recommendations."""
-from comprehensive_tracking import rank_predictions, finite
+from phase3.comprehensive_tracking import rank_predictions, finite
 
 def prepare_capture(advanced, alternatives):
     # Advanced recommendations arrive in original model order.
