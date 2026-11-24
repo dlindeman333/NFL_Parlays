@@ -12,7 +12,9 @@ with sync_playwright() as p:
     executable=os.environ.get('PLAYWRIGHT_CHROMIUM_EXECUTABLE')
     browser=p.chromium.launch(executable_path=executable) if executable else p.chromium.launch()
     for mobile in (False,True):
-        context=browser.new_context(viewport={'width':390 if mobile else 1365,'height':844},is_mobile=mobile,has_touch=mobile,service_workers='block')
+        profile=dict(p.devices['iPhone 13']) if mobile else {'viewport':{'width':1365,'height':844}}
+        profile.pop('default_browser_type',None)
+        context=browser.new_context(**profile,service_workers='block')
         # Pin the historical model season in this throwaway browser context;
         # otherwise next year's CI would disable the 2026-only model by design.
         context.add_init_script("localStorage.setItem('nflp-production-isolated-v1:nflp-selected-season-v1','2026')")
@@ -66,15 +68,29 @@ with sync_playwright() as p:
             account=page.locator('#topAccountPanel')
             toggle=page.locator('#skipNavToggle')
             drawer=page.locator('#stickySkipNavigation')
+            assert page.evaluate("matchMedia('(max-width:700px)').matches"), 'Expected mobile CSS breakpoint'
+            def tap_skip():
+                try:
+                    toggle.tap(timeout=8000)
+                except Exception:
+                    print('Mobile hit-test diagnostics:',json.dumps(page.evaluate('''() => {
+                      const e=document.getElementById('skipNavToggle'), r=e.getBoundingClientRect();
+                      const chain=[]; for(let n=e;n;n=n.parentElement){const s=getComputedStyle(n);chain.push({id:n.id,tag:n.tagName,position:s.position,zIndex:s.zIndex,pointerEvents:s.pointerEvents,transform:s.transform,rect:n.getBoundingClientRect().toJSON()});}
+                      return {width:innerWidth,height:innerHeight,scrollY,visualViewport:visualViewport&&{width:visualViewport.width,height:visualViewport.height,scale:visualViewport.scale},hit:document.elementsFromPoint(r.x+r.width/2,r.y+r.height/2).slice(0,8).map(n=>({tag:n.tagName,id:n.id})),chain};
+                    }''')),flush=True)
+                    raise
             for expanded in (True,False):
                 if (account.get_attribute('open') is not None)!=expanded:
-                    account.locator(':scope > summary').click()
-                toggle.click()
+                    account.locator(':scope > summary').tap()
+                assert (account.get_attribute('open') is not None)==expanded
+                tap_skip()
                 assert drawer.get_attribute('open') is not None
-                toggle.click()
+                tap_skip()
                 assert drawer.get_attribute('open') is None
-            toggle.click()
-        page.locator('#skipNavLinks a[href="#bestRiskParlayControls"]').click()
+            tap_skip()
+        shortcut=page.locator('#skipNavLinks a[href="#bestRiskParlayControls"]')
+        if mobile: shortcut.tap()
+        else: shortcut.click()
         page.wait_for_function("""() => {
           const box=document.getElementById('bestRiskParlayControls');
           const nav=document.getElementById('stickySkipNavigation');
