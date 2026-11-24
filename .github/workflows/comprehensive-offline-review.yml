@@ -18,3 +18,7 @@ jobs:
         with:
           python-version: '3.11'
       - run: python run_comprehensive_review_tests.py
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - run: node phase3/test_comprehensive_view_review.cjs
