@@ -22,3 +22,5 @@ jobs:
         with:
           node-version: '22'
       - run: node phase3/test_comprehensive_view_review.cjs
+      - run: node phase3/test_comprehensive_xlsx_review.cjs /tmp/comprehensive-review.xlsx
+      - run: python phase3/check_comprehensive_xlsx_review.py /tmp/comprehensive-review.xlsx
