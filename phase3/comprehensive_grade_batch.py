@@ -12,7 +12,7 @@ def grade_snapshot(snapshot, final, player_grade, existing=()):
     seen=set(existing)
     rows=[]
     for index,pick in enumerate(snapshot['picks']):
-        key=pick_key(index,pick)
+        key=pick_key(pick,index)
         if key in seen:
             continue
         if pick.get('market')=='player':
@@ -26,5 +26,5 @@ def grade_snapshot(snapshot, final, player_grade, existing=()):
         status,actual=result
         if status not in ('hit','miss') or number(actual) is None:
             raise ValueError('Invalid grade')
-        rows.append(dict(pick_key=key,result=status,actual=actual))
+        rows.append(dict(season=snapshot['season'],week=snapshot['week'],game_id=str(snapshot['game_id']),pick_key=key,outcome=status,actual_value=number(actual)))
     return rows
