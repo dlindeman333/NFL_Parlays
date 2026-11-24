@@ -2,6 +2,8 @@
 from phase3.comprehensive_report_payload import report_payload
 
 def export_tables(picks, parlays):
+    picks=list(picks)
+    parlays=list(parlays)
     report=report_payload(picks,parlays)
     legs=[]
     summaries=[]
