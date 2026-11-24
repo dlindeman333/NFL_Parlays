@@ -27,7 +27,14 @@
   }
   if(Number.isFinite(g.tot)) for(const side of ['o','u'])
     alternatives.push({market:'total',side,line:g.tot,probability:.5,probability_source:'placeholder'});
+  for(const t of ['a','h']){
+    const line=PN.td[1], over=g.pp?.[t]?.tdp;
+    if(Number.isFinite(line)&&Number.isFinite(over)&&over>0&&over<1)
+      for(const side of ['o','u']) alternatives.push({market:'team_touchdowns',
+        team:t==='a'?a:h,side,line,probability:side==='o'?over:1-over,
+        probability_source:'model',model_preferred:false,line_source:'model_default'});
+  }
   return {away_team:a,home_team:h,advanced,alternatives,
-    unavailable_markets:['team_total','team_touchdowns'],
-    unavailable_reason:'Verified line provenance and team touchdown mapping pending'};
+    unavailable_markets:['team_total'],
+    unavailable_reason:'Team points lines are device-entered; no automated verified source'};
 }
