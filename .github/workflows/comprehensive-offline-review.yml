@@ -1,0 +1,20 @@
+name: Comprehensive tracking offline review
+on:
+  push:
+    branches:
+      - review/comprehensive-ai-tracking
+permissions:
+  contents: read
+jobs:
+  offline-tests:
+    if: github.ref == 'refs/heads/review/comprehensive-ai-tracking'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - run: python run_comprehensive_review_tests.py
