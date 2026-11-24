@@ -65,6 +65,18 @@ with sync_playwright() as p:
         # its shortcut lands at the leg/odds selectors (not halfway down picks).
         assert page.locator('#bestRiskParlayControls').count()==1
         assert page.evaluate("document.getElementById('uiPlaysSection').compareDocumentPosition(document.getElementById('uiRiskSection')) & Node.DOCUMENT_POSITION_FOLLOWING")
+        if not mobile:
+            page.evaluate("window.scrollTo({top:700,behavior:'instant'})")
+            for expanded in (False, True, False):
+                page.evaluate("(open) => document.getElementById('stickySkipNavigation').open=open", expanded)
+                page.wait_for_function("""() => {
+                    const nav=document.getElementById('stickySkipNavigation').getBoundingClientRect();
+                    const quick=document.getElementById('quickFiltersBar').getBoundingClientRect();
+                    const toggle=document.getElementById('qfCollapseToggle').getBoundingClientRect();
+                    return scrollY>100 && Math.abs(nav.top)<2 && Math.abs(quick.top-nav.bottom)<2 &&
+                      document.elementFromPoint(toggle.left+12,toggle.top+12)?.closest('#qfCollapseToggle');
+                }""")
+            page.evaluate("window.scrollTo({top:0,behavior:'instant'})")
         if mobile:
             account=page.locator('#topAccountPanel')
             toggle=page.locator('#skipNavToggle')
