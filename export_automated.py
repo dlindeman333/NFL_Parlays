@@ -19,6 +19,7 @@ import urllib.request
 import urllib.error
 from datetime import datetime, timezone
 import warnings
+import time
 import numpy as np
 import pandas as pd
 import nflreadpy as nfl
@@ -58,9 +59,20 @@ def first_column(df, options, required=False):
     return None
 
 
+def load_with_retry(loader, label, attempts=3, sleep=time.sleep):
+    for attempt in range(1, attempts+1):
+        try:
+            return loader()
+        except (ConnectionError, TimeoutError, OSError) as exc:
+            if attempt == attempts:
+                raise RuntimeError(f"{label} unavailable after {attempts} attempts; refresh aborted without substituting stale data") from exc
+            print(f"{label} download failed (attempt {attempt}/{attempts}); retrying", flush=True)
+            sleep(5 * 2**(attempt-1))
+
+
 def load_schedule():
     print("Loading NFL schedule...")
-    sc = frame(nfl.load_schedules([SEASON]))
+    sc = frame(load_with_retry(lambda: nfl.load_schedules([SEASON]), 'NFL schedule'))
     sc = sc.copy()
     week_col = first_column(sc, ["week"], True)
     home_col = first_column(sc, ["home_team"], True)
@@ -95,7 +107,7 @@ def load_schedule():
 
 def load_players():
     print("Loading weekly player statistics...")
-    raw = frame(nfl.load_player_stats([SEASON]))
+    raw = frame(load_with_retry(lambda: nfl.load_player_stats([SEASON]), 'NFL player statistics'))
     type_col = first_column(raw, ["season_type", "game_type"])
     if type_col:
         raw = raw[raw[type_col].astype(str).str.upper().eq("REG")].copy()
