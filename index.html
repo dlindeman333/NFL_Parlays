@@ -3945,7 +3945,7 @@ function safe6MergeIndex(s){const m=new Map(),d=new Set(s.deleted.map(String));f
 function safe6MergePlan(base,cloud,device){const b=safe6MergeIndex(base),c=safe6MergeIndex(cloud),l=safe6MergeIndex(device),conflicts=[],cs=[],ls=[],baseline=[];const marks=new Set([...b.d,...c.d,...l.d]);const ids=new Set([...b.m.keys(),...c.m.keys(),...l.m.keys()]);for(const id of ids){const x=b.m.get(id),y=c.m.get(id),z=l.m.get(id);let reason='';if(marks.has(id)){if((y&&!safe6Equal(y,x))||(z&&!safe6Equal(z,x)))reason='delete/edit conflict';else continue;}else if(x&&(!y||!z))reason='missing without deletion marker';else if(!safe6Equal(y,z)&&!safe6Equal(y,x)&&!safe6Equal(z,x))reason='concurrent edit';if(reason){conflicts.push({id,reason});if(y)cs.push(y);if(z)ls.push(z);if(x)baseline.push(x);continue;}const p=safe6Equal(y,z)?y:safe6Equal(y,x)?z:y;if(p){cs.push(p);ls.push(p);baseline.push(p);}}// Deletion/edit conflicts must block all writes until reviewed: a shared marker cannot coexist with a retained record.
 const blocked=conflicts.some(x=>marks.has(x.id));return {blocked,conflicts,cloud:{saved:cs,deleted:[...marks].sort()},device:{saved:ls,deleted:[...marks].sort()},baseline:{saved:baseline,deleted:[...marks].sort()}};}
 
-function safe6Retryable(e,writeAttempted){return !writeAttempted && (e?.safeReadRetry===true || e?.message==="Cloud changed before write");}
+function safe6Retryable(e,writeAttempted){return !writeAttempted && (e?.safeReadRetry===true || e?.message==="Cloud changed before write" || e?.message==="Account/device changed during synchronization");}
 async function safe6Cycle(){
  if(!stage1WriteAllowed()){safe6Running=false;status('Guarded cloud writes are locked outside the production URL.');return;}
  if(!safe6Running||busy||!auth||!navigator.onLine||document.hidden)return;
@@ -3981,7 +3981,7 @@ async function safe6Cycle(){
   phase3LocalStorage.setItem(safe6Key(uid),JSON.stringify({uid,canonical:safe6Canonical(plan.baseline),enabled:true}));
   if(!plan.conflicts.length)phase3ClearVerifiedRecoveryNotice(uid,plan.cloud);
   status(plan.conflicts.length?'AUTO-SYNC: Safe records synchronized; review conflicts: '+plan.conflicts.map(x=>x.id+' ('+x.reason+')').join(', '):'AUTO-SYNC: Saved parlays synchronized and verified. Drafts preserved.');
- }catch(e){if(safe6Retryable(e,writeAttempted)){status("AUTO-SYNC: Temporary read interruption; will retry automatically. No saved-parlay write attempted.");return;}safe6Running=false;try{const uid=phase3LocalStorage.getItem(OWNER_KEY),key=safe6Key(uid),base=JSON.parse(phase3LocalStorage.getItem(key));if(base&&base.uid===uid){base.enabled=false;phase3LocalStorage.setItem(key,JSON.stringify(base));}}catch(_){}status('AUTO-SYNC v7 PAUSED: '+(e&&e.message||String(e))+'. No further automatic writes. Review before resuming.');}
+ }catch(e){if(safe6Retryable(e,writeAttempted)){status("AUTO-SYNC: Temporary read or device-change interruption; will retry automatically. No saved-parlay write attempted.");return;}safe6Running=false;try{const uid=phase3LocalStorage.getItem(OWNER_KEY),key=safe6Key(uid),base=JSON.parse(phase3LocalStorage.getItem(key));if(base&&base.uid===uid){base.enabled=false;phase3LocalStorage.setItem(key,JSON.stringify(base));}}catch(_){}status('AUTO-SYNC v7 PAUSED: '+(e&&e.message||String(e))+'. No further automatic writes. Review before resuming.');}
  finally{busy=false}
 }
 safe6Button.onclick=async()=>{
@@ -4007,7 +4007,7 @@ safe6Button.onclick=async()=>{
   phase3LocalStorage.setItem(safe6Key(uid),JSON.stringify({uid,canonical:baseline,enabled:true}));safe6Running=true;
   status('AUTO-SYNC v7 ENABLED for this device. Resumes after reload; checks approximately every 15 seconds while tab is active.');
  }catch(e){status('AUTO-SYNC v7 NOT ENABLED: '+(e&&e.message||String(e)));}
- finally{busy=false}
+ finally{busy=false;if(safe6Running)void safe6Cycle()}
 };
 // Phase 3 consolidated cloud deletion controls: one, selected, or all.
 // Cloud-first CAS, readback, then device update. Drafts and unrelated payload keys are preserved.
@@ -4479,6 +4479,9 @@ else status('No saved sign-in found in this browser installation. Sign in to res
 // arrays are discarded, and pagehide would overwrite the new account partition.
 // Explicit sign-out saves; switching accounts snapshots active phase3LocalStorage.
 window.addEventListener('online',()=>{if(safe6Running)safe6Cycle()});
+window.addEventListener('pageshow',()=>{if(safe6Running)safe6Cycle()});
+window.addEventListener('focus',()=>{if(safe6Running)safe6Cycle()});
+document.addEventListener('visibilitychange',()=>{if(!document.hidden&&safe6Running)safe6Cycle()});
 })();
 </script>
 <script>
