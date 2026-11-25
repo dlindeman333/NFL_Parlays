@@ -1961,7 +1961,7 @@ function draw(){
     const dis=(mode==="same"&&focus!==g.id)||!!g.sc;const on=(m,s)=>legs.some(l=>l.gid===g.id&&l.mkt===m&&l.side===s);
     const b=(m,s,t,sub)=>`<button class="o ${on(m,s)?"on":""}" ${dis?"disabled":""} onclick="pick('${g.id}','${m}','${s}')">${t}<span>${sub}</span></button>`;
     const mainChoices=allPickTypes()?gameMainMarkets(g,b):filterHas(pf,'td')?propBtns(g,'td',b):'';
-    return`<div class="card g"><div class="gh" style="cursor:pointer" onclick="tog('${g.id}')"><b>${openG===g.id?"▾":"▸"} <img class="logo" loading="lazy" alt="" src="https://a.espncdn.com/i/teamlogos/nfl/500/${g.a.toLowerCase()}.png" onerror="this.style.display='none'"> ${g.a} @ <img class="logo" loading="lazy" alt="" src="https://a.espncdn.com/i/teamlogos/nfl/500/${g.h.toLowerCase()}.png" onerror="this.style.display='none'"> ${g.h}</b><span class="row"><button type="button" class="pill" onclick="event.stopPropagation();openGameInjuries('${g.a}','${g.h}',${Number(g.week||wk)})">Injuries</button><span class="mu">${g.sc?`Final ${g.a} ${g.sc[0]}, ${g.h} ${g.sc[1]}`:g.tm}</span>${mode==="same"?`<button class="pill ${focus===g.id?"on":""}" onclick="event.stopPropagation();setFocus('${g.id}')">Build here</button>`:""}</span></div>
+    return`<div class="card g"><div class="gh" style="cursor:pointer" onclick="tog('${g.id}')"><b>${openG===g.id?"▾":"▸"} <img class="logo" loading="lazy" alt="" src="https://a.espncdn.com/i/teamlogos/nfl/500/${g.a.toLowerCase()}.png" onerror="this.style.display='none'"> ${g.a} @ <img class="logo" loading="lazy" alt="" src="https://a.espncdn.com/i/teamlogos/nfl/500/${g.h.toLowerCase()}.png" onerror="this.style.display='none'"> ${g.h}</b><span class="row"><button type="button" class="pill" onclick="event.stopPropagation();openGameInjuries('${g.a}','${g.h}',${Number(g.week||wk)})">Injuries</button>${g.sc?'':`<button type="button" class="pill" data-weather-game="${esc(g.id)}" onclick="event.stopPropagation();openGameWeather(this.dataset.weatherGame)">Weather</button>`}<span class="mu">${g.sc?`Final ${g.a} ${g.sc[0]}, ${g.h} ${g.sc[1]}`:g.tm}</span>${mode==="same"?`<button class="pill ${focus===g.id?"on":""}" onclick="event.stopPropagation();setFocus('${g.id}')">Build here</button>`:""}</span></div>
     <div class="mu">${g.a} ${T[g.a][1]}-${T[g.a][2]} · ${g.h} ${T[g.h][1]}-${T[g.h][2]} · <span class="game-meta">${g.sc?"Completed":"Upcoming"}</span><span class="game-card-actions"><button type="button" class="btn alt" onclick="event.stopPropagation();openBestPicks('${g.id}')">Best Picks</button><button type="button" class="btn alt" id="more-picks-button-${g.id}" aria-expanded="${expandedGamePicks.has(gamePicksKey(g.id))}" aria-controls="more-picks-${g.id}" onclick="event.stopPropagation();toggleGamePicks('${g.id}')">${expandedGamePicks.has(gamePicksKey(g.id))?"Hide All Picks":"All Picks"}</button></span></div>
     ${gameHitRateHost(g,wk)}<div class="grid">${mainChoices||'<div class="m mu">No picks in this view match the loaded data. Try All Picks or refresh statistics.</div>'}</div>${moreGamePicks(g,b)}${manualRosterPanel(g)}${det(g)}</div>`}).join("")||`<div class="card mu">No games match this kickoff window.</div>`;
   $("gameCount").textContent=games.filter(vis).length+" of "+games.length+" games · Week "+wk;
@@ -2494,19 +2494,55 @@ function renderAdvanced(){
  window.phase3CaptureCurrentAdvancedSuggestions?.(view);
 }
 $('advView').add(new Option('Smart parlay optimizer (3–6 legs)','optimizer'));
+const phase4WeatherOptions='<option value="none">No adjustment</option><option value="wind">Windy</option><option value="severe">Strong wind</option><option value="wet">Heavy precipitation</option>';
 const phase4Controls=document.createElement('div');phase4Controls.className='phase4-controls';
 phase4Controls.innerHTML='<div id="phase4OptimizerOptions" class="phase4-control-card" hidden><label><b>Optimizer legs</b> <select id="phase4LegCount"><option>3</option><option>4</option><option>5</option><option>6</option></select></label><span class="mu">Different games only · one pick per game · risk-aware ranking</span></div>'+
- '<details class="phase4-control-card"><summary>Manual game-weather scenario (optional)</summary><p class="mu">Enter only weather conditions you have independently checked. These local advisory adjustments do not fetch weather forecasts and do not alter official data or saved picks.</p><div class="tools"><label>Game <select id="phase4WeatherGame"></select></label><label>Condition <select id="phase4WeatherCondition"><option value="none">No adjustment</option><option value="wind">Windy</option><option value="severe">Strong wind</option><option value="wet">Heavy precipitation</option></select></label><button type="button" class="btn alt" id="phase4SaveWeather">Apply to recommendations</button></div><p class="mu" id="phase4WeatherStatus" role="status"></p></details>';
+ '<details class="phase4-control-card"><summary>Manual game-weather scenario (optional)</summary><p class="mu">Enter only weather conditions you have independently checked. These local advisory adjustments do not fetch weather forecasts and do not alter official data or saved picks.</p><div class="tools"><label>Game <select id="phase4WeatherGame"></select></label><label>Condition <select id="phase4WeatherCondition">'+phase4WeatherOptions+'</select></label><button type="button" class="btn alt" id="phase4SaveWeather">Apply to recommendations</button></div><p class="mu" id="phase4WeatherStatus" role="status"></p></details>';
 $('advView').closest('.tools').after(phase4Controls);
 $('phase4LegCount').addEventListener('change',renderAdvanced);
 $('phase4WeatherGame').addEventListener('change',()=>{$('phase4WeatherCondition').value=phase4Weather[[SEASON,wk,$('phase4WeatherGame').value].join('|')]||'none';});
-$('phase4SaveWeather').addEventListener('click',()=>{
- const gid=$('phase4WeatherGame').value,condition=$('phase4WeatherCondition').value;
- if(!gid){$('phase4WeatherStatus').textContent='Select an upcoming matchup first.';return;}
- const key=[SEASON,wk,gid].join('|');if(condition==='none')delete phase4Weather[key];else phase4Weather[key]=condition;
- try{phase3LocalStorage.setItem(PHASE4_WEATHER_KEY,JSON.stringify(phase4Weather));$('phase4WeatherStatus').textContent='Device-only scenario applied. Recheck against the actual forecast.';renderAdvanced();}
- catch(e){$('phase4WeatherStatus').textContent='Could not save weather scenario in this browser.';}
-});
+function saveGameWeather(gid, condition, status){
+ if(!(WKS[wk]||[]).some(g=>!g.sc&&String(g.id)===gid)){
+  status.textContent='Select an upcoming matchup first.';
+  return false;
+ }
+ const key=[SEASON,wk,gid].join('|');
+ const next={...phase4Weather};
+ if(condition==='none')delete next[key];else next[key]=condition;
+ try{
+  phase3LocalStorage.setItem(PHASE4_WEATHER_KEY,JSON.stringify(next));
+ }catch(e){
+  status.textContent='Could not save weather scenario in this browser.';
+  return false;
+ }
+ phase4Weather=next;
+ if($('phase4WeatherGame').value===gid)$('phase4WeatherCondition').value=condition;
+ status.textContent=condition==='none'?'Weather adjustment cleared.':'Device-only scenario applied. Recheck against the actual forecast.';
+ renderAdvanced();
+ return true;
+}
+function openGameWeather(gid){
+ const game=(WKS[wk]||[]).find(g=>!g.sc&&String(g.id)===gid);
+ if(!game)return;
+ let dialog=$('gameWeatherDialog');
+ if(!dialog){
+  dialog=document.createElement('dialog');
+  dialog.id='gameWeatherDialog';
+  dialog.setAttribute('aria-labelledby','gameWeatherTitle');
+  dialog.style.cssText='box-sizing:border-box;max-width:440px;width:90%;padding:20px;border:2px solid var(--ac);border-radius:14px;background:var(--card);color:var(--tx)';
+  dialog.innerHTML='<h2 id="gameWeatherTitle">Game weather</h2><p id="gameWeatherMatchup"></p><p class="mu">Use a forecast you’ve checked. This setting applies on this device.</p><label>Condition <select id="gameWeatherCondition">'+phase4WeatherOptions+'</select></label><p id="gameWeatherStatus" class="mu" role="status"></p><div class="row"><button type="button" class="btn" id="gameWeatherApply">Apply to recommendations</button><button type="button" class="btn alt" id="gameWeatherClose">Close</button></div>';
+  document.body.append(dialog);
+  $('gameWeatherClose').onclick=()=>dialog.close();
+ }
+ $('gameWeatherMatchup').textContent=game.a+' @ '+game.h;
+ $('gameWeatherCondition').value=phase4WeatherForGame(game).code;
+ $('gameWeatherStatus').textContent='';
+ $('gameWeatherApply').onclick=()=>saveGameWeather(gid,$('gameWeatherCondition').value,$('gameWeatherStatus'));
+ dialog.showModal();
+}
+$('phase4SaveWeather').addEventListener('click',()=>saveGameWeather(
+ $('phase4WeatherGame').value,$('phase4WeatherCondition').value,$('phase4WeatherStatus')
+));
 renderAdvanced();
 $('advView').onchange=renderAdvanced;$('advMarket').onchange=renderAdvanced;
 $('advSaveLine').onclick=()=>{const x=(window._advPicks||[]).find(x=>x.key===$('advEditor').dataset.key);if(x)advSaveOdds(x.key);else $('advStatus').textContent='This pick is no longer in the filtered results. Reopen its sportsbook line editor before saving.';};
