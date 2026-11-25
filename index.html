@@ -1450,7 +1450,7 @@ function moreGamePicks(g,b){
  const key=gamePicksKey(g.id),f=allPickFilters.get(key)||{},closed=allPickCollapsed.get(key)||new Set();
  const all=sortedMorePicks(g).filter(x=>!x.player||!phase3PlayerOut(x.player));
  const best=new Set(gameBestPickRows(g).slice(0,8).map(x=>x.mk+'|'+x.sd));
- const suggested=new Set(phase4Top12GameCandidates(g).slice(0,12).filter(x=>!x.manual).map(x=>'p'+x.p.i+'|'+advancedPickSide(x)));
+ const suggested=new Set(phase4Top12GameCandidates(g).slice(0,12).filter(x=>{if(x.manual)return false;const baseline=pstat(x.p,g);return !!baseline&&(x.p.k==='td'?x.line==null:Number.isFinite(x.line)&&x.line===baseline.line);}).map(x=>'p'+x.p.i+'|'+advancedPickSide(x)));
  const visible=all.filter(x=>(!f.market||allPickMarket(x)===f.market)&&(!f.position||x.position===f.position)&&(!f.team||allPickTeam(x)===f.team));
  const select=(k,label,values)=>'<label>'+label+' <select aria-label="'+label+'" onchange="setAllPickFilter(\''+g.id+'\',\''+k+'\',this.value)"><option value="">All</option>'+values.map(v=>'<option value="'+esc(v)+'" '+(f[k]===v?'selected':'')+'>'+esc(v)+'</option>').join('')+'</select></label>';
  const controls='<div class="tools" style="flex-wrap:wrap">'+select('market','Market',[...new Set(all.map(allPickMarket))])+select('position','Position',[...new Set(all.map(x=>x.position))])+select('team','Team',[g.a,g.h])+'<button class="btn alt" onclick="resetAllPickFilters(\''+g.id+'\')">Reset Filters</button><button class="btn alt" onclick="setAllPickGroups(\''+g.id+'\',false)">Expand All</button><button class="btn alt" onclick="setAllPickGroups(\''+g.id+'\',true)">Collapse All</button></div>';
