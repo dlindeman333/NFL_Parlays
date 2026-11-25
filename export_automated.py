@@ -72,7 +72,25 @@ def load_with_retry(loader, label, attempts=3, sleep=time.sleep):
 
 def load_schedule():
     print("Loading NFL schedule...")
-    sc = frame(load_with_retry(lambda: nfl.load_schedules([SEASON]), 'NFL schedule'))
+    try:
+        sc = frame(load_with_retry(lambda: nfl.load_schedules([SEASON]), 'NFL schedule'))
+    except RuntimeError:
+        print("Primary schedule unavailable; trying official nflverse source CSV", flush=True)
+        sc = load_with_retry(lambda: pd.read_csv(
+            "https://raw.githubusercontent.com/nflverse/nfldata/master/data/games.csv"),
+            "Official schedule CSV")
+        required = {"season", "week", "home_team", "away_team", "game_type", "gameday", "gametime", "home_score", "away_score"}
+        if not required.issubset(sc.columns):
+            raise ValueError("Fallback schedule missing required columns")
+        sc = sc[pd.to_numeric(sc["season"], errors="coerce").eq(SEASON) & sc["game_type"].eq("REG")].copy()
+        if len(sc) != 272 or sc[["week", "home_team", "away_team", "gameday", "gametime"]].isna().any().any():
+            raise ValueError("Fallback schedule incomplete")
+        if sc.duplicated(["week", "home_team"]).any() or sc.duplicated(["week", "away_team"]).any():
+            raise ValueError("Fallback schedule has duplicate games")
+        teams = pd.concat([sc[["week", "home_team"]].rename(columns={"home_team":"team"}), sc[["week", "away_team"]].rename(columns={"away_team":"team"})])
+        if teams.duplicated(["week", "team"]).any() or teams["team"].nunique() != 32 or not teams.groupby("team").size().eq(17).all():
+            raise ValueError("Fallback schedule has invalid team coverage")
+        print("Official schedule fallback passed structural validation", flush=True)
     sc = sc.copy()
     week_col = first_column(sc, ["week"], True)
     home_col = first_column(sc, ["home_team"], True)
