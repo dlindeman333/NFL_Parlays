@@ -2544,7 +2544,7 @@ function renderAdvanced(){
 }
 $('advView').add(new Option('Smart parlay optimizer (3–6 legs)','optimizer'));
 function gameWeatherControls(prefix){
- return '<label>Wind <select id="'+prefix+'Condition"><option value="none">No wind adjustment</option><option value="wind">Windy</option><option value="severe">Strong wind</option></select></label> <label><input type="checkbox" id="'+prefix+'Wet"> Heavy precipitation</label>';
+ return '<label for="'+prefix+'Condition">Wind</label> <select id="'+prefix+'Condition"><option value="none">No wind adjustment</option><option value="wind">Windy</option><option value="severe">Strong wind</option></select> <label><input type="checkbox" id="'+prefix+'Wet"> Heavy precipitation</label>';
 }
 function showWeatherSelection(prefix,code){
  const {wind,wet}=weatherSelection(code);
