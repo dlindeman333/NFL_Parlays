@@ -721,6 +721,11 @@ html{scroll-padding-top:175px}#topAccountPanel,#myParlays,#savedParlaySlips,#bui
 .phase4-control-card .tools{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
 .phase4-control-card label{display:flex;gap:6px;flex-wrap:wrap;align-items:center;min-width:0}
 .phase4-control-card select{max-width:100%;min-width:120px}
+.game-weather-controls{display:grid;gap:8px;min-width:0;max-width:100%}
+.game-weather-wind{display:flex;align-items:center;gap:6px;flex-wrap:wrap}
+.game-weather-wind select{min-width:0;max-width:100%}
+.game-weather-controls .game-weather-precipitation{display:flex;flex-wrap:nowrap;align-items:center;gap:8px;justify-self:start}
+.game-weather-precipitation input{flex:none;margin:0}
 .phase4-control-card summary{cursor:pointer;font-weight:750;color:var(--tx,#16406f)}
 .phase4-auto-controls label{display:flex;gap:8px;align-items:center}
 .phase4-auto-controls p{margin:7px 0 0}
@@ -2544,7 +2549,7 @@ function renderAdvanced(){
 }
 $('advView').add(new Option('Smart parlay optimizer (3–6 legs)','optimizer'));
 function gameWeatherControls(prefix){
- return '<label for="'+prefix+'Condition">Wind</label> <select id="'+prefix+'Condition"><option value="none">No wind adjustment</option><option value="wind">Windy</option><option value="severe">Strong wind</option></select> <label><input type="checkbox" id="'+prefix+'Wet"> Heavy precipitation</label>';
+ return '<div class="game-weather-controls"><div class="game-weather-wind"><label for="'+prefix+'Condition">Wind</label> <select id="'+prefix+'Condition"><option value="none">No wind adjustment</option><option value="wind">Windy</option><option value="severe">Strong wind</option></select></div><label class="game-weather-precipitation"><input type="checkbox" id="'+prefix+'Wet"><span>Heavy precipitation</span></label></div>';
 }
 function showWeatherSelection(prefix,code){
  const {wind,wet}=weatherSelection(code);

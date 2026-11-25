@@ -125,6 +125,14 @@ with sync_playwright() as p:
         assert weather.locator('#gameWeatherMatchup').inner_text()==matchup
         condition=weather.get_by_label('Wind',exact=True)
         precipitation=weather.get_by_label('Heavy precipitation')
+        assert weather.locator('.game-weather-precipitation').evaluate("""label => {
+          const wind=label.previousElementSibling.getBoundingClientRect();
+          const row=label.getBoundingClientRect();
+          const checkbox=label.querySelector('input').getBoundingClientRect();
+          const text=label.querySelector('span').getBoundingClientRect();
+          return row.top>=wind.bottom && Math.abs(row.left-wind.left)<2 &&
+            checkbox.right<=text.left && checkbox.top<text.bottom && text.top<checkbox.bottom;
+        }""")
         assert condition.input_value()=='none'
         condition.select_option('wind')
         precipitation.check()
