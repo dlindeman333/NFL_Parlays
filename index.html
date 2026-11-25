@@ -3897,6 +3897,9 @@ const safe6Key=uid=>'nflp-phase3-prod-saved-sync-v1-'+uid;
 let safe6Running=false;
 let safe6VerifiedUid=null;
 const safe6LastKey=uid=>safe6Key(uid)+'-last-success';
+const safe6ReasonKey=uid=>safe6Key(uid)+'-pause-reason';
+function safe6RememberReason(uid,reason){if(!uid||!safe6Active(uid))return;try{if(reason)phase3LocalStorage.setItem(safe6ReasonKey(uid),String(reason).slice(0,240));else phase3LocalStorage.removeItem(safe6ReasonKey(uid));}catch(_){}}
+
 function safe6Paint(){
  const host=document.getElementById('topAccountIndicator');if(!host)return;
  let el=document.getElementById('guardedSyncIndicator');if(!el){el=document.createElement('div');el.id='guardedSyncIndicator';el.setAttribute('role','status');host.insertAdjacentElement('afterend',el);}
@@ -3904,9 +3907,10 @@ function safe6Paint(){
  const active=verified&&safe6Running&&stage1WriteAllowed();
  const label=!verified?'Cloud sync: sign-in verification required':!stage1WriteAllowed()?'Cloud sync: preview locked':!active?'Cloud sync: paused':!navigator.onLine?'Cloud sync: waiting for network':'Cloud sync: active';
  let last='';if(verified){try{const stamp=phase3LocalStorage.getItem(safe6LastKey(uid));if(stamp&&Number.isFinite(Date.parse(stamp)))last=' · Last verified: '+new Date(stamp).toLocaleString();}catch(_){}}
- el.textContent=label+last;el.style.color=active&&navigator.onLine?'#167443':'#946200';el.style.fontWeight='600';
+ let reason='';if(verified&&!active){try{const value=phase3LocalStorage.getItem(safe6ReasonKey(uid));if(value)reason=' · Reason: '+value;}catch(_){}}
+ if(el.textContent!==label+last+reason)el.textContent=label+last+reason;el.style.color=active&&navigator.onLine?'#167443':'#946200';el.style.fontWeight='600';
 }
-function safe6MarkSuccess(uid){if(!safe6Active(uid))return;try{phase3LocalStorage.setItem(safe6LastKey(uid),new Date().toISOString());}catch(_){}safe6Paint();}
+function safe6MarkSuccess(uid){if(!safe6Active(uid))return;safe6RememberReason(uid,'');try{phase3LocalStorage.setItem(safe6LastKey(uid),new Date().toISOString());}catch(_){}safe6Paint();}
 document.addEventListener('phase3-account-signed-out',()=>{safe6VerifiedUid=null;safe6Paint()});
 setInterval(safe6Paint,1000);
 const safe6Button=document.createElement('button');safe6Button.type='button';safe6Button.className='btn alt';
@@ -3969,10 +3973,10 @@ function safe6Retryable(e,writeAttempted){return !writeAttempted && (e?.safeRead
 async function safe6Cycle(){
  if(!stage1WriteAllowed()){safe6Running=false;status('Guarded cloud writes are locked outside the production URL.');return;}
  if(!safe6Running||busy||!auth||!navigator.onLine||document.hidden)return;
- busy=true;let writeAttempted=false;
+ busy=true;let writeAttempted=false,cycleUid=null;
  try{
-  const uid=await userId();if(!safe6Active(uid))throw Error('Account ownership changed');safe6VerifiedUid=uid;
-  const raw=phase3LocalStorage.getItem(safe6Key(uid));if(!raw){safe6Running=false;return;}
+  const uid=await userId();cycleUid=uid;if(!safe6Active(uid))throw Error('Account ownership changed');safe6VerifiedUid=uid;
+  const raw=phase3LocalStorage.getItem(safe6Key(uid));if(!raw){safe6Running=false;safe6RememberReason(uid,'Missing verified baseline');return;}
   const base=JSON.parse(raw);if(!base||base.uid!==uid||typeof base.canonical!=='string')throw Error('Missing baseline');
   const remote=await readRemote(uid);if(!remote||!remote.updated_at)throw Error('Cloud revision unavailable');
   const cloud=safe6View(personalCloudValues(remote.payload),'Cloud');
@@ -4001,7 +4005,7 @@ async function safe6Cycle(){
   phase3LocalStorage.setItem(safe6Key(uid),JSON.stringify({uid,canonical:safe6Canonical(plan.baseline),enabled:true}));
   if(!plan.conflicts.length){phase3ClearVerifiedRecoveryNotice(uid,plan.cloud);safe6MarkSuccess(uid);}
   status(plan.conflicts.length?'AUTO-SYNC: Safe records synchronized; review conflicts: '+plan.conflicts.map(x=>x.id+' ('+x.reason+')').join(', '):'AUTO-SYNC: Saved parlays synchronized and verified. Drafts preserved.');
- }catch(e){if(safe6Retryable(e,writeAttempted)){status("AUTO-SYNC: Temporary read or device-change interruption; will retry automatically. No saved-parlay write attempted.");return;}safe6Running=false;try{const uid=phase3LocalStorage.getItem(OWNER_KEY),key=safe6Key(uid),base=JSON.parse(phase3LocalStorage.getItem(key));if(base&&base.uid===uid){base.enabled=false;phase3LocalStorage.setItem(key,JSON.stringify(base));}}catch(_){}status('AUTO-SYNC v7 PAUSED: '+(e&&e.message||String(e))+'. No further automatic writes. Review before resuming.');}
+ }catch(e){if(safe6Retryable(e,writeAttempted)){status("AUTO-SYNC: Temporary read or device-change interruption; will retry automatically. No saved-parlay write attempted.");return;}safe6Running=false;safe6RememberReason(cycleUid,e?.message||'Synchronization failed');try{const uid=cycleUid,key=safe6Key(uid),base=JSON.parse(phase3LocalStorage.getItem(key));if(base&&base.uid===uid){base.enabled=false;phase3LocalStorage.setItem(key,JSON.stringify(base));}}catch(_){}status('AUTO-SYNC v7 PAUSED: '+(e&&e.message||String(e))+'. No further automatic writes. Review before resuming.');}
  finally{busy=false}
 }
 safe6Button.onclick=async()=>{
@@ -4258,7 +4262,7 @@ if(deleteAllSavedButton){
  };
 }
 
-safe6Stop.onclick=()=>{safe6Running=false;const uid=phase3LocalStorage.getItem(OWNER_KEY);if(uid){const raw=phase3LocalStorage.getItem(safe6Key(uid));if(raw){try{const base=JSON.parse(raw);base.enabled=false;phase3LocalStorage.setItem(safe6Key(uid),JSON.stringify(base));}catch(_){phase3LocalStorage.removeItem(safe6Key(uid));}}}status('AUTO-SYNC v6 PAUSED on this device. No data deleted.');};
+safe6Stop.onclick=()=>{safe6Running=false;const uid=phase3LocalStorage.getItem(OWNER_KEY);safe6RememberReason(uid,'Manually paused');if(uid){const raw=phase3LocalStorage.getItem(safe6Key(uid));if(raw){try{const base=JSON.parse(raw);base.enabled=false;phase3LocalStorage.setItem(safe6Key(uid),JSON.stringify(base));}catch(_){phase3LocalStorage.removeItem(safe6Key(uid));}}}status('AUTO-SYNC v6 PAUSED on this device. No data deleted.');};
 setInterval(()=>{if(safe6Running)safe6Cycle()},15000);
 
 // Production review: route legacy Sync now to guarded synchronization only.
