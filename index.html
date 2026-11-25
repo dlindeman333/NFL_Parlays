@@ -4111,10 +4111,10 @@ $('sbSyncNow').parentNode.insertBefore(reconcileSavedButton,$('sbSyncNow'));
 async function reconcileSavedParlays(nameSource="device"){
  if(!stage1WriteAllowed()){status('Reconciliation is locked outside the production URL.');return;}
  if(busy){status('Another cloud operation is running.');return;}
- busy=true;safe6Running=false;let cloudWritten=false,uid=null;
+ busy=true;const priorRunning=safe6Running;safe6Running=false;let cloudWritten=false,writeAttempted=false,uid=null;
  try{
   uid=await userId();if(!safe6Active(uid))throw Error('Account ownership mismatch');
-  phase3LocalStorage.removeItem(safe6Key(uid));
+  // Preserve the verified baseline until a reconciliation write is attempted.
   const remote=await readRemote(uid);if(!remote||!remote.updated_at)throw Error('Cloud row or revision missing. No new row will be created.');
   const before=safe6Canonical(safe6View(snapshot(),'Device'));
   const partRaw=phase3LocalStorage.getItem(ACCOUNT_PREFIX+uid),part=partRaw===null?null:JSON.parse(partRaw);
@@ -4128,11 +4128,12 @@ async function reconcileSavedParlays(nameSource="device"){
   downloadJSON({format:'nfl-saved-reconciliation-backup-v1',uid,exported_at:new Date().toISOString(),storage:fullLocalBackup(),cloud:{updated_at:remote.updated_at,payload:personalCloudValues(remote.payload)}},'nfl-parlay-reconciliation-backup-'+new Date().toISOString().slice(0,10)+'.json');
   const label=p=>String(p.name||'Untitled')+' · '+p.legs.length+' legs · ID '+String(p.id);
   const text='Verify the backup download before approving.\n\nKEEP / MERGE ('+plan.next.saved.length+'):\n'+(plan.next.saved.map(label).join('\n')||'None')+'\n\nNAME-ONLY DIFFERENCES ('+plan.renames.length+') — keep '+nameSource+' names:\n'+(plan.renames.map(r=>r.device+' / '+r.cloud+' → '+r.chosen).join('\n')||'None')+'\n\nREMOVE FROM THIS DEVICE because already marked deleted ('+plan.removed.length+'):\n'+(plan.removed.map(label).join('\n')||'None')+'\n\nKeep '+plan.next.deleted.length+' deletion markers. This writes the reviewed saved list to your signed-in cloud row and refreshes this device account copy. Drafts stay local and cloud draft data is preserved. Automatic sync remains paused.';
-  if(!await phase3V10Confirm('Review saved-parlay reconciliation',text,'Backup verified — apply reviewed list')){status('Reconciliation canceled. Saved records unchanged; auto-sync paused.');return;}
+  if(!await phase3V10Confirm('Review saved-parlay reconciliation',text,'Backup verified — apply reviewed list')){status('Reconciliation canceled. Saved records and verified baseline unchanged.');return;}
   unchanged();const fresh=await readRemote(uid);
   if(!fresh||fresh.updated_at!==remote.updated_at||safe6Canonical(safe6View(personalCloudValues(fresh.payload),'Cloud'))!==cloudBefore)throw Error('Cloud changed during review. No reconciliation write attempted.');
   unchanged();const jwt=await token();unchanged();
   const payload={...fresh.payload,'nflp-saved-v1':JSON.stringify(plan.next.saved),'nflp-deleted-saved-v1':JSON.stringify(plan.next.deleted)};
+  writeAttempted=true;phase3LocalStorage.removeItem(safe6Key(uid));
   const rows=await api('/rest/v1/nfl_parlay_sync?user_id=eq.'+encodeURIComponent(uid)+'&updated_at=eq.'+encodeURIComponent(fresh.updated_at)+'&select=payload,updated_at',{
    method:'PATCH',headers:{Authorization:'Bearer '+jwt,Prefer:'return=representation'},body:JSON.stringify({payload,updated_at:new Date().toISOString()})
   });
@@ -4145,7 +4146,7 @@ async function reconcileSavedParlays(nameSource="device"){
   phase3ClearVerifiedRecoveryNotice(uid,personalCloudValues(checked.payload));
   status('RECONCILIATION VERIFIED: cloud, device and account copy '+plan.next.saved.length+' saved; '+plan.next.deleted.length+' deletion markers. '+plan.removed.length+' already-deleted records removed locally. Drafts preserved. Auto-sync remains OFF. Run read-only preflight before enabling it.');
  }catch(e){status('Reconciliation stopped: '+e.message+(cloudWritten?' Cloud write occurred; keep sync paused and inspect before retrying.':' No verified cloud write; device saved list was not replaced.'));}
- finally{safe6Running=false;busy=false;}
+ finally{safe6Running=!writeAttempted&&priorRunning&&!!uid&&safe6Active(uid);busy=false;if(safe6Running)void safe6Cycle();}
 }
 reconcileSavedButton.onclick=()=>reconcileSavedParlays('device');
 const reconcileCloudNamesButton=document.createElement('button');reconcileCloudNamesButton.type='button';reconcileCloudNamesButton.className='btn alt';reconcileCloudNamesButton.textContent='Review reconciliation (keep cloud names)';
