@@ -1312,7 +1312,7 @@ function allManualScenarioHTML(limit=12){
  return '<div class="card"><b>Manual Override scenarios · not verified recommendations</b>'+gamesWithScenarios.map(id=>manualScenarioHTML(games.find(g=>g.id===id),limit)).join('')+'</div>';
 }
 function injuryTag(p,week=wk){return `<small class="mu ui-injury-label" data-injury-player="${esc(p.n)}" data-injury-team="${esc(p.tm)}" data-injury-week="${Number(week)}">${esc(window.phase3InjuryLabel?.(p.n,p.tm,week)||'Injury status loading')}</small>`;}
-const plBtns=(g,k,b)=>PLY.filter(p=>p.k===k&&(p.tm===g.a||p.tm===g.h)&&playerSuggested(p)).map(p=>{const s=pstat(p,g),sub=q=>am(dec(q))+" · "+Math.round(q*100)+"%";if(!s)return '';const buttons=k==='td'?b('p'+p.i,'o','Anytime TD',sub(s.p)):b('p'+p.i,'o','Over',sub(s.p))+b('p'+p.i,'u','Under',sub(1-s.p));return buttons?'<div class="m">'+esc(p.n)+' ('+p.tm+')'+(k==='td'?'':' · line '+s.line)+' '+injuryTag(p)+(p.dynamic?' <small class="mu">'+p.samples+' completed games</small>':'')+'</div>'+buttons:'';}).join('');
+const plBtns=(g,k,b)=>PLY.filter(p=>p.k===k&&(p.tm===g.a||p.tm===g.h)&&playerSuggested(p)).map(p=>{const s=weatherPlayerStat(p,g),sub=(q,reference)=>am(dec(reference))+" · "+Math.round(q*100)+"%";if(!s)return '';const reference=s.referenceProbability??s.p;const buttons=k==='td'?b('p'+p.i,'o','Anytime TD',sub(s.p,reference)):b('p'+p.i,'o','Over',sub(s.p,reference))+b('p'+p.i,'u','Under',sub(1-s.p,1-reference));return buttons?'<div class="m">'+esc(p.n)+' ('+p.tm+')'+(k==='td'?'':' · line '+s.line)+' '+injuryTag(p)+(p.dynamic?' <small class="mu">'+p.samples+' completed games</small>':'')+'</div>'+buttons:'';}).join('');
 const hr=tm=>{const m=/(\d+):(\d+) (AM|PM)/.exec(tm);return m?(+m[1]%12)+(m[3]==="PM"?12:0)+(+m[2])/60:0};
 const bucket=tm=>{const h=hr(tm);return h<11?"early":h<15?"aft":h<19?"eve":"late"};
 const vis=g=>filterHas(tf,bucket(g.tm))&&(!gameQuery||`${g.a} ${g.h} ${T[g.a]?.[0]||""} ${T[g.h]?.[0]||""}`.toLowerCase().includes(gameQuery));
@@ -1418,6 +1418,7 @@ function gamePickCandidates(g,includeManual=false){
    if(player.k!=='td'&&manual.side==='u')probability=probability==null?null:1-probability;
    text=player.k==='td'?player.n+' anytime TD':player.n+' '+(manual.side==='u'?'Under ':'Over ')+Number(manual.line)+' '+(player.k==='ps'?'pass yds':player.k==='rec'?'receiving yds':player.k==='rcp'?'receptions':'rush yds');
   }
+  if(player&&!manual){const stat=weatherPlayerStat(player,g);probability=stat&&(side==='o'?stat.p:1-stat.p);}
   const decimal=oddsDecimal(odds);
   if(decimal===null||!Number.isFinite(probability)||probability<=0||probability>=1)return;
   rows.push({key:String(g.id)+'|'+mkt+'|'+side,gid:g.id,away:g.a,home:g.h,mkt,side,family,player,position:player?pickPosition(player):'Team',text,odds,decimal,probability,matchup:g.a+' @ '+g.h,source:manual?'entered odds':/^teamtot[ah]$/.test(mkt)?'verified entered line · model estimate':'model estimate'});
@@ -1817,12 +1818,12 @@ function gameBestPickRows(g){
  if(allPickTypes()){const h=g.p>=.5;it.push({mk:"ml",sd:h?"h":"a",p:h?g.p:1-g.p,txt:(h?g.h:g.a)+" moneyline",why:"Model margin "+f1(Math.abs(g.m))+" pts"+(g.fp!=null?", schedule feed "+P((h?g.fp:1-g.fp)*100)+"%":"")})}
 
  if(filterHas(pf,'td'))['a','h'].forEach(t=>{const p=g.pp[t].tdp,o=p>=.5;it.push({mk:'td'+t,sd:o?'o':'u',p:o?p:1-p,txt:(t==='a'?g.a:g.h)+' '+(o?'Over ':'Under ')+PN.td[1]+' team TDs',why:'Model team touchdown estimate'})});
- PLY.filter(p=>(p.tm===g.a||p.tm===g.h)&&filterHas(pf,p.k)&&playerSuggested(p)).forEach(p=>{const s=pstat(p,g);if(!s)return;const o=p.k==="td"||s.p>=.5;it.push({mk:"p"+p.i,sd:o?"o":"u",p:o?s.p:1-s.p,txt:p.k==="td"?p.n+" anytime TD":p.n+" "+(o?"Over ":"Under ")+s.line+(p.k==="ps"?" pass yds":p.k==="ru"?" rush yds":p.k==="rec"?" receiving yds":p.k==="rcp"?" receptions":""),why:p.k==="td"?f1(p.v)+" TDs per game this season, projects "+f1(s.proj)+" here":"Averages "+Math.round(p.v)+" yds per game, projects about "+Math.round(s.proj)+" here"})});
+ PLY.filter(p=>(p.tm===g.a||p.tm===g.h)&&filterHas(pf,p.k)&&playerSuggested(p)).forEach(p=>{const s=weatherPlayerStat(p,g);if(!s)return;const o=p.k==="td"||s.p>=.5;it.push({mk:"p"+p.i,sd:o?"o":"u",p:o?s.p:1-s.p,priceProbability:o?(s.referenceProbability??s.p):1-(s.referenceProbability??s.p),txt:p.k==="td"?p.n+" anytime TD":p.n+" "+(o?"Over ":"Under ")+s.line+(p.k==="ps"?" pass yds":p.k==="ru"?" rush yds":p.k==="rec"?" receiving yds":p.k==="rcp"?" receptions":""),why:p.k==="td"?f1(p.v)+" TDs per game this season, projects "+f1(s.proj)+" here":"Averages "+Math.round(p.v)+" yds per game, projects about "+Math.round(s.proj)+" here"})});
  it.sort((a,b)=>b.p-a.p);return it;
 }
 function det(g){if(SEASON!==MODEL_SEASON||openG!==g.id)return "";const P=Math.round,it=gameBestPickRows(g);
  const pa=g.pp.a,ph=g.pp.h,sa=S[g.a],sh=S[g.h];
- return`<div class="det" id="best-picks-${g.id}"><div class="mu"><b>Projected score:</b> ${g.a} ${P(pa.pts)}, ${g.h} ${P(ph.pts)} · total ${g.tot} · ${g.p>=.5?g.h:g.a} by ${f1(Math.abs(g.m))}</div><div class="mu"><b>Win chance (model):</b> ${g.h} ${P(g.pm*100)}%, ${g.a} ${P((1-g.pm)*100)}%${g.fp!=null?" · schedule feed: "+g.h+" "+P(g.fp*100)+"%":""}</div><div class="mu"><b>Recent scoring:</b> ${g.a} ${f1(sa.ppg)} for / ${f1(sa.opp)} against · ${g.h} ${f1(sh.ppg)} / ${f1(sh.opp)}</div><div style="margin-top:6px"><b>Best picks for this game</b></div>${it.slice(0,8).map(x=>`<div class="pl ${g.sc?(grade({...g,week:wk},x.mk,x.sd)===true?"hit":grade({...g,week:wk},x.mk,x.sd)===false?"miss":"pending"):(x.p<.6?"med":"")}"><b>${esc(x.txt)}</b>${playerForMarket(x.mk)?injuryTag(playerForMarket(x.mk)):''} · ${P(x.p*100)}% · ${am(dec(x.p))}${g.sc?"":`<button class="pill" onclick="addp('${g.id}','${x.mk}','${x.sd}')">+ Add</button>`}<div class="mu">${x.why}</div></div>`).join("")}</div>`}
+ return`<div class="det" id="best-picks-${g.id}"><div class="mu"><b>Projected score:</b> ${g.a} ${P(pa.pts)}, ${g.h} ${P(ph.pts)} · total ${g.tot} · ${g.p>=.5?g.h:g.a} by ${f1(Math.abs(g.m))}</div><div class="mu"><b>Win chance (model):</b> ${g.h} ${P(g.pm*100)}%, ${g.a} ${P((1-g.pm)*100)}%${g.fp!=null?" · schedule feed: "+g.h+" "+P(g.fp*100)+"%":""}</div><div class="mu"><b>Recent scoring:</b> ${g.a} ${f1(sa.ppg)} for / ${f1(sa.opp)} against · ${g.h} ${f1(sh.ppg)} / ${f1(sh.opp)}</div><div style="margin-top:6px"><b>Best picks for this game</b></div>${it.slice(0,8).map(x=>`<div class="pl ${g.sc?(grade({...g,week:wk},x.mk,x.sd)===true?"hit":grade({...g,week:wk},x.mk,x.sd)===false?"miss":"pending"):(x.p<.6?"med":"")}"><b>${esc(x.txt)}</b>${playerForMarket(x.mk)?injuryTag(playerForMarket(x.mk)):''} · ${P(x.p*100)}% · ${am(dec(x.priceProbability??x.p))}${g.sc?"":`<button class="pill" onclick="addp('${g.id}','${x.mk}','${x.sd}')">+ Add</button>`}<div class="mu">${x.why}</div></div>`).join("")}</div>`}
 const dec=p=>Math.max(1.06,1/(p*1.045));
 const am=d=>d>=2?"+"+Math.round((d-1)*100):String(-Math.round(100/(d-1)));
 const sg=n=>(n>0?"+":"")+n;
@@ -2137,8 +2138,8 @@ function plays(){
 
  if(filterHas(pf,'td'))for(const pf of ['td']){const L=[];(WKS[wk]||[]).filter(g=>!g.sc&&vis(g)).forEach(g=>["a","h"].forEach(t=>{const p=g.pp[t][pf+"p"],o=p>=.5;L.push({g,t,o,p:o?p:1-p})}));L.sort((a,b)=>b.p-a.p);
   h+=`<div class="card"><b>Top ${PL[pf]} plays</b>`+(L.slice(0,6).map(x=>{const tm=x.t==="a"?x.g.a:x.g.h;return`<div class="pl ${x.p<.6?"med":""}"><b>${tm} ${x.o?"Over":"Under"} ${PN[pf][1]} ${PN[pf][0]}</b> · ${Math.round(x.p*100)}% · ${am(dec(x.p))}<div class="mu">vs ${x.t==="a"?x.g.h:x.g.a} · projected ${pf==="td"?f1(x.g.pp[x.t].td)+" TDs":Math.round(x.g.pp[x.t][pf+"y"])+" yds"}</div><button type="button" class="btn alt" onclick="quickAddRecommended('${x.g.id}','${pf+x.t}','${x.o?'o':'u'}')">+ Add to parlay</button></div>`}).join("")||`<div class="mu">No team picks match the current filters and loaded data.</div>`)+`</div>`}
-  {const Q=[];(WKS[wk]||[]).filter(g=>!g.sc&&vis(g)).forEach(g=>PLY.forEach(p=>{if((p.tm===g.a||p.tm===g.h)&&filterHas(pf,p.k)&&playerSuggested(p)){const s=pstat(p,g);if(!s)return;const o=p.k==="td"||s.p>=.5;Q.push({p,g,o,q:o?s.p:1-s.p,s})}}));Q.sort((a,b)=>b.q-a.q);
-  h+=`<div class="card"><b>Top player picks${allPickTypes()?"":" ("+pickTypes().map(k=>PL[k]).join(", ")+")"}</b>`+(Q.slice(0,6).map(x=>`<div class="pl ${x.q<.6?"med":""}"><b>${esc(x.p.k==="td"?x.p.n+" anytime TD":x.p.n+" "+(x.o?"Over ":"Under ")+x.s.line+(x.p.k==="ps"?" pass yds":x.p.k==="rec"?" receiving yds":x.p.k==="rcp"?" receptions":" rush yds"))}</b>${injuryTag(x.p)} · ${Math.round(x.q*100)}% · ${am(dec(x.q))}<div class="mu">${x.g.a} @ ${x.g.h}</div><button type="button" class="btn alt" onclick="quickAddRecommended('${x.g.id}','p${x.p.i}','${x.o?'o':'u'}')">+ Add to parlay</button>${playerStatsButton(x.p,x.g)}</div>`).join("")||`<div class="mu">No player picks match the current filters and loaded data.</div>`)+`</div>`}
+  {const Q=[];(WKS[wk]||[]).filter(g=>!g.sc&&vis(g)).forEach(g=>PLY.forEach(p=>{if((p.tm===g.a||p.tm===g.h)&&filterHas(pf,p.k)&&playerSuggested(p)){const s=weatherPlayerStat(p,g);if(!s)return;const o=p.k==="td"||s.p>=.5;Q.push({p,g,o,q:o?s.p:1-s.p,s})}}));Q.sort((a,b)=>b.q-a.q);
+  h+=`<div class="card"><b>Top player picks${allPickTypes()?"":" ("+pickTypes().map(k=>PL[k]).join(", ")+")"}</b>`+(Q.slice(0,6).map(x=>`<div class="pl ${x.q<.6?"med":""}"><b>${esc(x.p.k==="td"?x.p.n+" anytime TD":x.p.n+" "+(x.o?"Over ":"Under ")+x.s.line+(x.p.k==="ps"?" pass yds":x.p.k==="rec"?" receiving yds":x.p.k==="rcp"?" receptions":" rush yds"))}</b>${injuryTag(x.p)} · ${Math.round(x.q*100)}% · ${am(dec(x.s.referenceProbability==null?x.q:x.o?x.s.referenceProbability:1-x.s.referenceProbability))}<div class="mu">${x.g.a} @ ${x.g.h}</div><button type="button" class="btn alt" onclick="quickAddRecommended('${x.g.id}','p${x.p.i}','${x.o?'o':'u'}')">+ Add to parlay</button>${playerStatsButton(x.p,x.g)}</div>`).join("")||`<div class="mu">No player picks match the current filters and loaded data.</div>`)+`</div>`}
   h+=allManualScenarioHTML();
   // Retrospective evaluations only: these are not verified pregame predictions.
   const completed=(WKS[wk]||[]).filter(g=>g.sc);
@@ -2195,11 +2196,20 @@ function phase4PlayerHistory(p){
  return phase4HistoryIndex.get(playerIdentity(p.n))||[];
 }
 function phase4WeatherForGame(g){
- const code=phase4Weather[[SEASON,wk,g.id].join('|')]||'none';
+ const code=g.sc?'none':phase4Weather[[SEASON,g.week||wk,g.id].join('|')]||'none';
  return {code,label:({none:'No adjustment',wind:'Verified wind scenario',severe:'Verified strong wind scenario',wet:'Verified heavy precipitation scenario'})[code]||'No adjustment',
   factor:k=>code==='wind'?(['ps','rec','rcp'].includes(k)?.93:1.02):
     code==='severe'?(['ps','rec','rcp'].includes(k)?.84:1.04):
     code==='wet'?(['ps','rec','rcp'].includes(k)?.94:1.01):1};
+}
+function weatherPlayerStat(p,g){
+ const baseline=pstat(p,g);
+ if(!baseline)return null;
+ const weather=phase4WeatherForGame(g);
+ if(weather.code==='none')return baseline;
+ const projection=baseline.proj*weather.factor(p.k);
+ const probability=p.k==='td'?1-Math.exp(-projection):propMarketOver(p.k,projection,baseline.line,sourcePlayer(p)||p);
+ return {...baseline,proj:projection,p:.5+(probability-.5)*.94,referenceProbability:baseline.p};
 }
 function advLogs(p){return phase4PlayerHistory(p).filter(r=>Number.isFinite(Number(r[p.k==='ps'?'passing_yards':p.k==='ru'?'rushing_yards':p.k==='rec'?'receiving_yards':p.k==='rcp'?'receptions':'touchdowns'])));}
 function advAvg(a){return a.length?a.reduce((v,x)=>v+x,0)/a.length:null;}
@@ -2518,6 +2528,8 @@ function saveGameWeather(gid, condition, status){
  phase4Weather=next;
  if($('phase4WeatherGame').value===gid)$('phase4WeatherCondition').value=condition;
  status.textContent=condition==='none'?'Weather adjustment cleared.':'Device-only scenario applied. Recheck against the actual forecast.';
+ draw();
+ plays();
  renderAdvanced();
  return true;
 }
