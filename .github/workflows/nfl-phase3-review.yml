@@ -1,6 +1,12 @@
 name: NFL Phase 3 release checks (read only)
 on:
   workflow_dispatch:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'index.html'
+      - 'phase3/**'
+      - '.github/workflows/nfl-phase3-review.yml'
   push:
     branches: [main]
     paths:
