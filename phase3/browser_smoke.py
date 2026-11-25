@@ -37,6 +37,12 @@ with sync_playwright() as p:
         page.wait_for_function("window.phase3InjuryLabel && window.phase3InjuryLabel('Synthetic Player','BUF',10).includes('Out')")
         assert not errors,errors
         assert not writes,writes
+        # Signed-out status must not expose another account's last sync time.
+        indicator=page.locator('#guardedSyncIndicator')
+        indicator.wait_for(state='attached')
+        assert indicator.inner_text()=='Cloud sync: sign-in verification required'
+        assert 'Last verified:' not in indicator.inner_text()
+        print('Signed-out synchronization status privacy passed',flush=True)
         assert page.get_by_role('button',name='Track upcoming predictions in my account',include_hidden=True).count()==1
         assert page.evaluate("window.phase3InjuryLabel('Missing Player','BUF',10).includes('unconfirmed')")
         # This test deliberately has no authenticated account. Reveal the local
