@@ -1400,7 +1400,7 @@ function gameMainMarkets(g,b){
    b('teamtot'+t,'o','Over '+line,Math.round(prob*100)+'% model estimate')+
    b('teamtot'+t,'u','Under '+line,Math.round((1-prob)*100)+'% model estimate'));}).join('');
 }
-const MORE_PICKS_INITIAL=50,MORE_PICKS_INCREMENT=25,morePickPages=new Map();
+
 const POSITION_ORDER={QB:0,RB:1,WR:2,TE:3,FB:4,K:5,Other:6,Team:7};
 function pickPosition(p){
  const pos=String(p?.position||'').toUpperCase();
@@ -1438,39 +1438,27 @@ function sortedMorePicks(g){
  return gamePickCandidates(g).filter(x=>filterHas(pf,x.family))
  .sort((a,b)=>POSITION_ORDER[a.position]-POSITION_ORDER[b.position]||a.decimal-b.decimal||a.text.localeCompare(b.text)||a.key.localeCompare(b.key));
 }
-function visibleMorePicks(all,limit){
- // Distribute the visible budget across available positions so team/receiver
- // choices do not disappear behind a long QB/RB list. Existing rows remain.
- const groups=new Map();for(const x of all){if(!groups.has(x.position))groups.set(x.position,[]);groups.get(x.position).push(x);}
- const selected=new Set();let depth=0;
- while(selected.size<Math.min(limit,all.length)){
-  for(const rows of groups.values()){if(rows[depth])selected.add(rows[depth].key);if(selected.size>=Math.min(limit,all.length))break;}depth++;
- }
- return all.filter(x=>selected.has(x.key));
-}
-function loadMoreGamePicks(id){
- const key=gamePicksKey(id),state=morePickPages.get(key);if(!state)return;
- morePickPages.set(key,{...state,limit:state.limit+MORE_PICKS_INCREMENT});draw();
- const button=document.getElementById('load-more-picks-'+id),status=document.getElementById('more-page-status-'+id);
- (button&&!button.disabled?button:status)?.focus({preventScroll:true});
-}
+const allPickFilters=new Map(),allPickCollapsed=new Map();
+function allPickMarket(x){return ({ml:'Moneyline',sp:'Point Spread',tot:'Game Total',teamtota:'Team Points',teamtoth:'Team Points',tda:'Team Touchdowns',tdh:'Team Touchdowns'})[x.mkt]||({ps:'Passing Yards',ru:'Rushing Yards',rec:'Receiving Yards',rcp:'Receptions',td:'Anytime Touchdown'})[x.family]||'Other';}
+function allPickTeam(x){return x.player?.tm||(/^(ml|sp)$/.test(x.mkt)?(x.side==='a'?x.away:x.home):/^(teamtot|td)[ah]$/.test(x.mkt)?(x.mkt.endsWith('a')?x.away:x.home):'');}
+function setAllPickFilter(id,k,v){const key=gamePicksKey(id);allPickFilters.set(key,{...allPickFilters.get(key),[k]:v});draw();}
+function resetAllPickFilters(id){allPickFilters.delete(gamePicksKey(id));draw();}
+function toggleAllPickMarket(id,m){const key=gamePicksKey(id),set=allPickCollapsed.get(key)||new Set();set.has(m)?set.delete(m):set.add(m);allPickCollapsed.set(key,set);draw();}
+function setAllPickGroups(id,close){const g=games.find(x=>String(x.id)===String(id));if(!g)return;allPickCollapsed.set(gamePicksKey(id),new Set(close?sortedMorePicks(g).map(allPickMarket):[]));draw();}
 function moreGamePicks(g,b){
- if(SEASON!==MODEL_SEASON)return '';
- const expanded=expandedGamePicks.has(gamePicksKey(g.id));
- const button='<button type="button" class="btn alt" id="more-picks-button-'+g.id+'" aria-expanded="'+expanded+'" aria-controls="more-picks-'+g.id+'" onclick="toggleGamePicks(\''+g.id+'\')">'+(expanded?'Show fewer':'More picks')+'</button>';
- if(!expanded)return '';
- const all=sortedMorePicks(g).filter(x=>!x.player||!phase3PlayerOut(x.player)),signature=JSON.stringify(pf),key=gamePicksKey(g.id),old=morePickPages.get(key),limit=old?.signature===signature?old.limit:MORE_PICKS_INITIAL;
- morePickPages.set(key,{limit,signature});const visible=visibleMorePicks(all,limit),remaining=all.length-visible.length;
- let previous='';const body=visible.map(x=>{
-  const heading=x.position===previous?'':'<h4 style="margin:12px 0 6px">'+x.position+'</h4>';previous=x.position;
-  return heading+'<div class="more-pick-row" data-position="'+x.position+'" data-odds="'+x.odds+'" data-pick-key="'+esc(x.key)+'" style="display:grid;grid-template-columns:minmax(0,1fr);gap:4px;margin:7px 0"><div class="mu">'+x.position+' · '+esc(x.matchup)+(x.player?' '+injuryTag(x.player):'')+'</div>'+b(x.mkt,x.side,esc(x.text),String(x.odds)+' · '+Math.round(x.probability*100)+'%')+''+(x.player?playerStatsButton(x.player,g):'')+'</div>';
- }).join('');
- const positions=['QB','RB','WR','Team'].map(position=>position+': '+visible.filter(x=>x.position===position).length+' / '+all.filter(x=>x.position===position).length).join(' · ');
- const status='<p class="mu" id="more-page-status-'+g.id+'" tabindex="-1" role="status" aria-live="polite">Showing '+visible.length+' of '+all.length+' picks · '+positions+'</p>';
- const load='<span class="mu">Showing '+visible.length+' of '+all.length+' picks</span><button type="button" class="btn alt" id="load-more-picks-'+g.id+'" '+(!remaining?'disabled aria-disabled="true"':'')+' onclick="loadMoreGamePicks(\''+g.id+'\')">Load 25 more</button>'+(!remaining?'<span class="mu">All matching picks are displayed. Broaden pick filters or turn off Regular contributors only to check for additional choices.</span>':'<span class="mu">'+remaining+' more available</span>');
+ if(SEASON!==MODEL_SEASON||!expandedGamePicks.has(gamePicksKey(g.id)))return '';
+ const key=gamePicksKey(g.id),f=allPickFilters.get(key)||{},closed=allPickCollapsed.get(key)||new Set();
+ const all=sortedMorePicks(g).filter(x=>!x.player||!phase3PlayerOut(x.player));
+ const best=new Set(gameBestPickRows(g).slice(0,8).map(x=>x.mk+'|'+x.sd));
+ const suggested=new Set(phase4Top12GameCandidates(g).slice(0,12).filter(x=>!x.manual).map(x=>'p'+x.p.i+'|'+advancedPickSide(x)));
+ const visible=all.filter(x=>(!f.market||allPickMarket(x)===f.market)&&(!f.position||x.position===f.position)&&(!f.team||allPickTeam(x)===f.team));
+ const select=(k,label,values)=>'<label>'+label+' <select aria-label="'+label+'" onchange="setAllPickFilter(\''+g.id+'\',\''+k+'\',this.value)"><option value="">All</option>'+values.map(v=>'<option value="'+esc(v)+'" '+(f[k]===v?'selected':'')+'>'+esc(v)+'</option>').join('')+'</select></label>';
+ const controls='<div class="tools" style="flex-wrap:wrap">'+select('market','Market',[...new Set(all.map(allPickMarket))])+select('position','Position',[...new Set(all.map(x=>x.position))])+select('team','Team',[g.a,g.h])+'<button class="btn alt" onclick="resetAllPickFilters(\''+g.id+'\')">Reset Filters</button><button class="btn alt" onclick="setAllPickGroups(\''+g.id+'\',false)">Expand All</button><button class="btn alt" onclick="setAllPickGroups(\''+g.id+'\',true)">Collapse All</button></div>';
+ const body=[...new Set(visible.map(allPickMarket))].map(m=>{const rows=visible.filter(x=>allPickMarket(x)===m).sort((a,b)=>b.probability-a.probability||a.key.localeCompare(b.key));return '<section><button type="button" class="btn alt" aria-expanded="'+!closed.has(m)+'" onclick="toggleAllPickMarket(\''+g.id+'\',\''+m+'\')">'+esc(m)+' ('+rows.length+')</button>'+(closed.has(m)?'':rows.map(x=>'<div class="more-pick-row" data-position="'+x.position+'" data-odds="'+x.odds+'" data-pick-key="'+esc(x.key)+'" style="display:grid;grid-template-columns:minmax(0,1fr);gap:4px;margin:7px 0">'+(best.has(x.mkt+'|'+x.side)||suggested.has(x.mkt+'|'+x.side)?'<div style="background:#198754;color:white;padding:5px;text-align:center;border-radius:5px;font-weight:bold">Suggested Pick</div>':'')+'<div class="mu">'+x.position+' · '+esc(x.matchup)+(x.player?' '+injuryTag(x.player):'')+'</div>'+b(x.mkt,x.side,esc(x.text),String(x.odds)+' · '+Math.round(x.probability*100)+'%')+(x.player?playerStatsButton(x.player,g):'')+'</div>').join(''))+'</section>';}).join('');
+ const status='<p class="mu" role="status">Showing '+visible.length+' of '+all.length+' eligible picks</p>';
  const teamPointsEditor=g.sc?'':'<fieldset class="team-points-editor" style="border:1px solid var(--bd);border-radius:9px;padding:10px;margin:12px 0"><legend><b>Team points Over / Under · verified sportsbook line</b></legend><p class="mu">Enter the actual team points total offered by your sportsbook. Blank means no team points recommendation. These lines stay on this device; model confidence is estimated, not a live betting price.</p><div class="tools">'+['a','h'].map(t=>'<label>'+esc(t==='a'?g.a:g.h)+' total points <input type="number" inputmode="decimal" min="0.5" max="99.5" step="0.5" id="team-points-line-'+g.id+'-'+t+'" style="width:95px" placeholder="e.g. 23.5" value="'+(verifiedTeamPointsLine(g,t)??'')+'"/></label>').join('')+'<button type="button" class="btn alt" onclick="saveTeamPointsLines(\''+g.id+'\')">Use verified lines</button></div><p class="mu" id="team-points-status-'+g.id+'" role="status" aria-live="polite"></p></fieldset>';
 
- return manualScenarioHTML(g)+'<section id="more-picks-'+g.id+'" class="more-game-picks" aria-label="More picks for '+g.a+' at '+g.h+'" style="margin-top:10px;padding-top:8px;border-top:1px solid var(--bd)"><p class="mu">50 picks initially, then up to 25 more per press. Available positions share the display so QB, RB, WR and Team choices are represented. Position and odds order are retained; filters and loaded data determine availability. Model estimates; verify sportsbook prices.</p>'+teamPointsEditor+status+(body||'<p class="mu">No picks match the current filters and loaded data.</p>')+'<div class="tools" style="margin-top:12px">'+load+'<button type="button" class="btn alt" onclick="toggleGamePicks(\''+g.id+'\')">Show fewer</button></div></section>';
+ return manualScenarioHTML(g)+'<section id="more-picks-'+g.id+'" class="more-game-picks" aria-label="All Picks" style="margin-top:10px;padding-top:8px;border-top:1px solid var(--bd)">'+controls+teamPointsEditor+status+(body||'<p class="mu">No picks match the current filters and loaded data.</p>')+'</section>';
 }
 let filteredParlayPlans={};
 let riskParlayHideBelowBreakEven=false;
@@ -1824,13 +1812,15 @@ function loadFilteredParlay(kind){
  document.getElementById('uiActiveParlay')?.scrollIntoView({block:'nearest',behavior:'smooth'});
 }
 
-function det(g){if(SEASON!==MODEL_SEASON)return "";if(openG!==g.id)return"";
+function gameBestPickRows(g){
  const P=Math.round,it=[],cat=pickTypes();
  if(allPickTypes()){const h=g.p>=.5;it.push({mk:"ml",sd:h?"h":"a",p:h?g.p:1-g.p,txt:(h?g.h:g.a)+" moneyline",why:"Model margin "+f1(Math.abs(g.m))+" pts"+(g.fp!=null?", schedule feed "+P((h?g.fp:1-g.fp)*100)+"%":"")})}
 
  if(filterHas(pf,'td'))['a','h'].forEach(t=>{const p=g.pp[t].tdp,o=p>=.5;it.push({mk:'td'+t,sd:o?'o':'u',p:o?p:1-p,txt:(t==='a'?g.a:g.h)+' '+(o?'Over ':'Under ')+PN.td[1]+' team TDs',why:'Model team touchdown estimate'})});
  PLY.filter(p=>(p.tm===g.a||p.tm===g.h)&&filterHas(pf,p.k)&&playerSuggested(p)).forEach(p=>{const s=pstat(p,g);if(!s)return;const o=p.k==="td"||s.p>=.5;it.push({mk:"p"+p.i,sd:o?"o":"u",p:o?s.p:1-s.p,txt:p.k==="td"?p.n+" anytime TD":p.n+" "+(o?"Over ":"Under ")+s.line+(p.k==="ps"?" pass yds":p.k==="ru"?" rush yds":p.k==="rec"?" receiving yds":p.k==="rcp"?" receptions":""),why:p.k==="td"?f1(p.v)+" TDs per game this season, projects "+f1(s.proj)+" here":"Averages "+Math.round(p.v)+" yds per game, projects about "+Math.round(s.proj)+" here"})});
- it.sort((a,b)=>b.p-a.p);
+ it.sort((a,b)=>b.p-a.p);return it;
+}
+function det(g){if(SEASON!==MODEL_SEASON||openG!==g.id)return "";const P=Math.round,it=gameBestPickRows(g);
  const pa=g.pp.a,ph=g.pp.h,sa=S[g.a],sh=S[g.h];
  return`<div class="det" id="best-picks-${g.id}"><div class="mu"><b>Projected score:</b> ${g.a} ${P(pa.pts)}, ${g.h} ${P(ph.pts)} · total ${g.tot} · ${g.p>=.5?g.h:g.a} by ${f1(Math.abs(g.m))}</div><div class="mu"><b>Win chance (model):</b> ${g.h} ${P(g.pm*100)}%, ${g.a} ${P((1-g.pm)*100)}%${g.fp!=null?" · schedule feed: "+g.h+" "+P(g.fp*100)+"%":""}</div><div class="mu"><b>Recent scoring:</b> ${g.a} ${f1(sa.ppg)} for / ${f1(sa.opp)} against · ${g.h} ${f1(sh.ppg)} / ${f1(sh.opp)}</div><div style="margin-top:6px"><b>Best picks for this game</b></div>${it.slice(0,8).map(x=>`<div class="pl ${g.sc?(grade({...g,week:wk},x.mk,x.sd)===true?"hit":grade({...g,week:wk},x.mk,x.sd)===false?"miss":"pending"):(x.p<.6?"med":"")}"><b>${esc(x.txt)}</b>${playerForMarket(x.mk)?injuryTag(playerForMarket(x.mk)):''} · ${P(x.p*100)}% · ${am(dec(x.p))}${g.sc?"":`<button class="pill" onclick="addp('${g.id}','${x.mk}','${x.sd}')">+ Add</button>`}<div class="mu">${x.why}</div></div>`).join("")}</div>`}
 const dec=p=>Math.max(1.06,1/(p*1.045));
@@ -1972,8 +1962,8 @@ function draw(){
     const b=(m,s,t,sub)=>`<button class="o ${on(m,s)?"on":""}" ${dis?"disabled":""} onclick="pick('${g.id}','${m}','${s}')">${t}<span>${sub}</span></button>`;
     const mainChoices=allPickTypes()?gameMainMarkets(g,b):filterHas(pf,'td')?propBtns(g,'td',b):'';
     return`<div class="card g"><div class="gh" style="cursor:pointer" onclick="tog('${g.id}')"><b>${openG===g.id?"▾":"▸"} <img class="logo" loading="lazy" alt="" src="https://a.espncdn.com/i/teamlogos/nfl/500/${g.a.toLowerCase()}.png" onerror="this.style.display='none'"> ${g.a} @ <img class="logo" loading="lazy" alt="" src="https://a.espncdn.com/i/teamlogos/nfl/500/${g.h.toLowerCase()}.png" onerror="this.style.display='none'"> ${g.h}</b><span class="row"><button type="button" class="pill" onclick="event.stopPropagation();openGameInjuries('${g.a}','${g.h}',${Number(g.week||wk)})">Injuries</button><span class="mu">${g.sc?`Final ${g.a} ${g.sc[0]}, ${g.h} ${g.sc[1]}`:g.tm}</span>${mode==="same"?`<button class="pill ${focus===g.id?"on":""}" onclick="event.stopPropagation();setFocus('${g.id}')">Build here</button>`:""}</span></div>
-    <div class="mu">${g.a} ${T[g.a][1]}-${T[g.a][2]} · ${g.h} ${T[g.h][1]}-${T[g.h][2]} · <span class="game-meta">${g.sc?"Completed":"Upcoming"}</span><span class="game-card-actions"><button type="button" class="btn alt" onclick="event.stopPropagation();openBestPicks('${g.id}')">Best Picks</button><button type="button" class="btn alt" id="more-picks-button-${g.id}" aria-expanded="${expandedGamePicks.has(gamePicksKey(g.id))}" aria-controls="more-picks-${g.id}" onclick="event.stopPropagation();toggleGamePicks('${g.id}')">${expandedGamePicks.has(gamePicksKey(g.id))?"Show fewer":"More Picks"}</button></span></div>
-    ${gameHitRateHost(g,wk)}<div class="grid">${mainChoices||'<div class="m mu">No picks in this view match the loaded data. Try More picks or refresh statistics.</div>'}</div>${moreGamePicks(g,b)}${manualRosterPanel(g)}${det(g)}</div>`}).join("")||`<div class="card mu">No games match this kickoff window.</div>`;
+    <div class="mu">${g.a} ${T[g.a][1]}-${T[g.a][2]} · ${g.h} ${T[g.h][1]}-${T[g.h][2]} · <span class="game-meta">${g.sc?"Completed":"Upcoming"}</span><span class="game-card-actions"><button type="button" class="btn alt" onclick="event.stopPropagation();openBestPicks('${g.id}')">Best Picks</button><button type="button" class="btn alt" id="more-picks-button-${g.id}" aria-expanded="${expandedGamePicks.has(gamePicksKey(g.id))}" aria-controls="more-picks-${g.id}" onclick="event.stopPropagation();toggleGamePicks('${g.id}')">${expandedGamePicks.has(gamePicksKey(g.id))?"Hide All Picks":"All Picks"}</button></span></div>
+    ${gameHitRateHost(g,wk)}<div class="grid">${mainChoices||'<div class="m mu">No picks in this view match the loaded data. Try All Picks or refresh statistics.</div>'}</div>${moreGamePicks(g,b)}${manualRosterPanel(g)}${det(g)}</div>`}).join("")||`<div class="card mu">No games match this kickoff window.</div>`;
   $("gameCount").textContent=games.filter(vis).length+" of "+games.length+" games · Week "+wk;
   renderManualRosterManager();
   renderPreviousGames();paintGameHitRates();
