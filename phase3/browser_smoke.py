@@ -115,6 +115,35 @@ with sync_playwright() as p:
           const expected=window.innerWidth>=701?nav.getBoundingClientRect().height+12:10;
           return box&&Math.abs(box.getBoundingClientRect().top-expected)<40;
         }""")
+        weather_button=page.get_by_role('button',name='Weather',exact=True).first
+        weather_game=weather_button.get_attribute('data-weather-game')
+        if mobile: weather_button.tap()
+        else: weather_button.click()
+        weather=page.get_by_role('dialog',name='Game weather')
+        assert weather.is_visible()
+        matchup=page.evaluate("id => {const g=games.find(x=>String(x.id)===id);return g.a+' @ '+g.h}",weather_game)
+        assert weather.locator('#gameWeatherMatchup').inner_text()==matchup
+        condition=weather.get_by_label('Condition')
+        assert condition.input_value()=='none'
+        condition.select_option('wind')
+        apply_weather=weather.get_by_role('button',name='Apply to recommendations')
+        apply_weather.click()
+        assert 'applied' in weather.get_by_role('status').inner_text()
+        weather.get_by_role('button',name='Close',exact=True).click()
+        assert page.evaluate("""id => {
+          const select=document.getElementById('phase4WeatherGame');
+          select.value=id;
+          select.dispatchEvent(new Event('change'));
+          return document.getElementById('phase4WeatherCondition').value==='wind';
+        }""",weather_game)
+        weather_button.click()
+        assert condition.input_value()=='wind'
+        condition.select_option('none')
+        apply_weather.click()
+        assert 'cleared' in weather.get_by_role('status').inner_text()
+        assert page.locator('#phase4WeatherCondition').input_value()=='none'
+        weather.get_by_role('button',name='Close',exact=True).click()
+        print('Game card weather checks passed',flush=True)
         game_button=page.locator('[id^="more-picks-button-"]').first
         game_id=game_button.get_attribute('id').removeprefix('more-picks-button-')
         game_button.click()
