@@ -3841,7 +3841,13 @@ autoPreflightButton.onclick=async()=>{
   // Draft differences are informational, not a blocker for saved-parlay-only synchronization.
   const markerDifference=local.deleted.filter(id=>!new Set(cloud.deleted.map(String)).has(String(id))).length;
   if(markerDifference)blockers.push(markerDifference+' device-only deletion marker(s) require safe union before cloud writes');
-  const msg='AUTO-SYNC PREFLIGHT (READ ONLY): cloud '+cids.size+' saved; device '+lids.size+' saved; account partition '+(pids?pids.size+' saved':'not initialized')+'; cloud-only '+cloudOnly.length+'; device-only '+localOnly.length+'; changed same-ID '+collisions.length+'; deleted-ID risks '+resurrection.length+'; cloud markers '+cloud.deleted.length+'; device markers '+local.deleted.length+'; drafts '+(draftsDiffer?'different (device-local policy)':'same')+'. '+(blockers.length?'BLOCKED: '+blockers.join('; '):'Saved-parlay preflight READY under device-local draft policy. Automatic sync remains OFF.')+' No data changed.';
+  if(safe6Canonical(cloud)!==safe6Canonical(local)){
+   try{const raw=phase3LocalStorage.getItem(safe6Key(uid)),prior=raw?JSON.parse(raw):null;
+    if(!prior||prior.uid!==uid||typeof prior.canonical!=='string')blockers.push('no verified baseline for divergent records; review reconciliation first');
+    else if(safe6MergePlan(JSON.parse(prior.canonical),cloud,local).blocked)blockers.push('deletion/edit conflict; review required');
+   }catch(_){blockers.push('invalid verified baseline; review reconciliation first');}
+  }
+  const msg='AUTO-SYNC PREFLIGHT (READ ONLY): cloud '+cids.size+' saved; device '+lids.size+' saved; account partition '+(pids?pids.size+' saved':'not initialized')+'; cloud-only '+cloudOnly.length+'; device-only '+localOnly.length+'; changed same-ID '+collisions.length+'; deleted-ID risks '+resurrection.length+'; cloud markers '+cloud.deleted.length+'; device markers '+local.deleted.length+'; drafts '+(draftsDiffer?'different (device-local policy)':'same')+'. '+(blockers.length?'BLOCKED: '+blockers.join('; '):'Saved-parlay preflight READY under device-local draft policy. Automatic sync is '+(safe6Running?'ON.':'OFF.'))+' No data changed.';
   status(msg);
  }catch(e){status('AUTO-SYNC PREFLIGHT STOPPED: '+(e&&e.message||String(e))+'. No data changed.');}
  finally{busy=false;}
