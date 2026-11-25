@@ -123,9 +123,11 @@ with sync_playwright() as p:
         assert weather.is_visible()
         matchup=page.evaluate("id => {const g=games.find(x=>String(x.id)===id);return g.a+' @ '+g.h}",weather_game)
         assert weather.locator('#gameWeatherMatchup').inner_text()==matchup
-        condition=weather.get_by_label('Condition')
+        condition=weather.get_by_label('Wind',exact=True)
+        precipitation=weather.get_by_label('Heavy precipitation')
         assert condition.input_value()=='none'
         condition.select_option('wind')
+        precipitation.check()
         apply_weather=weather.get_by_role('button',name='Apply to recommendations')
         apply_weather.click()
         assert 'applied' in weather.get_by_role('status').inner_text()
@@ -134,14 +136,17 @@ with sync_playwright() as p:
           const select=document.getElementById('phase4WeatherGame');
           select.value=id;
           select.dispatchEvent(new Event('change'));
-          return document.getElementById('phase4WeatherCondition').value==='wind';
+          return document.getElementById('phase4WeatherCondition').value==='wind' && document.getElementById('phase4WeatherWet').checked;
         }""",weather_game)
         weather_button.click()
         assert condition.input_value()=='wind'
+        assert precipitation.is_checked()
+        precipitation.uncheck()
         condition.select_option('none')
         apply_weather.click()
         assert 'cleared' in weather.get_by_role('status').inner_text()
         assert page.locator('#phase4WeatherCondition').input_value()=='none'
+        assert not page.locator('#phase4WeatherWet').is_checked()
         weather.get_by_role('button',name='Close',exact=True).click()
         print('Game card weather checks passed',flush=True)
         game_button=page.locator('[id^="more-picks-button-"]').first
