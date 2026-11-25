@@ -3889,6 +3889,20 @@ discrepancyAuditButton.onclick=async()=>{
 // Strict three-way baseline: never infer deletions from a missing ID without a baseline.
 const safe6Key=uid=>'nflp-phase3-prod-saved-sync-v1-'+uid;
 let safe6Running=false;
+let safe6VerifiedUid=null;
+const safe6LastKey=uid=>safe6Key(uid)+'-last-success';
+function safe6Paint(){
+ const host=document.getElementById('topAccountIndicator');if(!host)return;
+ let el=document.getElementById('guardedSyncIndicator');if(!el){el=document.createElement('div');el.id='guardedSyncIndicator';el.setAttribute('role','status');host.insertAdjacentElement('afterend',el);}
+ const uid=phase3LocalStorage.getItem(OWNER_KEY),verified=!!auth&&uid&&safe6VerifiedUid===uid;
+ const active=verified&&safe6Running&&stage1WriteAllowed();
+ const label=!verified?'Cloud sync: sign-in verification required':!stage1WriteAllowed()?'Cloud sync: preview locked':!active?'Cloud sync: paused':!navigator.onLine?'Cloud sync: waiting for network':'Cloud sync: active';
+ let last='';if(verified){try{const stamp=phase3LocalStorage.getItem(safe6LastKey(uid));if(stamp&&Number.isFinite(Date.parse(stamp)))last=' · Last verified: '+new Date(stamp).toLocaleString();}catch(_){}}
+ el.textContent=label+last;el.style.color=active&&navigator.onLine?'#167443':'#946200';el.style.fontWeight='600';
+}
+function safe6MarkSuccess(uid){if(!safe6Active(uid))return;try{phase3LocalStorage.setItem(safe6LastKey(uid),new Date().toISOString());}catch(_){}safe6Paint();}
+document.addEventListener('phase3-account-signed-out',()=>{safe6VerifiedUid=null;safe6Paint()});
+setInterval(safe6Paint,1000);
 const safe6Button=document.createElement('button');safe6Button.type='button';safe6Button.className='btn alt';
 safe6Button.textContent='Enable guarded automatic synchronization';
 $('sbSyncNow').parentNode.insertBefore(safe6Button,$('sbSyncNow'));
@@ -3951,7 +3965,7 @@ async function safe6Cycle(){
  if(!safe6Running||busy||!auth||!navigator.onLine||document.hidden)return;
  busy=true;let writeAttempted=false;
  try{
-  const uid=await userId();if(!safe6Active(uid))throw Error('Account ownership changed');
+  const uid=await userId();if(!safe6Active(uid))throw Error('Account ownership changed');safe6VerifiedUid=uid;
   const raw=phase3LocalStorage.getItem(safe6Key(uid));if(!raw){safe6Running=false;return;}
   const base=JSON.parse(raw);if(!base||base.uid!==uid||typeof base.canonical!=='string')throw Error('Missing baseline');
   const remote=await readRemote(uid);if(!remote||!remote.updated_at)throw Error('Cloud revision unavailable');
@@ -3959,7 +3973,7 @@ async function safe6Cycle(){
   const local=safe6View(snapshot(),'Device');
   const c=safe6Canonical(cloud),l=safe6Canonical(local),b=base.canonical;
   if(!safe6Active(uid))throw Error('Account changed during cloud read');
-  if(c===l){phase3ClearVerifiedRecoveryNotice(uid,cloud);if(b!==c)phase3LocalStorage.setItem(safe6Key(uid),JSON.stringify({uid,canonical:c,enabled:true}));saveActiveAccount();status('GUARDED SYNC v11 PASSED: Cloud and device saved parlays and deletion markers match. Drafts preserved.');return;}
+  if(c===l){phase3ClearVerifiedRecoveryNotice(uid,cloud);if(b!==c)phase3LocalStorage.setItem(safe6Key(uid),JSON.stringify({uid,canonical:c,enabled:true}));saveActiveAccount();safe6MarkSuccess(uid);status('GUARDED SYNC v11 PASSED: Cloud and device saved parlays and deletion markers match. Drafts preserved.');return;}
   const plan=safe6MergePlan(JSON.parse(b),cloud,local);
   if(plan.blocked)throw Error('Deletion/edit conflict; review required');
   const nextCloud=safe6Canonical(plan.cloud),nextLocal=safe6Canonical(plan.device);
@@ -3979,7 +3993,7 @@ async function safe6Cycle(){
   unchanged();if(nextLocal!==l)safe6LocalWrite(uid,plan.device);else saveActiveAccount();
   if(safe6Canonical(safe6View(JSON.parse(phase3LocalStorage.getItem(ACCOUNT_PREFIX+uid)),'Account readback'))!==nextLocal)throw Error('Account readback mismatch');
   phase3LocalStorage.setItem(safe6Key(uid),JSON.stringify({uid,canonical:safe6Canonical(plan.baseline),enabled:true}));
-  if(!plan.conflicts.length)phase3ClearVerifiedRecoveryNotice(uid,plan.cloud);
+  if(!plan.conflicts.length){phase3ClearVerifiedRecoveryNotice(uid,plan.cloud);safe6MarkSuccess(uid);}
   status(plan.conflicts.length?'AUTO-SYNC: Safe records synchronized; review conflicts: '+plan.conflicts.map(x=>x.id+' ('+x.reason+')').join(', '):'AUTO-SYNC: Saved parlays synchronized and verified. Drafts preserved.');
  }catch(e){if(safe6Retryable(e,writeAttempted)){status("AUTO-SYNC: Temporary read or device-change interruption; will retry automatically. No saved-parlay write attempted.");return;}safe6Running=false;try{const uid=phase3LocalStorage.getItem(OWNER_KEY),key=safe6Key(uid),base=JSON.parse(phase3LocalStorage.getItem(key));if(base&&base.uid===uid){base.enabled=false;phase3LocalStorage.setItem(key,JSON.stringify(base));}}catch(_){}status('AUTO-SYNC v7 PAUSED: '+(e&&e.message||String(e))+'. No further automatic writes. Review before resuming.');}
  finally{busy=false}
@@ -3988,7 +4002,7 @@ safe6Button.onclick=async()=>{
  if(!stage1WriteAllowed()){status('Cloud writes are locked outside the production URL.');return;}
  if(busy){status('Another cloud operation is running.');return;}busy=true;
  try{
-  const uid=await userId();if(!safe6Active(uid))throw Error('Account ownership mismatch');
+  const uid=await userId();if(!safe6Active(uid))throw Error('Account ownership mismatch');safe6VerifiedUid=uid;
   const remote=await readRemote(uid);if(!remote)throw Error('Cloud record missing');
   const cloud=safe6View(personalCloudValues(remote.payload),'Cloud'),local=safe6View(snapshot(),'Device');
   const c=safe6Canonical(cloud),l=safe6Canonical(local);
@@ -4461,6 +4475,7 @@ if(auth&&config.url&&config.key){status('Restoring saved sign-in…');setTimeout
  }
  // v7: Resume only a previously user-enabled, account-scoped guarded sync.
  // The v6 in-memory flag was lost on every Safari reload/navigation.
+ safe6VerifiedUid=uid;safe6Paint();
  const resumeRaw=phase3LocalStorage.getItem(safe6Key(uid));
  if(resumeRaw && stage1WriteAllowed() && !startupRecoveryHold){
   try{
