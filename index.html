@@ -3959,7 +3959,7 @@ function safe6MergeIndex(s){const m=new Map(),d=new Set(s.deleted.map(String));f
 function safe6MergePlan(base,cloud,device){const b=safe6MergeIndex(base),c=safe6MergeIndex(cloud),l=safe6MergeIndex(device),conflicts=[],cs=[],ls=[],baseline=[];const marks=new Set([...b.d,...c.d,...l.d]);const ids=new Set([...b.m.keys(),...c.m.keys(),...l.m.keys()]);for(const id of ids){const x=b.m.get(id),y=c.m.get(id),z=l.m.get(id);let reason='';if(marks.has(id)){if((y&&!safe6Equal(y,x))||(z&&!safe6Equal(z,x)))reason='delete/edit conflict';else continue;}else if(x&&(!y||!z))reason='missing without deletion marker';else if(!safe6Equal(y,z)&&!safe6Equal(y,x)&&!safe6Equal(z,x))reason='concurrent edit';if(reason){conflicts.push({id,reason});if(y)cs.push(y);if(z)ls.push(z);if(x)baseline.push(x);continue;}const p=safe6Equal(y,z)?y:safe6Equal(y,x)?z:y;if(p){cs.push(p);ls.push(p);baseline.push(p);}}// Deletion/edit conflicts must block all writes until reviewed: a shared marker cannot coexist with a retained record.
 const blocked=conflicts.some(x=>marks.has(x.id));return {blocked,conflicts,cloud:{saved:cs,deleted:[...marks].sort()},device:{saved:ls,deleted:[...marks].sort()},baseline:{saved:baseline,deleted:[...marks].sort()}};}
 
-function safe6Retryable(e,writeAttempted){return !writeAttempted && (e?.safeReadRetry===true || e?.message==="Cloud changed before write" || e?.message==="Account/device changed during synchronization");}
+function safe6Retryable(e,writeAttempted){return !writeAttempted && (e?.safeReadRetry===true || e?.message==="Cloud changed before write" || e?.message==="Device changed during synchronization");}
 async function safe6Cycle(){
  if(!stage1WriteAllowed()){safe6Running=false;status('Guarded cloud writes are locked outside the production URL.');return;}
  if(!safe6Running||busy||!auth||!navigator.onLine||document.hidden)return;
@@ -3972,12 +3972,12 @@ async function safe6Cycle(){
   const cloud=safe6View(personalCloudValues(remote.payload),'Cloud');
   const local=safe6View(snapshot(),'Device');
   const c=safe6Canonical(cloud),l=safe6Canonical(local),b=base.canonical;
-  if(!safe6Active(uid))throw Error('Account changed during cloud read');
+  if(!safe6Active(uid))throw Error('Account changed during cloud read');if(!safe6Running)throw Error('Synchronization paused');
   if(c===l){phase3ClearVerifiedRecoveryNotice(uid,cloud);if(b!==c)phase3LocalStorage.setItem(safe6Key(uid),JSON.stringify({uid,canonical:c,enabled:true}));saveActiveAccount();safe6MarkSuccess(uid);status('GUARDED SYNC v11 PASSED: Cloud and device saved parlays and deletion markers match. Drafts preserved.');return;}
   const plan=safe6MergePlan(JSON.parse(b),cloud,local);
   if(plan.blocked)throw Error('Deletion/edit conflict; review required');
   const nextCloud=safe6Canonical(plan.cloud),nextLocal=safe6Canonical(plan.device);
-  const unchanged=()=>{if(!safe6Active(uid)||safe6Canonical(safe6View(snapshot(),'Device'))!==l)throw Error('Account/device changed during synchronization');};
+  const unchanged=()=>{if(!safe6Active(uid))throw Error('Account ownership changed');if(!safe6Running)throw Error('Synchronization paused');if(safe6Canonical(safe6View(snapshot(),'Device'))!==l)throw Error('Device changed during synchronization');};
   unchanged();
   if(nextCloud!==c||nextLocal!==l)preserveSavedRecovery(uid,remote,'Before automatic saved-parlay merge');
   if(nextCloud!==c){
