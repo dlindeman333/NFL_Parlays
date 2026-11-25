@@ -146,6 +146,31 @@ with sync_playwright() as p:
         assert rows.count()==total
         if mobile:
             assert page.evaluate("id => [...document.getElementById('more-picks-'+id).querySelectorAll('select,button')].every(e=>{const r=e.getBoundingClientRect();return !r.width||(r.left>=-2&&r.right<=document.documentElement.clientWidth+2)})",game_id)
+        assert page.evaluate("""id => {
+          const g=games.find(x=>String(x.id)===id);
+          const best=new Set(gameBestPickRows(g).slice(0,8).map(x=>x.mk+'|'+x.sd));
+          const suggested=new Set(phase4Top12GameCandidates(g).slice(0,12).filter(x=>!x.manual).map(x=>'p'+x.p.i+'|'+advancedPickSide(x)));
+          const rows=[...document.getElementById('more-picks-'+id).querySelectorAll('.more-pick-row')];
+          return rows.every(row=>{
+            const key=row.dataset.pickKey.split('|').slice(1).join('|');
+            return row.textContent.includes('Suggested Pick')===(best.has(key)||suggested.has(key));
+          });
+        }""",game_id)
+        slip_before=page.locator('#ln').inner_text()
+        for label in ('Market','Position','Team'):
+            control=panel.get_by_role('combobox',name=label,exact=True)
+            options=control.locator('option').all()
+            if len(options)>1:
+                control.select_option(options[1].get_attribute('value'))
+        assert page.evaluate("""id => {
+          const g=games.find(x=>String(x.id)===id),f=allPickFilters.get(gamePicksKey(id))||{};
+          const expected=sortedMorePicks(g).filter(x=>(!x.player||!phase3PlayerOut(x.player))&&(!f.market||allPickMarket(x)===f.market)&&(!f.position||x.position===f.position)&&(!f.team||allPickTeam(x)===f.team)).map(x=>x.key).sort();
+          const actual=[...document.getElementById('more-picks-'+id).querySelectorAll('.more-pick-row')].map(x=>x.dataset.pickKey).sort();
+          return JSON.stringify(expected)===JSON.stringify(actual);
+        }""",game_id)
+        assert page.locator('#ln').inner_text()==slip_before
+        panel.get_by_role('button',name='Reset Filters',exact=True).click()
+        assert rows.count()==total
         game_button.click()
         assert panel.count()==0
         print('All Picks acceptance checks passed',flush=True)
