@@ -3976,13 +3976,14 @@ async function safe6Cycle(){
  busy=true;let writeAttempted=false,cycleUid=null;
  try{
   const uid=await userId();cycleUid=uid;if(!safe6Active(uid))throw Error('Account ownership changed');safe6VerifiedUid=uid;
-  const raw=phase3LocalStorage.getItem(safe6Key(uid));if(!raw){safe6Running=false;safe6RememberReason(uid,'Missing verified baseline');return;}
-  const base=JSON.parse(raw);if(!base||base.uid!==uid||typeof base.canonical!=='string')throw Error('Missing baseline');
+  const raw=phase3LocalStorage.getItem(safe6Key(uid));
+  const base=raw?JSON.parse(raw):null;if(base&& (base.uid!==uid||typeof base.canonical!=='string'))throw Error('Invalid verified baseline');
   const remote=await readRemote(uid);if(!remote||!remote.updated_at)throw Error('Cloud revision unavailable');
   const cloud=safe6View(personalCloudValues(remote.payload),'Cloud');
   const local=safe6View(snapshot(),'Device');
-  const c=safe6Canonical(cloud),l=safe6Canonical(local),b=base.canonical;
+  const c=safe6Canonical(cloud),l=safe6Canonical(local),b=base?.canonical;
   if(!safe6Active(uid))throw Error('Account changed during cloud read');if(!safe6Running)throw Error('Synchronization paused');
+  if(!base){const part=phase3LocalStorage.getItem(ACCOUNT_PREFIX+uid);if(c!==l||!part||safe6Canonical(safe6View(JSON.parse(part),'Account partition'))!==l)throw Error('Missing verified baseline; reconciliation required');}
   if(c===l){phase3ClearVerifiedRecoveryNotice(uid,cloud);if(b!==c)phase3LocalStorage.setItem(safe6Key(uid),JSON.stringify({uid,canonical:c,enabled:true}));saveActiveAccount();safe6MarkSuccess(uid);status('GUARDED SYNC v11 PASSED: Cloud and device saved parlays and deletion markers match. Drafts preserved.');return;}
   const plan=safe6MergePlan(JSON.parse(b),cloud,local);
   if(plan.blocked)throw Error('Deletion/edit conflict; review required');
