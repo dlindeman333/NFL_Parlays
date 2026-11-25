@@ -117,6 +117,7 @@ with sync_playwright() as p:
         }""")
         weather_button=page.get_by_role('button',name='Weather',exact=True).first
         weather_game=weather_button.get_attribute('data-weather-game')
+        weather_button=page.locator(f'[data-weather-game="{weather_game}"]')
         if mobile: weather_button.tap()
         else: weather_button.click()
         weather=page.get_by_role('dialog',name='Game weather')
@@ -139,6 +140,8 @@ with sync_playwright() as p:
         apply_weather=weather.get_by_role('button',name='Apply to recommendations')
         apply_weather.click()
         assert 'applied' in weather.get_by_role('status').inner_text()
+        assert weather_button.inner_text()=='Weather applied'
+        assert page.get_by_role('button',name='Weather applied',exact=True).count()==1
         weather.get_by_role('button',name='Close',exact=True).click()
         assert page.evaluate("""id => {
           const select=document.getElementById('phase4WeatherGame');
@@ -153,6 +156,7 @@ with sync_playwright() as p:
         condition.select_option('none')
         apply_weather.click()
         assert 'cleared' in weather.get_by_role('status').inner_text()
+        assert weather_button.inner_text()=='Weather'
         assert page.locator('#phase4WeatherCondition').input_value()=='none'
         assert not page.locator('#phase4WeatherWet').is_checked()
         weather.get_by_role('button',name='Close',exact=True).click()

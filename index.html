@@ -1956,6 +1956,8 @@ function clearAllSlips(){if(!confirm('Delete ALL draft slips? Saved parlays will
 $('newSlip').onclick=newSlip;$('clearAllSlips').onclick=clearAllSlips;
 function gameHitRateHost(g,week){return g.sc?'<div class="pregame-game-rate" data-rate-game="'+esc(String(g.id))+'" data-rate-week="'+Number(week)+'">Pregame AI hit rate: N/A · loading archived recommendations</div>':'';}
 function paintGameHitRates(){document.querySelectorAll('[data-rate-game]').forEach(el=>{const week=Number(el.dataset.rateWeek),g=(WKS[week]||[]).find(g=>String(g.id)===el.dataset.rateGame);if(g&&g.sc&&window.gamePregameHitRateHTML)el.innerHTML=window.gamePregameHitRateHTML(g,week);});}
+const PHASE4_WEATHER_KEY='nflp-phase4-manual-weather-v1';
+let phase4Weather={};try{const x=JSON.parse(phase3LocalStorage.getItem(PHASE4_WEATHER_KEY)||'{}');if(x&&typeof x==='object'&&!Array.isArray(x))phase4Weather=x;}catch(e){}
 function draw(){
  const headerWeek=document.getElementById("headerWeekLabel");if(headerWeek)headerWeek.textContent="NFL "+SEASON+" · Week "+wk;
  refreshPlayerMarkets();
@@ -1969,8 +1971,9 @@ function draw(){
   $("games").innerHTML=`<h3 class="week-group-heading">Week ${wk} — Selected Week</h3>`+games.filter(vis).map(g=>{
     const dis=(mode==="same"&&focus!==g.id)||!!g.sc;const on=(m,s)=>legs.some(l=>l.gid===g.id&&l.mkt===m&&l.side===s);
     const b=(m,s,t,sub)=>`<button class="o ${on(m,s)?"on":""}" ${dis?"disabled":""} onclick="pick('${g.id}','${m}','${s}')">${t}<span>${sub}</span></button>`;
+    const weatherApplied=phase4WeatherForGame(g).code!=='none';
     const mainChoices=allPickTypes()?gameMainMarkets(g,b):filterHas(pf,'td')?propBtns(g,'td',b):'';
-    return`<div class="card g"><div class="gh" style="cursor:pointer" onclick="tog('${g.id}')"><b>${openG===g.id?"▾":"▸"} <img class="logo" loading="lazy" alt="" src="https://a.espncdn.com/i/teamlogos/nfl/500/${g.a.toLowerCase()}.png" onerror="this.style.display='none'"> ${g.a} @ <img class="logo" loading="lazy" alt="" src="https://a.espncdn.com/i/teamlogos/nfl/500/${g.h.toLowerCase()}.png" onerror="this.style.display='none'"> ${g.h}</b><span class="row"><button type="button" class="pill" onclick="event.stopPropagation();openGameInjuries('${g.a}','${g.h}',${Number(g.week||wk)})">Injuries</button>${g.sc?'':`<button type="button" class="pill" data-weather-game="${esc(g.id)}" onclick="event.stopPropagation();openGameWeather(this.dataset.weatherGame)">Weather</button>`}<span class="mu">${g.sc?`Final ${g.a} ${g.sc[0]}, ${g.h} ${g.sc[1]}`:g.tm}</span>${mode==="same"?`<button class="pill ${focus===g.id?"on":""}" onclick="event.stopPropagation();setFocus('${g.id}')">Build here</button>`:""}</span></div>
+    return`<div class="card g"><div class="gh" style="cursor:pointer" onclick="tog('${g.id}')"><b>${openG===g.id?"▾":"▸"} <img class="logo" loading="lazy" alt="" src="https://a.espncdn.com/i/teamlogos/nfl/500/${g.a.toLowerCase()}.png" onerror="this.style.display='none'"> ${g.a} @ <img class="logo" loading="lazy" alt="" src="https://a.espncdn.com/i/teamlogos/nfl/500/${g.h.toLowerCase()}.png" onerror="this.style.display='none'"> ${g.h}</b><span class="row"><button type="button" class="pill" onclick="event.stopPropagation();openGameInjuries('${g.a}','${g.h}',${Number(g.week||wk)})">Injuries</button>${g.sc?'':`<button type="button" class="pill${weatherApplied?' on':''}" data-weather-game="${esc(g.id)}" onclick="event.stopPropagation();openGameWeather(this.dataset.weatherGame)">${weatherApplied?'Weather applied':'Weather'}</button>`}<span class="mu">${g.sc?`Final ${g.a} ${g.sc[0]}, ${g.h} ${g.sc[1]}`:g.tm}</span>${mode==="same"?`<button class="pill ${focus===g.id?"on":""}" onclick="event.stopPropagation();setFocus('${g.id}')">Build here</button>`:""}</span></div>
     <div class="mu">${g.a} ${T[g.a][1]}-${T[g.a][2]} · ${g.h} ${T[g.h][1]}-${T[g.h][2]} · <span class="game-meta">${g.sc?"Completed":"Upcoming"}</span><span class="game-card-actions"><button type="button" class="btn alt" onclick="event.stopPropagation();openBestPicks('${g.id}')">Best Picks</button><button type="button" class="btn alt" id="more-picks-button-${g.id}" aria-expanded="${expandedGamePicks.has(gamePicksKey(g.id))}" aria-controls="more-picks-${g.id}" onclick="event.stopPropagation();toggleGamePicks('${g.id}')">${expandedGamePicks.has(gamePicksKey(g.id))?"Hide All Picks":"All Picks"}</button></span></div>
     ${gameHitRateHost(g,wk)}<div class="grid">${mainChoices||'<div class="m mu">No picks in this view match the loaded data. Try All Picks or refresh statistics.</div>'}</div>${moreGamePicks(g,b)}${manualRosterPanel(g)}${det(g)}</div>`}).join("")||`<div class="card mu">No games match this kickoff window.</div>`;
   $("gameCount").textContent=games.filter(vis).length+" of "+games.length+" games · Week "+wk;
@@ -2176,8 +2179,6 @@ function plays(){
 const ADV_ODDS_KEY='nflp-manual-props-v1';
 let advManual={};try{advManual=JSON.parse(phase3LocalStorage.getItem(ADV_ODDS_KEY)||'{}')||{}}catch(e){}
 const advKey=(g,p)=>[SEASON,wk,g.a,g.h,p.n,p.k].join('|');
-const PHASE4_WEATHER_KEY='nflp-phase4-manual-weather-v1';
-let phase4Weather={};try{const x=JSON.parse(phase3LocalStorage.getItem(PHASE4_WEATHER_KEY)||'{}');if(x&&typeof x==='object'&&!Array.isArray(x))phase4Weather=x;}catch(e){}
 const phase4Clamp=(v,low,high)=>Math.min(high,Math.max(low,v));
 // Build the completed-player index ONCE per statistics revision/week instead of
 // rescanning every imported row for every pick and every game-card redraw.
