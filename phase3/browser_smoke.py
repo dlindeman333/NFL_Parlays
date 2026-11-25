@@ -122,6 +122,33 @@ with sync_playwright() as p:
           const expected=window.innerWidth>=701?nav.getBoundingClientRect().height+document.getElementById('quickFiltersBar').getBoundingClientRect().height+12:10;
           return box&&Math.abs(box.getBoundingClientRect().top-expected)<40;
         }""")
+        game_button=page.locator('[id^="more-picks-button-"]').first
+        game_id=game_button.get_attribute('id').removeprefix('more-picks-button-')
+        game_button.click()
+        panel=page.locator('[id="more-picks-'+game_id+'"]')
+        assert panel.is_visible()
+        rows=panel.locator('.more-pick-row')
+        total=rows.count()
+        assert total>0
+        assert page.evaluate("id => sortedMorePicks(games.find(g=>String(g.id)===id)).filter(x=>!x.player||!phase3PlayerOut(x.player)).length",game_id)==total
+        for label in ('Market','Position','Team'):
+            control=panel.get_by_role('combobox',name=label,exact=True)
+            assert control.count()==1
+            options=control.locator('option').all()
+            if len(options)>1:
+                control.select_option(options[1].get_attribute('value'))
+                assert rows.count()<=total
+                panel.get_by_role('button',name='Reset Filters',exact=True).click()
+                assert rows.count()==total
+        panel.get_by_role('button',name='Collapse All',exact=True).click()
+        assert rows.count()==0
+        panel.get_by_role('button',name='Expand All',exact=True).click()
+        assert rows.count()==total
+        if mobile:
+            assert page.evaluate("id => [...document.getElementById('more-picks-'+id).querySelectorAll('select,button')].every(e=>{const r=e.getBoundingClientRect();return !r.width||(r.left>=-2&&r.right<=document.documentElement.clientWidth+2)})",game_id)
+        game_button.click()
+        assert panel.count()==0
+        print('All Picks acceptance checks passed',flush=True)
         before=page.locator('#ln').inner_text()
         page.locator('#riskParlayLegs').select_option('4')
         page.locator('#riskParlayFrom').fill('500')
