@@ -2198,17 +2198,27 @@ function phase4PlayerHistory(p){
  }
  return phase4HistoryIndex.get(playerIdentity(p.n))||[];
 }
+function weatherSelection(code){
+ const parts=String(code).split('+');
+ const wind=parts.includes('severe')?'severe':parts.includes('wind')?'wind':'none';
+ return {wind,wet:parts.includes('wet')};
+}
 function phase4WeatherForGame(g){
  const code=g.sc?'none':phase4Weather[[SEASON,g.week||wk,g.id].join('|')]||'none';
- return {code,label:({none:'No adjustment',wind:'Verified wind scenario',severe:'Verified strong wind scenario',wet:'Verified heavy precipitation scenario'})[code]||'No adjustment',
-  factor:k=>code==='wind'?(['ps','rec','rcp'].includes(k)?.93:1.02):
-    code==='severe'?(['ps','rec','rcp'].includes(k)?.84:1.04):
-    code==='wet'?(['ps','rec','rcp'].includes(k)?.94:1.01):1};
+ const {wind,wet}=weatherSelection(code);
+ const label=[wind==='severe'?'Strong wind':wind==='wind'?'Windy':'',wet?'Heavy precipitation':''].filter(Boolean).join(' + ');
+ return {code,label:label||'No adjustment',
+  teamFactor:(({wind:.97,severe:.92})[wind]??1)*(wet?.96:1),
+  factor:k=>{
+   const passing=['ps','rec','rcp'].includes(k);
+   const windFactor=wind==='severe'?(passing?.84:1.04):wind==='wind'?(passing?.93:1.02):1;
+   return windFactor*(wet?(passing?.94:1.01):1);
+  }};
 }
 // Scenario assumptions for team scoring. Reference lines and prices stay fixed.
 function weatherTeamProjection(g){
- const factor=({wind:.97,severe:.92,wet:.96})[phase4WeatherForGame(g).code];
- if(factor==null)return null;
+ const factor=phase4WeatherForGame(g).teamFactor;
+ if(factor===1)return null;
  const away=g.pp.a.pts*factor,home=g.pp.h.pts*factor;
  const margin=home-away,pm=sig(margin/5.5);
  return {away,home,margin,total:away+home,pm,p:g.fp==null?pm:(pm+g.fp)/2};
@@ -2533,13 +2543,24 @@ function renderAdvanced(){
  window.phase3CaptureCurrentAdvancedSuggestions?.(view);
 }
 $('advView').add(new Option('Smart parlay optimizer (3–6 legs)','optimizer'));
-const phase4WeatherOptions='<option value="none">No adjustment</option><option value="wind">Windy</option><option value="severe">Strong wind</option><option value="wet">Heavy precipitation</option>';
+function gameWeatherControls(prefix){
+ return '<label>Wind <select id="'+prefix+'Condition"><option value="none">No wind adjustment</option><option value="wind">Windy</option><option value="severe">Strong wind</option></select></label> <label><input type="checkbox" id="'+prefix+'Wet"> Heavy precipitation</label>';
+}
+function showWeatherSelection(prefix,code){
+ const {wind,wet}=weatherSelection(code);
+ $(prefix+'Condition').value=wind;
+ $(prefix+'Wet').checked=wet;
+}
+function readWeatherSelection(prefix){
+ const wind=$(prefix+'Condition').value;
+ return [wind==='none'?'':wind,$(prefix+'Wet').checked?'wet':''].filter(Boolean).join('+')||'none';
+}
 const phase4Controls=document.createElement('div');phase4Controls.className='phase4-controls';
 phase4Controls.innerHTML='<div id="phase4OptimizerOptions" class="phase4-control-card" hidden><label><b>Optimizer legs</b> <select id="phase4LegCount"><option>3</option><option>4</option><option>5</option><option>6</option></select></label><span class="mu">Different games only · one pick per game · risk-aware ranking</span></div>'+
- '<details class="phase4-control-card"><summary>Manual game-weather scenario (optional)</summary><p class="mu">Enter only weather conditions you have independently checked. These local advisory adjustments do not fetch weather forecasts and do not alter official data or saved picks.</p><div class="tools"><label>Game <select id="phase4WeatherGame"></select></label><label>Condition <select id="phase4WeatherCondition">'+phase4WeatherOptions+'</select></label><button type="button" class="btn alt" id="phase4SaveWeather">Apply to recommendations</button></div><p class="mu" id="phase4WeatherStatus" role="status"></p></details>';
+ '<details class="phase4-control-card"><summary>Manual game-weather scenario (optional)</summary><p class="mu">Enter only weather conditions you have independently checked. These local advisory adjustments do not fetch weather forecasts and do not alter official data or saved picks.</p><div class="tools"><label>Game <select id="phase4WeatherGame"></select></label>'+gameWeatherControls('phase4Weather')+'<button type="button" class="btn alt" id="phase4SaveWeather">Apply to recommendations</button></div><p class="mu" id="phase4WeatherStatus" role="status"></p></details>';
 $('advView').closest('.tools').after(phase4Controls);
 $('phase4LegCount').addEventListener('change',renderAdvanced);
-$('phase4WeatherGame').addEventListener('change',()=>{$('phase4WeatherCondition').value=phase4Weather[[SEASON,wk,$('phase4WeatherGame').value].join('|')]||'none';});
+$('phase4WeatherGame').addEventListener('change',()=>showWeatherSelection('phase4Weather',phase4Weather[[SEASON,wk,$('phase4WeatherGame').value].join('|')]));
 function saveGameWeather(gid, condition, status){
  if(!(WKS[wk]||[]).some(g=>!g.sc&&String(g.id)===gid)){
   status.textContent='Select an upcoming matchup first.';
@@ -2555,7 +2576,7 @@ function saveGameWeather(gid, condition, status){
   return false;
  }
  phase4Weather=next;
- if($('phase4WeatherGame').value===gid)$('phase4WeatherCondition').value=condition;
+ if($('phase4WeatherGame').value===gid)showWeatherSelection('phase4Weather',condition);
  status.textContent=condition==='none'?'Weather adjustment cleared.':'Device-only scenario applied. Recheck against the actual forecast.';
  draw();
  plays();
@@ -2571,18 +2592,18 @@ function openGameWeather(gid){
   dialog.id='gameWeatherDialog';
   dialog.setAttribute('aria-labelledby','gameWeatherTitle');
   dialog.style.cssText='box-sizing:border-box;max-width:440px;width:90%;padding:20px;border:2px solid var(--ac);border-radius:14px;background:var(--card);color:var(--tx)';
-  dialog.innerHTML='<h2 id="gameWeatherTitle">Game weather</h2><p id="gameWeatherMatchup"></p><p class="mu">Use a forecast you’ve checked. This setting applies on this device.</p><label>Condition <select id="gameWeatherCondition">'+phase4WeatherOptions+'</select></label><p id="gameWeatherStatus" class="mu" role="status"></p><div class="row"><button type="button" class="btn" id="gameWeatherApply">Apply to recommendations</button><button type="button" class="btn alt" id="gameWeatherClose">Close</button></div>';
+  dialog.innerHTML='<h2 id="gameWeatherTitle">Game weather</h2><p id="gameWeatherMatchup"></p><p class="mu">Use a forecast you’ve checked. This setting applies on this device.</p>'+gameWeatherControls('gameWeather')+'<p id="gameWeatherStatus" class="mu" role="status"></p><div class="row"><button type="button" class="btn" id="gameWeatherApply">Apply to recommendations</button><button type="button" class="btn alt" id="gameWeatherClose">Close</button></div>';
   document.body.append(dialog);
   $('gameWeatherClose').onclick=()=>dialog.close();
  }
  $('gameWeatherMatchup').textContent=game.a+' @ '+game.h;
- $('gameWeatherCondition').value=phase4WeatherForGame(game).code;
+ showWeatherSelection('gameWeather',phase4WeatherForGame(game).code);
  $('gameWeatherStatus').textContent='';
- $('gameWeatherApply').onclick=()=>saveGameWeather(gid,$('gameWeatherCondition').value,$('gameWeatherStatus'));
+ $('gameWeatherApply').onclick=()=>saveGameWeather(gid,readWeatherSelection('gameWeather'),$('gameWeatherStatus'));
  dialog.showModal();
 }
 $('phase4SaveWeather').addEventListener('click',()=>saveGameWeather(
- $('phase4WeatherGame').value,$('phase4WeatherCondition').value,$('phase4WeatherStatus')
+ $('phase4WeatherGame').value,readWeatherSelection('phase4Weather'),$('phase4WeatherStatus')
 ));
 renderAdvanced();
 $('advView').onchange=renderAdvanced;$('advMarket').onchange=renderAdvanced;
