@@ -1,0 +1,14 @@
+name: Feed resilience review
+on:
+  push:
+    branches: [review/nfl-feed-resilience]
+permissions:
+  contents: read
+jobs:
+  retry-tests:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - run: python3 -m unittest -v test_feed_resilience
