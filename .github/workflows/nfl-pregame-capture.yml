@@ -10,7 +10,7 @@ concurrency:
   cancel-in-progress: false
 jobs:
   capture:
-    if: github.repository == 'dlindeman333/NFL_Parlays' && vars.NFL_AUTOMATION_ENABLED == 'true' && vars.NFL_PHASE3_PUBLISH_ENABLED == 'true' && vars.NFL_PHASE3_LAUNCH_APPROVED == 'true'
+    if: github.ref == 'refs/heads/main' && github.repository == 'dlindeman333/NFL_Parlays' && vars.NFL_AUTOMATION_ENABLED == 'true' && vars.NFL_PHASE3_PUBLISH_ENABLED == 'true' && vars.NFL_PHASE3_LAUNCH_APPROVED == 'true'
     runs-on: ubuntu-latest
     # Allow Chromium setup before the 35-minute boundary and a bounded wait.
     timeout-minutes: 85

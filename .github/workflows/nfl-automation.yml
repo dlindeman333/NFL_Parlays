@@ -12,7 +12,7 @@ concurrency:
   cancel-in-progress: false
 jobs:
   refresh-and-snapshot:
-    if: github.repository == 'dlindeman333/NFL_Parlays' && vars.NFL_AUTOMATION_ENABLED == 'true'
+    if: github.ref == 'refs/heads/main' && github.repository == 'dlindeman333/NFL_Parlays' && vars.NFL_AUTOMATION_ENABLED == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 35
     steps:

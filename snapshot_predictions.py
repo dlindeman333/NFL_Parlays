@@ -235,15 +235,21 @@ def main():
     with sync_playwright() as pw:
         browser = pw.chromium.launch(headless=True)
         page = browser.new_page()
+        # Capture uses the supplied statistics and server-side injury report.
+        # Prevent asynchronous app startup from replacing those inputs.
+        page.route('http**/*', lambda route: route.abort())
         page.goto(html.as_uri(), wait_until='domcontentloaded', timeout=60000)
         page.evaluate('(csv) => loadCSV(csv, {persist:false})', stats[0]['csv_text'])
         for e in pending:
             if not e['a'] or not e['h']:
                 raise RuntimeError(f"Missing team mapping for {e['id']}")
             result = page.evaluate('''e => {
+              setWk(e.week);
               const a=normalizeTeam(e.a),h=normalizeTeam(e.h);
               if(!T[a]||!T[h])return null;
               const g=build([['espn'+e.id,a,h,'Scheduled',null]])[0];
+              g.week=e.week;
+              g.date=e.kickoff;
               const candidates=window.phase4Top12GameCandidates(g);
               const stats={ps:'passing_yards',ru:'rushing_yards',rec:'receiving_yards',
                 rcp:'receptions',td:'touchdowns'};
@@ -261,8 +267,8 @@ def main():
                 raise RuntimeError(f"No model picks for {e['id']}")
             # Filter excluded injuries BEFORE the limit, filling from next-ranked picks.
             filtered=select_top12(result['picks'], reports['records'], e['week'])
-            if len(filtered) != TOP_N:
-                raise RuntimeError(f"Expected {TOP_N} eligible picks for {e['id']}; got {len(filtered)}")
+            if not filtered:
+                raise RuntimeError(f"No eligible picks after injury review for {e['id']}")
             # Browser startup and model evaluation can take several minutes.
             # The database independently enforces the 30-minute minimum.
             kickoff = datetime.fromisoformat(e['kickoff'])
@@ -270,7 +276,7 @@ def main():
                 raise RuntimeError(f"Capture window elapsed for {e['id']}; no late write")
             row = {'season': SEASON, 'week': e['week'], 'game_id': e['id'],
                    'away_team': result['away_team'], 'home_team': result['home_team'],
-                   'kickoff_at': e['kickoff'], 'model_version': 'browser-model-2026-phase3-top12-v1',
+                   'kickoff_at': e['kickoff'], 'model_version': 'browser-model-2026-phase3-top12-reliability-v2',
                    'picks': filtered}
             request = Request(base + '/rest/v1/nfl_prediction_snapshots_v3?on_conflict=season,week,game_id',
                               data=json.dumps(row).encode(), method='POST',
@@ -283,7 +289,7 @@ def main():
                     if len(saved) != 1 or not authentic_snapshot(saved[0]):
                         raise RuntimeError('New v3 capture was not verified after INSERT; '
                                            'possible duplicate or unexpected timestamp')
-                    print('Archived verified Top 12 v3 week', e['week'], result['away_team'], '@', result['home_team'],
+                    print('Archived verified v3 week', e['week'], result['away_team'], '@', result['home_team'],
                           len(filtered), 'picks; server timestamp', saved[0]['created_at'], 'HTTP', r.status)
             except HTTPError as err:
                 raise RuntimeError(f'Prediction snapshot upload HTTP {err.code}: {err.read().decode()[:500]}') from err

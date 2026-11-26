@@ -61,6 +61,7 @@ with sync_playwright() as p:
           WKS[11]=WKS[10].slice(0,8).map((game,index)=>({
             ...game,id:'synthetic-w11-'+index,week:11,date:kickoff,sc:null
           }));
+          populateWeeks();
           setWk(11);
         }""")
         assert page.evaluate("WKS[11].length===8 && WKS[11].every(g => !g.sc && Date.parse(g.date)>Date.now())")
@@ -112,7 +113,7 @@ with sync_playwright() as p:
         page.wait_for_function("""() => {
           const box=document.getElementById('bestRiskParlayControls');
           const nav=document.getElementById('stickySkipNavigation');
-          const expected=window.innerWidth>=701?nav.getBoundingClientRect().height+12:10;
+          const expected=(window.innerWidth>=701?nav.getBoundingClientRect().height:0)+document.getElementById('quickFiltersBar').getBoundingClientRect().height+12;
           return box&&Math.abs(box.getBoundingClientRect().top-expected)<40;
         }""")
         weather_button=page.get_by_role('button',name='Weather',exact=True).first
@@ -235,6 +236,79 @@ with sync_playwright() as p:
             assert page.evaluate('document.documentElement.scrollWidth<=window.innerWidth+2')
             assert page.evaluate("""() => [...document.querySelectorAll('#bestRiskParlayControls input,#bestRiskParlayControls select,#bestRiskParlayControls button')]
               .every(e => e.getBoundingClientRect().left>=-2&&e.getBoundingClientRect().right<=window.innerWidth+2)""")
+        # Four completed team weeks, with one receiver missing the latest game.
+        page.evaluate("""id => {
+          const g=games.find(game=>String(game.id)===id);
+          const header='player,team,week,season,game_status,position,targets,receptions,receiving_yards,snap_share';
+          const rows=[header];
+          for(const week of [7,8,9,10]){
+            rows.push(['Fixture Current',g.a,week,2026,'COMPLETED','WR',6,4,45,.65].join(','));
+            if(week!==10)rows.push(['Fixture Recent Absence',g.a,week,2026,'COMPLETED','WR',6,4,45,.65].join(','));
+            if(week>=9)rows.push(['Fixture Thin',g.a,week,2026,'COMPLETED','WR',6,4,45,.65].join(','));
+          }
+          loadCSV(rows.join(String.fromCharCode(10)),{persist:false});
+          const current=PLY.find(p=>p.n==='Fixture Current'&&p.k==='rec');
+          const absent=PLY.find(p=>p.n==='Fixture Recent Absence'&&p.k==='rec');
+          const thin=PLY.find(p=>p.n==='Fixture Thin'&&p.k==='rec');
+          if(!reliablePlayerUsage(current,'u')||!reliablePlayerUsage(absent,'o')||
+             reliablePlayerUsage(absent,'u')||reliablePlayerUsage(thin,'o'))throw Error('Participation/UNDER policy');
+          if(!phase4Top12GameCandidates(g).some(x=>x.p===current))throw Error('Capture uses the same eligible player pool');
+          window.captureFixture=phase4Top12GameCandidates(g).map(x=>[x.p.i,x.line,advancedPickSide(x)]);
+        }""",game_id)
+        if page.locator('#qfCollapse').get_attribute('open') is None:
+            page.locator('#qfCollapseToggle').click()
+        page.locator('#qfSportsbook').select_option('DraftKings')
+        assert page.evaluate("id => gamePickCandidates(games.find(g=>g.id===id)).length===0",game_id)
+        game_button.click()
+        editor=page.locator('#verify-book-'+game_id)
+        selected=editor.locator('select[name=selection] option').filter(has_text='Fixture Current Over').first
+        selection=selected.get_attribute('value')
+        editor.locator('select[name=selection]').select_option(selection)
+        editor.get_by_role('button',name='Confirm exact selection').click()
+        assert 'confirmation saved' in editor.get_by_role('status').inner_text()
+        assert page.evaluate("""id => {
+          const game=games.find(g=>g.id===id);
+          const [pick]=gamePickCandidates(game);
+          if(!pick||gamePickCandidates(game).length!==1||!pick.player||pick.side!=='o')return false;
+          const line=pstat(pick.player,game).line;
+          return !sportsbookAllows(game,pick.mkt,'u',line)&&!sportsbookAllows(game,pick.mkt,'o',line+1)&&
+            !sportsbookAllows({...game,date:new Date(Date.parse(game.date)+60000).toISOString()},pick.mkt,'o',line)&&
+            !currentBookLine(Date.now()-BOOK_LINE_MAX_AGE)&&
+            JSON.stringify(phase4Top12GameCandidates(game).map(x=>[x.p.i,x.line,advancedPickSide(x)]))===JSON.stringify(window.captureFixture);
+        }""",game_id)
+        page.locator('#qfSportsbook').select_option('FanDuel')
+        assert page.evaluate("id => gamePickCandidates(games.find(g=>g.id===id)).length===0",game_id)
+        page.locator('#qfSportsbook').select_option('DraftKings')
+        if not mobile:
+            assert page.evaluate('document.getElementById("quickFiltersBar").getBoundingClientRect().top>=document.getElementById("stickySkipNavigation").getBoundingClientRect().bottom-1')
+        shots=os.environ.get('NFL_GUIDE_SCREENSHOTS')
+        if shots:
+            page.locator('#quickFiltersBar').screenshot(path=f'{shots}/filters-{"iphone" if mobile else "desktop"}.png')
+            editor.locator('select[name=selection]').select_option(selection)
+            editor.screenshot(path=f'{shots}/verify-{"iphone" if mobile else "desktop"}.png',
+                              style='#floatingBackToTop,#stickySkipNavigation,#phase3MobileSlipToggle,#quickFiltersBar { visibility:hidden !important; }')
+        page.locator('#qfCollapseToggle').click()
+        editor.locator('select[name=selection]').select_option(selection)
+        editor.get_by_role('button',name='Remove confirmation').click()
+        page.locator('#qfCollapseToggle').click()
+        assert page.evaluate("id => gamePickCandidates(games.find(g=>g.id===id)).length===0",game_id)
+        page.locator('#qfUnder').uncheck()
+        assert page.evaluate("reliablePlayerUsage(PLY.find(p=>p.n==='Fixture Recent Absence'&&p.k==='rec'),'u')")
+        page.locator('#qfAdvancedButton').click()
+        page.wait_for_function("phase3LocalStorage.getItem('nflp-quick-filter-advanced-v1')==='expanded'")
+        page.locator('#qfPresetName').fill('DraftKings test')
+        page.locator('#qfSavePreset').click()
+        page.locator('#qfClear').click()
+        assert page.locator('#qfUnder').is_checked()
+        page.locator('#qfLoadPreset').click()
+        assert page.locator('#qfSportsbook').input_value()=='DraftKings'
+        assert not page.locator('#qfUnder').is_checked()
+        page.reload(wait_until='domcontentloaded')
+        assert page.locator('#qfCollapse').get_attribute('open') is not None
+        assert page.locator('#qfAdvanced').get_attribute('open') is not None
+        assert page.locator('#qfSportsbook').input_value()=='DraftKings'
+        assert not page.locator('#qfUnder').is_checked()
+        print('Participation, sportsbook evidence, capture isolation and persistent filters passed',flush=True)
         assert not errors,errors
         assert not writes,'browser smoke must never write to a production backend'
         print(('Mobile' if mobile else 'Desktop')+' feature smoke passed; no runtime errors or live writes')
