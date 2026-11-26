@@ -35,18 +35,18 @@ console.log('Top 12 selection, exclusions, cap and cloud-history contract passed
 
 const usageStart=html.indexOf("function reliablePlayerUsage(");
 const usageEnd=html.indexOf("function playerSuggested(",usageStart);
-const rows=[11,10,9].map(week=>({week,team:'BUF',position:'RB',rushing_attempts:4,targets:2,snap_share:null}));
+const rows=[11,10,9].map(week=>({week,team:'BUF',position:'RB',rushing_attempts:1,targets:1,snap_share:.1,touchdowns:0}));
 const usage={enhancedUnderOnly:true,phase4PlayerHistory:()=>rows,
  phase4TeamHistoryIndex:new Map([['BUF',[...rows,{week:8}]]])};
 vm.createContext(usage);
 vm.runInContext(html.slice(usageStart,usageEnd),usage);
 const td={tm:'BUF',k:'td'};
-assert(usage.reliablePlayerUsage(td),'recorded carries and targets qualify when snap share is missing');
-rows.forEach(row=>{row.snap_share=.25;});
-assert(!usage.reliablePlayerUsage(td),'known low snap share cannot be bypassed by opportunities');
-rows.forEach(row=>{row.snap_share=null;row.targets=0;});
-assert(!usage.reliablePlayerUsage(td),'insufficient recorded opportunities do not qualify');
-rows.forEach(row=>{row.targets=3;});
+assert(usage.reliablePlayerUsage(td),'one carry plus one target qualifies even with low snap share');
+assert(!usage.reliablePlayerUsage(td,'u'),'a TD pick has only a scorer side');
+rows.forEach(row=>{row.targets=0;});
+assert(!usage.reliablePlayerUsage(td),'one opportunity per game with no TD falls short');
+rows[0].touchdowns=1;
+assert(usage.reliablePlayerUsage(td),'one observed TD qualifies a player with a smaller role');
 rows.pop();
-assert(!usage.reliablePlayerUsage(td),'fallback still requires three appearances');
-console.log('Anytime TD missing-snap regression passed');
+assert(!usage.reliablePlayerUsage(td),'the three-appearance requirement still applies');
+console.log('Anytime TD opportunity, recent touchdown and participation gates passed');

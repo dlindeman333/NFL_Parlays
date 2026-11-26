@@ -214,6 +214,21 @@ with sync_playwright() as p:
         game_button.click()
         assert panel.count()==0
         print('All Picks acceptance checks passed',flush=True)
+        defense = page.locator(f'.defense-td-options:has([data-defense-game="{game_id}"])')
+        defense.locator('summary').click()
+        assert defense.locator('form').count() == 2
+        for side in ('a','h'):
+            if defense.get_attribute('open') is None:
+                defense.locator('summary').click()
+            row=defense.locator(f'form[data-team-side="{side}"]')
+            row.locator('input').fill('650')
+            row.locator('button').click()
+            assert page.evaluate("side => legs.some(leg=>leg.mkt==='deftd'+side&&leg.o==='+650')",side)
+            assert 'Model win chance is unavailable' in page.locator('#slip').inner_text()
+            page.locator('#slip').get_by_role('button',name='Clear this leg').click()
+        assert page.evaluate("!legs.some(leg=>leg.mkt.startsWith('deftd'))")
+        print('Both team defense TD options accepted entered odds',flush=True)
+
         before=page.locator('#ln').inner_text()
         page.locator('#riskParlayLegs').select_option('4')
         page.locator('#riskParlayFrom').fill('500')
@@ -239,12 +254,12 @@ with sync_playwright() as p:
         # Four completed team weeks, with one receiver missing the latest game.
         page.evaluate("""id => {
           const g=games.find(game=>String(game.id)===id);
-          const header='player,team,week,season,game_status,position,targets,receptions,receiving_yards,snap_share';
+          const header='player,team,week,season,game_status,position,targets,receptions,receiving_yards,snap_share,rushing_attempts,touchdowns';
           const rows=[header];
           for(const week of [7,8,9,10]){
-            rows.push(['Fixture Current',g.a,week,2026,'COMPLETED','WR',6,4,45,.65].join(','));
-            if(week!==10)rows.push(['Fixture Recent Absence',g.a,week,2026,'COMPLETED','WR',6,4,45,.65].join(','));
-            if(week>=9)rows.push(['Fixture Thin',g.a,week,2026,'COMPLETED','WR',6,4,45,.65].join(','));
+            rows.push(['Fixture Current',g.a,week,2026,'COMPLETED','WR',6,4,45,.65,0,0].join(','));
+            if(week!==10)rows.push(['Fixture Recent Absence',g.a,week,2026,'COMPLETED','WR',6,4,45,.65,0,0].join(','));
+            if(week>=9)rows.push(['Fixture Thin',g.a,week,2026,'COMPLETED','WR',6,4,45,.65,0,0].join(','));
           }
           loadCSV(rows.join(String.fromCharCode(10)),{persist:false});
           const current=PLY.find(p=>p.n==='Fixture Current'&&p.k==='rec');
@@ -252,6 +267,9 @@ with sync_playwright() as p:
           const thin=PLY.find(p=>p.n==='Fixture Thin'&&p.k==='rec');
           if(!reliablePlayerUsage(current,'u')||!reliablePlayerUsage(absent,'o')||
              reliablePlayerUsage(absent,'u')||reliablePlayerUsage(thin,'o'))throw Error('Participation/UNDER policy');
+          const td=PLY.find(p=>p.n==='Fixture Current'&&p.k==='td');
+          if(!td||!gamePickCandidates(g).some(x=>x.player===td)||!phase4Top12GameCandidates(g).some(x=>x.p===td))
+            throw Error('Qualifying scoreless player should have a TD market and capture candidate');
           if(!phase4Top12GameCandidates(g).some(x=>x.p===current))throw Error('Capture uses the same eligible player pool');
           window.captureFixture=phase4Top12GameCandidates(g).map(x=>[x.p.i,x.line,advancedPickSide(x)]);
         }""",game_id)

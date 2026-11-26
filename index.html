@@ -796,7 +796,7 @@ html{scroll-padding-top:175px}#topAccountPanel,#myParlays,#savedParlaySlips,#bui
 </div>
 <h3 class="filter-group-title">Kickoff &amp; bet markets</h3><div class="row" style="margin-top:10px"><b>Kickoff</b><span class="mu">Select one or more times; All clears specific choices.</span></div><div class="row" id="tf" style="margin-top:4px"></div>
 <div class="row" style="margin-top:10px"><b>Picks</b><span class="mu">Select one or more types; All includes game markets.</span></div><div class="row" id="pf" style="margin-top:4px"></div><p class="mu">Receiving yards and receptions require completed-game player statistics. No projections are shown when supporting data is unavailable.</p>
-<div class="team-pick-setting"><label><input checked="" id="supportedTeamOnly" onchange="setSupportedTeamOnly(this.checked)" type="checkbox"/> <b>Exclude Infrequently Used Team Picks</b></label><p class="mu">On by default: show team moneyline, spread, game totals, team points totals and team total touchdowns. Other team specialty picks are hidden from recommendations; saved picks are preserved.</p></div><h3 class="filter-group-title">Player eligibility &amp; risk</h3><label><input id="enhancedUnderOnly" type="checkbox" checked onchange="setEnhancedUnderOnly(this.checked)"/> <b>Enhanced UNDER eligibility</b></label><p class="mu">Require stronger recent usage for UNDER recommendations. Baseline participation always applies.</p><div style="margin-top:12px"><label><input checked="" id="regularOnly" onchange="setRegularOnly(this.checked)" type="checkbox"/> <b>Regular contributors only</b></label><p class="mu">Baseline recommendations require participation in at least 3 of the last 4 completed team games, with market-specific usage. Enhanced UNDER also requires an appearance in the latest completed team game and higher average usage. Anytime TD uses snap share when available or recorded carries and targets when snap data is absent. Turning this option off relaxes the additional legacy contributor checks, not the baseline safety rules. Existing selections stay intact.</p></div><fieldset style="margin:12px 0 0;padding:10px;border:1px solid var(--bd);border-radius:8px"><legend><b>Risk factor — combined parlay odds</b></legend><div class="row"><label for="oddsFrom">From <input id="oddsFrom" inputmode="text" placeholder="+500" step="1" style="width:100px" type="number"/></label><label for="oddsThrough">Through <input id="oddsThrough" inputmode="text" placeholder="+2000" step="1" style="width:100px" type="number"/></label><button class="btn alt" onclick="applyOddsRange()" type="button">Apply odds range</button><button class="btn alt" id="quickViewParlays" onclick="quickViewFilteredParlays()" type="button">Quick view: X-leg parlays in range</button></div><p class="mu" style="margin:6px 0 0">Rounded American odds for the whole parlay, inclusive. Blank means no limit. Individual picks remain visible. Model prices are estimates.</p><div aria-live="polite" class="mu" id="oddsFilterStatus" role="status"></div><div class="mu" id="combinedOddsStatus" role="status"></div></fieldset>
+<div class="team-pick-setting"><label><input checked="" id="supportedTeamOnly" onchange="setSupportedTeamOnly(this.checked)" type="checkbox"/> <b>Exclude Infrequently Used Team Picks</b></label><p class="mu">On by default: show team moneyline, spread, game totals, team points totals and team total touchdowns. Other team specialty picks are hidden from recommendations; saved picks are preserved.</p></div><h3 class="filter-group-title">Player eligibility &amp; risk</h3><label><input id="enhancedUnderOnly" type="checkbox" checked onchange="setEnhancedUnderOnly(this.checked)"/> <b>Enhanced UNDER eligibility</b></label><p class="mu">Require stronger recent usage for UNDER recommendations. Baseline participation always applies.</p><div style="margin-top:12px"><label><input checked="" id="regularOnly" onchange="setRegularOnly(this.checked)" type="checkbox"/> <b>Regular contributors only</b></label><p class="mu">Baseline recommendations require participation in at least 3 of the last 4 completed team games, with market-specific usage. Enhanced UNDER also requires an appearance in the latest completed team game and higher average usage. Anytime TD requires an average of 2 combined carries and targets, or a touchdown in the recent team-game window. Turning this option off relaxes the additional legacy contributor checks, not the baseline safety rules. Existing selections stay intact.</p></div><fieldset style="margin:12px 0 0;padding:10px;border:1px solid var(--bd);border-radius:8px"><legend><b>Risk factor — combined parlay odds</b></legend><div class="row"><label for="oddsFrom">From <input id="oddsFrom" inputmode="text" placeholder="+500" step="1" style="width:100px" type="number"/></label><label for="oddsThrough">Through <input id="oddsThrough" inputmode="text" placeholder="+2000" step="1" style="width:100px" type="number"/></label><button class="btn alt" onclick="applyOddsRange()" type="button">Apply odds range</button><button class="btn alt" id="quickViewParlays" onclick="quickViewFilteredParlays()" type="button">Quick view: X-leg parlays in range</button></div><p class="mu" style="margin:6px 0 0">Rounded American odds for the whole parlay, inclusive. Blank means no limit. Individual picks remain visible. Model prices are estimates.</p><div aria-live="polite" class="mu" id="oddsFilterStatus" role="status"></div><div class="mu" id="combinedOddsStatus" role="status"></div></fieldset>
 <div class="mu" id="hint" style="margin-top:8px"></div>
 </div></details></aside><main aria-label="NFL game cards" class="responsive-game-main"><h2 id="gameSection">Games</h2><div class="toolbar"><input aria-label="Search games" id="gameSearch" placeholder="Search teams or matchups" type="search"/><span class="mu" id="gameCount"></span><button aria-controls="previousGames" aria-expanded="false" class="btn alt" id="togglePreviousGames" onclick="togglePreviousGames()" type="button">Show previous weeks</button></div><details id="manualOverrideManager" class="card"><summary>Manual Override Management <span id="manualOverrideManagerCount" class="manual-manager-count">Checking saved scenarios…</span></summary><div class="manual-manager-content"><p class="mu">New-team scenarios are saved only in this browser and are specific to a season, week and matchup. Removing one does not change official predictions, saved parlays, or hypothetical legs already added to a draft.</p><div id="manualOverrideManagerList"></div><div class="manual-manager-footer"><button class="btn alt" type="button" id="clearAllManualOverrides" onclick="clearAllManualRosterOverrides()">Clear All Manual Overrides…</button></div><div id="manualOverrideManagerStatus" class="mu" aria-live="polite" role="status" style="margin-top:9px"></div></div></details><div id="games"></div><div id="previousGames" style="display:none"></div></main></div>
 
@@ -1090,7 +1090,7 @@ function reliablePlayerUsage(p,side='o'){
  if(appearances.some(rows=>rows.length>1))return false;
  const rows=appearances.flat();
  const valid=(r,k)=>typeof r[k]==='number'&&Number.isFinite(r[k])&&r[k]>=0;
- const active=rows.filter(r=>['snap_share','passing_attempts','rushing_attempts','targets','receptions'].some(k=>valid(r,k)&&r[k]>0));
+ const active=rows.filter(r=>['snap_share','passing_attempts','rushing_attempts','targets','receptions'].some(k=>valid(r,k)&&r[k]>0)||p.k==='td'&&valid(r,'touchdowns')&&r.touchdowns>0);
  if(active.length<3)return false;
  const avg=k=>active.every(r=>valid(r,k))?active.reduce((a,r)=>a+r[k],0)/active.length:null;
  const meets=(k,n)=>avg(k)!==null&&avg(k)>=n;
@@ -1099,22 +1099,20 @@ function reliablePlayerUsage(p,side='o'){
  if(p.k==='ps')return pos==='QB'&&meets('passing_attempts',under?25:20)&&valid(active[0],'passing_attempts')&&active[0].passing_attempts>=20;
  if(p.k==='ru')return pos==='QB'?meets('rushing_attempts',under?4:3):['RB','HB','TB','FB'].includes(pos)&&meets('rushing_attempts',under?8:6);
  if(p.k==='rec'||p.k==='rcp')return ['WR','TE','RB','HB','TB','FB'].includes(pos)&&meets('targets',under?4:3);
- if(p.k!=='td')return false;
- if(active.some(r=>valid(r,'snap_share')))return meets('snap_share',.35);
- // The weekly export can lack snap counts. Use documented offensive
- // opportunities in that case without treating them as an estimated snap share.
+ if(p.k!=='td'||side!=='o')return false;
+ if(active.some(row=>valid(row,'touchdowns')&&row.touchdowns>=1))return true;
  const carries=avg('rushing_attempts'),targets=avg('targets');
- return carries!==null&&targets!==null&&carries+targets>=5;
+ return carries!==null&&targets!==null&&carries+targets>=2;
 }
 function playerSuggested(p){
- const stats=recentContribution(p),position=String(stats.position||'').trim().toUpperCase();
+ const stats=p.k==='td'?null:recentContribution(p),position=String(stats?.position||'').trim().toUpperCase();
  if(phase3PlayerOut(p)||!playerAvailable(p)||p.k==='ru'&&['WR','TE'].includes(position))return false;
  // Reject old or ambiguous team assignments using the newest available roster rows.
  phase4PlayerHistory(p);
  const roster=phase4LatestRoster.get(playerIdentity(p.n));
  if(roster&&(roster.teams.size!==1||!roster.teams.has(p.tm)))return false;
  if(!reliablePlayerUsage(p))return false;
- if(!regularOnly)return true;
+ if(p.k==='td'||!regularOnly)return true;
  if(!stats.known)return false;
  if(p.k==='ru'){
   const minimum=position==='QB'?3:['RB','HB','TB','FB'].includes(position)?5:null;
@@ -1124,9 +1122,7 @@ function playerSuggested(p){
  if(p.k==='rec'||p.k==='rcp')return ['RB','HB','TB','FB','WR','TE'].includes(position)&&(stats.receptions!==null&&stats.receptions>=1||stats.snap_share!==null&&stats.snap_share>=.25);
  const snaps=stats.snap_share!==null&&stats.snap_share>=.25;
  if(p.k==='ps')return position==='QB'&&(snaps||stats.passing_attempts!==null&&stats.passing_attempts>=10);
- const touches=stats.rushing_attempts!==null&&stats.receptions!==null?stats.rushing_attempts+stats.receptions:null;
- if(p.k==='td'&&stats.snap_share===null)return true; // The baseline already checked snap share or opportunities.
- return snaps||touches!==null&&touches>=5;
+ return false;
 }
 function setRegularOnly(value){regularOnly=!!value;saveBuilderFilters();drawF();draw();plays();renderAdvanced();}
 function refreshPlayerMarkets(){
@@ -1146,8 +1142,15 @@ function refreshPlayerMarkets(){
   for(const [kind,field] of [['ps','passing_yards'],['ru','rushing_yards'],['rec','receiving_yards'],['rcp','receptions'],['td','touchdowns']]){
    if(kind==='ps'&&latest.position&&latest.position!=='QB')continue;
    const byWeek=new Map();for(const r of rows){if(!Number.isFinite(r[field]))continue;const prior=byWeek.get(r.week);if(prior===undefined)byWeek.set(r.week,r[field]);else if(prior!==r[field])byWeek.set(r.week,null);}
-   const values=[...byWeek.values()].filter(Number.isFinite);if(!values.length||!values.some(v=>v>0))continue;
-   const average=values.reduce((a,b)=>a+b,0)/values.length;if(!(average>0))continue;
+   const values=[...byWeek.values()].filter(Number.isFinite);
+   if(!values.length)continue;
+   let average=values.reduce((a,b)=>a+b,0)/values.length;
+   if(!(average>0)){
+    if(kind!=='td'||average<0||!reliablePlayerUsage({tm:latest.team,n:latest.player,k:kind}))continue;
+    // Keep qualifying zero-TD players selectable. A one-game prior of 0.1
+    // TDs gives a small model estimate that shrinks with each scoreless game.
+    average=.1/(values.length+1);
+   }
    const identity=playerIdentity(latest.player);
    if(PLY.some(p=>!p.dynamic&&p.tm===latest.team&&playerIdentity(p.n)===identity&&p.k===kind))continue;
    const id='x_'+SEASON+'_'+latest.team+'_'+identity+'_'+kind;
@@ -1557,6 +1560,41 @@ function setAllPickFilter(id,k,v){const key=gamePicksKey(id);allPickFilters.set(
 function resetAllPickFilters(id){allPickFilters.delete(gamePicksKey(id));draw();}
 function toggleAllPickMarket(id,m){const key=gamePicksKey(id),set=allPickCollapsed.get(key)||new Set();set.has(m)?set.delete(m):set.add(m);allPickCollapsed.set(key,set);draw();}
 function setAllPickGroups(id,close){const g=games.find(x=>String(x.id)===String(id));if(!g)return;allPickCollapsed.set(gamePicksKey(id),new Set(close?sortedMorePicks(g).map(allPickMarket):[]));draw();}
+function defenseTouchdownOptions(g){
+ if(g.sc||SEASON!==MODEL_SEASON)return '';
+ const open=Number.isFinite(Date.parse(g.date||''))&&Date.parse(g.date)>Date.now();
+ const disabled=!open||mode==='same'&&String(focus)!==String(g.id);
+ return '<details class="book-line-editor defense-td-options"><summary><b>Defense Anytime TD</b></summary>'+
+ '<p class="mu">Both defenses are listed. Check the sportsbook’s scoring rules and enter its American odds to add a selection.</p>'+
+ ['a','h'].map(side=>{
+  const team=side==='a'?g.a:g.h;
+  return '<form data-defense-game="'+esc(g.id)+'" data-team-side="'+side+'" onsubmit="event.preventDefault();addDefenseTouchdown(this)" class="tools">'+
+   '<label>'+esc(team)+' defense · American odds <input type="number" inputmode="text" step="1" placeholder="+650" name="price" required'+(disabled?' disabled':'')+'></label>'+
+   '<button type="submit" class="btn alt"'+(disabled?' disabled':'')+'>Add '+esc(team)+' defense TD</button></form>';
+ }).join('')+'</details>';
+}
+function addDefenseTouchdown(form){
+ const g=games.find(game=>String(game.id)===form.dataset.defenseGame);
+ const t=form.dataset.teamSide;
+ if(SEASON!==MODEL_SEASON||!['a','h'].includes(t)||!g||g.sc||!(Date.parse(g.date||'')>Date.now())){
+  aiSelectionFeedback('Defense TD requires an upcoming game with a verified kickoff.');return false;
+ }
+ if(mode==='same'&&String(focus)!==String(g.id)){
+  aiSelectionFeedback('Select this matchup with Build here first.');return false;
+ }
+ const entered=form.elements.price.value.trim(),decimal=oddsDecimal(entered);
+ if(decimal===null){aiSelectionFeedback('Enter verified American odds of +100 or higher, or -100 or lower.');return false;}
+ const mkt='deftd'+t;
+ if(legs.some(leg=>String(leg.gid)===String(g.id)&&leg.mkt===mkt)){
+  aiSelectionFeedback('This defense is already in Current parlay.');return false;
+ }
+ if(!makeSelectionRoom())return false;
+ const team=t==='a'?g.a:g.h;
+ legs.push({gid:g.id,mkt,side:'o',custom:true,t:team+' defense anytime TD',m:g.a+' @ '+g.h,o:am(decimal)});
+ draw();
+ aiSelectionFeedback('Added '+team+' defense Anytime TD at entered odds. Verify the sportsbook’s scoring rules.');
+ return true;
+}
 function moreGamePicks(g,b){
  if(SEASON!==MODEL_SEASON||!expandedGamePicks.has(gamePicksKey(g.id)))return '';
  const key=gamePicksKey(g.id),f=allPickFilters.get(key)||{},closed=allPickCollapsed.get(key)||new Set();
@@ -1858,7 +1896,7 @@ let tdComparisonPlans={};
 function renderAnytimeTDComparison(){
  tdComparisonPlans={};
  const pool=filteredParlayCandidates(true),context=filteredParlayContext();
- let html='<section class="card" id="anytimeTdParlayComparison" aria-label="Best 3 through 6 leg anytime touchdown parlays"><h3>Best Anytime TD parlays · 3, 4, 5 &amp; 6 legs</h3><p><b>Whole-parlay odds range: '+esc(riskParlayFrom||'unbounded')+' through '+esc(riskParlayThrough||'unbounded')+'</b> · '+(riskParlayHideBelowBreakEven?'Experimental break-even filter ON':'All qualifying odds results shown')+'</p><p class="mu">Individual player Anytime TD picks only (no team TD totals). Four independent leg counts, regardless of the selected recommendation leg count or Pick Types checkbox. Week, matchup, player eligibility, injuries, and Same/Multi-game filters still apply. One player per leg; Multi-game uses one player per game. Ranking uses uncalibrated estimated joint HIT × illustrative/entered combined payout with conservative same-game scenarios. These are not verified sportsbook probabilities, odds or betting value; check actual anytime TD markets and prices.</p>';
+ let html='<section class="card" id="anytimeTdParlayComparison" aria-label="Best 3 through 6 leg anytime touchdown parlays"><h3>Best Anytime TD parlays · 3, 4, 5 &amp; 6 legs</h3><p><b>Whole-parlay odds range: '+esc(riskParlayFrom||'unbounded')+' through '+esc(riskParlayThrough||'unbounded')+'</b> · '+(riskParlayHideBelowBreakEven?'Experimental break-even filter ON':'All qualifying odds results shown')+'</p><p class="mu">Ranked combinations use individual player Anytime TD picks. Defense Anytime TD options are on each upcoming game card and use sportsbook odds you enter. Four independent leg counts, regardless of the selected recommendation leg count or Pick Types checkbox. Week, matchup, player eligibility, injuries, and Same/Multi-game filters still apply. One player per leg; Multi-game uses one player per game. Ranking uses uncalibrated estimated joint HIT × illustrative/entered combined payout with conservative same-game scenarios. These are not verified sportsbook probabilities, odds or betting value; check actual anytime TD markets and prices.</p>';
  for(const legCount of [3,4,5,6]){
   const result=searchCombinedParlays(pool,legCount,{comparison:true});
   if(!result.best&&riskParlayHideBelowBreakEven&&result.informationalBest){
@@ -2083,7 +2121,7 @@ function draw(){
     const mainChoices=allPickTypes()?gameMainMarkets(g,b):filterHas(pf,'td')?propBtns(g,'td',b):'';
     return`<div class="card g"><div class="gh" style="cursor:pointer" onclick="tog('${g.id}')"><b>${openG===g.id?"▾":"▸"} <img class="logo" loading="lazy" alt="" src="https://a.espncdn.com/i/teamlogos/nfl/500/${g.a.toLowerCase()}.png" onerror="this.style.display='none'"> ${g.a} @ <img class="logo" loading="lazy" alt="" src="https://a.espncdn.com/i/teamlogos/nfl/500/${g.h.toLowerCase()}.png" onerror="this.style.display='none'"> ${g.h}</b><span class="row"><button type="button" class="pill" onclick="event.stopPropagation();openGameInjuries('${g.a}','${g.h}',${Number(g.week||wk)})">Injuries</button>${g.sc?'':`<button type="button" class="pill${weatherApplied?' on':''}" data-weather-game="${esc(g.id)}" onclick="event.stopPropagation();openGameWeather(this.dataset.weatherGame)">${weatherApplied?'Weather applied':'Weather'}</button>`}<span class="mu">${g.sc?`Final ${g.a} ${g.sc[0]}, ${g.h} ${g.sc[1]}`:g.tm}</span>${mode==="same"?`<button class="pill ${focus===g.id?"on":""}" onclick="event.stopPropagation();setFocus('${g.id}')">Build here</button>`:""}</span></div>
     <div class="mu">${g.a} ${T[g.a][1]}-${T[g.a][2]} · ${g.h} ${T[g.h][1]}-${T[g.h][2]} · <span class="game-meta">${g.sc?"Completed":"Upcoming"}</span><span class="game-card-actions"><button type="button" class="btn alt" onclick="event.stopPropagation();openBestPicks('${g.id}')">Best Picks</button><button type="button" class="btn alt" id="more-picks-button-${g.id}" aria-expanded="${expandedGamePicks.has(gamePicksKey(g.id))}" aria-controls="more-picks-${g.id}" onclick="event.stopPropagation();toggleGamePicks('${g.id}')">${expandedGamePicks.has(gamePicksKey(g.id))?"Hide All Picks":"All Picks"}</button></span></div>
-    ${gameHitRateHost(g,wk)}<div class="grid">${mainChoices||'<div class="m mu">No picks in this view match the loaded data. Try All Picks or refresh statistics.</div>'}</div>${moreGamePicks(g,b)}${manualRosterPanel(g)}${det(g)}</div>`}).join("")||`<div class="card mu">No games match this kickoff window.</div>`;
+    ${gameHitRateHost(g,wk)}<div class="grid">${mainChoices||'<div class="m mu">No picks in this view match the loaded data. Try All Picks or refresh statistics.</div>'}</div>${defenseTouchdownOptions(g)}${moreGamePicks(g,b)}${manualRosterPanel(g)}${det(g)}</div>`}).join("")||`<div class="card mu">No games match this kickoff window.</div>`;
   $("gameCount").textContent=games.filter(vis).length+" of "+games.length+" games · Week "+wk;
   renderManualRosterManager();
   renderPreviousGames();paintGameHitRates();
@@ -2091,7 +2129,8 @@ function draw(){
   const st=Math.max(0,+$("stake").value||0);let D=1,P=1;
   const li=legs.map((L,i)=>{const x=legOf(L);D*=x.d;P*=x.p;return`<div class="leg"><div><b>${esc(x.txt)}</b><div class="mu">${x.g.a} @ ${x.g.h} · ${am(x.d)}</div></div><button class="x" aria-label="Clear this leg" title="Clear this leg" onclick="legs.splice(${i},1);draw()">✕</button></div>`}).join("");
   const combinedStatus=$('combinedOddsStatus');if(combinedStatus)combinedStatus.textContent=legs.length?'Current parlay ('+legs.length+' legs): estimated combined odds '+am(D)+' ('+D.toFixed(3)+'x) · '+(oddsFrom===''&&oddsThrough===''?'no target range':combinedOddsInRange(D)?'within combined target':'outside combined target')+'.':'Build a slip to compare its combined odds with the target.';
-  $("slip").innerHTML=legs.length?li+`<div class="mu" style="margin-top:8px">Win chance (est.): ${f1(P*100)}%${mode==="same"?" · legs correlated, treat as rough":""}</div>`:`<span class="mu">Your slip is empty.</span>`;
+  const manualDefense=legs.some(leg=>/^deftd[ah]$/.test(leg.mkt));
+  $("slip").innerHTML=legs.length?li+(manualDefense?'<div class="mu" style="margin-top:8px">Defense TD uses entered odds. Model win chance is unavailable.</div>':`<div class="mu" style="margin-top:8px">Win chance (est.): ${f1(P*100)}%${mode==="same"?" · legs correlated, treat as rough":""}</div>`):`<span class="mu">Your slip is empty.</span>`;
   // Advisory only: do not silently change or submit the user's selections.
   const prebetWarnings=validateDraftForBet(legs,games,N,mode);
   if(prebetWarnings.length){
@@ -2450,7 +2489,7 @@ function advMetrics(p,g,{useManual=true}={}){
  const sample=Math.min(5,vals.length);
  const hits=line==null?null:vals.slice(0,sample).filter(v=>v>line).length;
  const underHits=line==null?null:vals.slice(0,sample).filter(v=>v<line).length;
- const selectedProb=validLine?selectedManualProb:Math.max(prob,1-prob);
+ const selectedProb=validLine?selectedManualProb:p.k==='td'?prob:Math.max(prob,1-prob);
  const riskPenalty=(newTeam?4:0)+(vals.length<3?5:0)+(injuryFactor<1?6:0)+(weather.code!=='none'?2:0);
  const score=100*(edge==null?selectedProb-.5:edge)+Math.min(5,vals.length)-riskPenalty;
  const phase4Notes=[newTeam?'New team: historical stats retained across '+previousTeams.join(', '):'',
@@ -3413,6 +3452,7 @@ function setTeamBoxPerformance(enabled){includeTeamBoxPicks=!!enabled;const b=$(
 function gradeDetail(g,mkt,side){
  if(!g.sc)return {result:null,reason:'Game has no verified final score'};
  const [away,home]=g.sc,val=side==='a'?away:home,other=side==='a'?home:away;
+ if(/^deftd[ah]$/.test(mkt))return {result:null,reason:'Check the sportsbook’s defense TD settlement for this selection'};
  if(mkt==='ml')return val===other?{result:false,reason:'MISS: tied final score (moneyline ties count as misses)'}:{result:val>other,reason:'Verified final score'};
  if(mkt==='sp'){const margin=val-other+(side==='a'?g.sp:-g.sp);return margin===0?{result:null,reason:'Push: final margin equals spread'}:{result:margin>0,reason:'Verified final score and spread'}}
  if(mkt==='tot'){const diff=away+home-g.tot;return diff===0?{result:null,reason:'Push: final total equals line'}:{result:side==='o'?diff>0:diff<0,reason:'Verified final score and total'}}
@@ -3507,6 +3547,7 @@ function performancePickExportFields(g,x){
  const finite=v=>typeof v==='number'&&Number.isFinite(v)?v:'';
  const team=t=>t==='h'?g.h:g.a;
  const base={market_code:m,selection_direction:direction};
+ if(/^deftd[ah]$/.test(m))return {...base,pick_category:'Team',player_or_team:team(m.at(-1)),market:'Defense anytime touchdown',selection_direction:'Anytime touchdown'};
  if(m==='ml')return {...base,pick_category:'Team',player_or_team:team(s),market:'Moneyline'};
  if(m==='sp')return {...base,pick_category:'Team',player_or_team:team(s),market:'Spread (model)',
   line:finite(s==='a'?g.sp:-g.sp),actual_value:finite(s==='a'?g.sc?.[0]-g.sc?.[1]:g.sc?.[1]-g.sc?.[0])};

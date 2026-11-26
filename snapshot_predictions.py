@@ -276,7 +276,7 @@ def main():
                 raise RuntimeError(f"Capture window elapsed for {e['id']}; no late write")
             row = {'season': SEASON, 'week': e['week'], 'game_id': e['id'],
                    'away_team': result['away_team'], 'home_team': result['home_team'],
-                   'kickoff_at': e['kickoff'], 'model_version': 'browser-model-2026-phase3-top12-reliability-v2',
+                   'kickoff_at': e['kickoff'], 'model_version': 'browser-model-2026-phase3-top12-reliability-v3',
                    'picks': filtered}
             request = Request(base + '/rest/v1/nfl_prediction_snapshots_v3?on_conflict=season,week,game_id',
                               data=json.dumps(row).encode(), method='POST',
