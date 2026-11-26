@@ -7,7 +7,10 @@ import os
 from datetime import datetime, timezone
 from urllib.request import Request, urlopen
 from urllib.error import HTTPError
-from grade_contract import pick_key
+if __package__:
+    from .grade_contract import pick_key
+else:
+    from grade_contract import pick_key
 
 PRODUCTION = 'https://wpvuunwtyxycqfjwuzkn.supabase.co'
 ALIASES = {'WSH':'WAS','LA':'LAR','JAC':'JAX','LV':'LV','OAK':'LV','SD':'LAC','STL':'LAR'}
