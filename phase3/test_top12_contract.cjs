@@ -32,3 +32,21 @@ assert(html.includes('Optional legacy browser-only Top 12 tracking and backups')
 assert(html.includes('original_grades:'));
 assert(html.includes('window.phase3AuthenticPregameSnapshot(original)'),'cloud history checks authentic capture provenance');
 console.log('Top 12 selection, exclusions, cap and cloud-history contract passed (synthetic; no writes)');
+
+const usageStart=html.indexOf("function reliablePlayerUsage(");
+const usageEnd=html.indexOf("function playerSuggested(",usageStart);
+const rows=[11,10,9].map(week=>({week,team:'BUF',position:'RB',rushing_attempts:4,targets:2,snap_share:null}));
+const usage={enhancedUnderOnly:true,phase4PlayerHistory:()=>rows,
+ phase4TeamHistoryIndex:new Map([['BUF',[...rows,{week:8}]]])};
+vm.createContext(usage);
+vm.runInContext(html.slice(usageStart,usageEnd),usage);
+const td={tm:'BUF',k:'td'};
+assert(usage.reliablePlayerUsage(td),'recorded carries and targets qualify when snap share is missing');
+rows.forEach(row=>{row.snap_share=.25;});
+assert(!usage.reliablePlayerUsage(td),'known low snap share cannot be bypassed by opportunities');
+rows.forEach(row=>{row.snap_share=null;row.targets=0;});
+assert(!usage.reliablePlayerUsage(td),'insufficient recorded opportunities do not qualify');
+rows.forEach(row=>{row.targets=3;});
+rows.pop();
+assert(!usage.reliablePlayerUsage(td),'fallback still requires three appearances');
+console.log('Anytime TD missing-snap regression passed');
