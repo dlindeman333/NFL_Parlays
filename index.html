@@ -996,6 +996,23 @@ function phase3LegOut(leg){
  if(leg.manualScenario)return phase3IsOut(leg.t?.split(' [MANUAL')[0],leg.manualDestination,leg.manualWeek)||phase3IsOut(leg.t?.split(' [MANUAL')[0],leg.manualSource,leg.manualWeek);
  const p=playerForMarket(leg.mkt);return !!p&&phase3PlayerOut(p,Number(leg.week)||wk);
 }
+// Recommendation-only eligibility; missing appearances are not zero-stat games.
+function reliablePlayerUsage(p,side='o'){
+ const history=phase4PlayerHistory(p);
+ const weeks=[...new Set((phase4TeamHistoryIndex.get(p.tm)||[]).map(r=>Number(r.week)))].sort((a,b)=>b-a).slice(0,4);
+ if(weeks.length<3)return false;
+ const rows=weeks.map(w=>history.find(r=>Number(r.week)===w&&r.team===p.tm)).filter(Boolean);
+ const valid=(r,k)=>typeof r[k]==='number'&&Number.isFinite(r[k])&&r[k]>=0;
+ const active=rows.filter(r=>['snap_share','passing_attempts','rushing_attempts','targets','receptions'].some(k=>valid(r,k)&&r[k]>0));
+ if(active.length<3)return false;
+ const avg=k=>active.every(r=>valid(r,k))?active.reduce((a,r)=>a+r[k],0)/active.length:null;
+ const meets=(k,n)=>avg(k)!==null&&avg(k)>=n;
+ const under=side==='u',pos=String(active[0].position||p.position||'').toUpperCase();
+ if(p.k==='ps')return pos==='QB'&&meets('passing_attempts',under?25:20)&&valid(active[0],'passing_attempts')&&active[0].passing_attempts>=20;
+ if(p.k==='ru')return pos==='QB'?meets('rushing_attempts',under?4:3):['RB','HB','TB','FB'].includes(pos)&&meets('rushing_attempts',under?8:6);
+ if(p.k==='rec'||p.k==='rcp')return meets('targets',under?4:3);
+ return p.k==='td'&&meets('snap_share',.35);
+}
 function playerSuggested(p){
  const stats=recentContribution(p),position=String(stats.position||'').trim().toUpperCase();
  if(phase3PlayerOut(p)||!playerAvailable(p)||p.k==='ru'&&['WR','TE'].includes(position))return false;
@@ -1003,6 +1020,7 @@ function playerSuggested(p){
  // appear as an eligible pick for the former team.
  const phase4History=phase4PlayerHistory(p);
  if(phase4History.length&&phase4History[0].team!==p.tm)return false;
+ if(!reliablePlayerUsage(p))return false;
  if(!regularOnly)return true;
  // One verified new-team appearance plus two older appearances can establish
  // recent participation; the projection later applies a transition discount.
@@ -1417,6 +1435,7 @@ function pickPosition(p){
 function gamePickCandidates(g,includeManual=false){
  const rows=[];
  const add=(mkt,side,family,player=null,manual=null)=>{
+  if(player&&!reliablePlayerUsage(player,side))return;
   const value=legOf({gid:g.id,mkt,side});let text=value.txt,probability=value.p,odds=Number(am(value.d));
   if(manual){
    if(regularOnly&&player.k==='ru'&&Number(manual.line)<5)return;
@@ -1825,7 +1844,7 @@ function gameBestPickRows(g){
  if(allPickTypes()){const p=weatherTeamProbability(g,"ml","h",g.p),h=p>=.5;it.push({mk:"ml",sd:h?"h":"a",p:h?p:1-p,priceProbability:h?g.p:1-g.p,txt:(h?g.h:g.a)+" moneyline",why:"Model margin "+f1(Math.abs(g.m))+" pts"+(g.fp!=null?", schedule feed "+P((h?g.fp:1-g.fp)*100)+"%":"")})}
 
  if(filterHas(pf,'td'))['a','h'].forEach(t=>{const p=weatherTeamProbability(g,'td'+t,'o',g.pp[t].tdp),o=p>=.5;it.push({mk:'td'+t,sd:o?'o':'u',p:o?p:1-p,priceProbability:o?g.pp[t].tdp:1-g.pp[t].tdp,txt:(t==='a'?g.a:g.h)+' '+(o?'Over ':'Under ')+PN.td[1]+' team TDs',why:'Model team touchdown estimate'})});
- PLY.filter(p=>(p.tm===g.a||p.tm===g.h)&&filterHas(pf,p.k)&&playerSuggested(p)).forEach(p=>{const s=weatherPlayerStat(p,g);if(!s)return;const o=p.k==="td"||s.p>=.5;it.push({mk:"p"+p.i,sd:o?"o":"u",p:o?s.p:1-s.p,priceProbability:o?(s.referenceProbability??s.p):1-(s.referenceProbability??s.p),txt:p.k==="td"?p.n+" anytime TD":p.n+" "+(o?"Over ":"Under ")+s.line+(p.k==="ps"?" pass yds":p.k==="ru"?" rush yds":p.k==="rec"?" receiving yds":p.k==="rcp"?" receptions":""),why:p.k==="td"?f1(p.v)+" TDs per game this season, projects "+f1(s.proj)+" here":"Averages "+Math.round(p.v)+" yds per game, projects about "+Math.round(s.proj)+" here"})});
+ PLY.filter(p=>(p.tm===g.a||p.tm===g.h)&&filterHas(pf,p.k)&&playerSuggested(p)).forEach(p=>{const s=weatherPlayerStat(p,g);if(!s)return;const o=p.k==="td"||s.p>=.5;if(!reliablePlayerUsage(p,o?'o':'u'))return;it.push({mk:"p"+p.i,sd:o?"o":"u",p:o?s.p:1-s.p,priceProbability:o?(s.referenceProbability??s.p):1-(s.referenceProbability??s.p),txt:p.k==="td"?p.n+" anytime TD":p.n+" "+(o?"Over ":"Under ")+s.line+(p.k==="ps"?" pass yds":p.k==="ru"?" rush yds":p.k==="rec"?" receiving yds":p.k==="rcp"?" receptions":""),why:p.k==="td"?f1(p.v)+" TDs per game this season, projects "+f1(s.proj)+" here":"Averages "+Math.round(p.v)+" yds per game, projects about "+Math.round(s.proj)+" here"})});
  it.sort((a,b)=>b.p-a.p);return it;
 }
 function det(g){if(SEASON!==MODEL_SEASON||openG!==g.id)return "";const P=Math.round,it=gameBestPickRows(g);
@@ -2355,7 +2374,7 @@ function advMetrics(p,g){
 // The writer checks official weekly injuries before selecting the first twelve.
 function phase4Top12GameCandidates(g){
  return PLY.filter(p=>(p.tm===g.a||p.tm===g.h)&&playerSuggested(p)&&!phase3PlayerOut(p))
-  .map(p=>advMetrics(p,g)).filter(x=>x&&!x.manual&&
+  .map(p=>advMetrics(p,g)).filter(x=>x&&!x.manual&&reliablePlayerUsage(x.p,advancedPickSide(x))&&
     (x.p.k==='td'||(x.line!=null&&Number.isFinite(Number(x.line)))))
   .sort((a,b)=>b.score-a.score||b.prob-a.prob||a.p.n.localeCompare(b.p.n)||a.p.k.localeCompare(b.p.k));
 }
