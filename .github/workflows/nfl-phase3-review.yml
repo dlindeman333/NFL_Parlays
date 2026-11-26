@@ -41,5 +41,6 @@ jobs:
           node phase3/test_advanced_optimizer.cjs
           node phase3/test_historical_calibration.cjs
           python snapshot_predictions.py --help
+          python -c "from phase3.automation import team, pick_key; from snapshot_predictions import select_top12; assert team('WSH') == 'WAS'; assert select_top12([], [], 12) == []"
       - name: Smoke-test desktop and iPhone-sized layouts with synthetic data
         run: python phase3/browser_smoke.py
