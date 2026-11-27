@@ -5815,6 +5815,21 @@ recovery.onclick=async()=>{recovery.disabled=true;recoveryStatus.textContent='Ve
  let selectedResultsWeek;
  try{selectedResultsWeek=Number(phase3LocalStorage.getItem(resultsWeekKey));}catch(e){}
  const resultLabels={WON_MODEL:'Won',LOST_MODEL:'Lost',OPEN:'Open',PUSH_REVIEW:'Push review',UNVERIFIED:'Unverified'};
+ const hypotheticalStake=10;
+ function suggestedParlayNet(p){
+  if(p.pending!==0)return null;
+  if(p.outcome==='LOST_MODEL')return -hypotheticalStake;
+  if(p.outcome!=='WON_MODEL')return null;
+  let decimal=Number(p.estimated_combined_decimal_odds);
+  if(!(Number.isFinite(decimal)&&decimal>1)){
+   const prices=p.legs.map(l=>Number(l.estimated_decimal_odds));
+   if(!prices.every(price=>Number.isFinite(price)&&price>1))return null;
+   decimal=prices.reduce((combined,price)=>combined*price,1);
+  }
+  const profit=hypotheticalStake*(decimal-1);
+  return Number.isFinite(profit)?Math.round(profit*100)/100:null;
+ }
+ const signedMoney=n=>(n>0?'+':'')+money(n);
  const legCounts=p=>p.hits+' HIT · '+p.misses+' MISS'+
   (p.pushes?' · '+p.pushes+' PUSH':'')+(p.pending?' · '+p.pending+' pending':'')+(p.unknown?' · '+p.unknown+' unverified':'');
  function clearSuggestionResults(message){
@@ -5836,23 +5851,39 @@ recovery.onclick=async()=>{recovery.disabled=true;recoveryStatus.textContent='Ve
   resultsWeek.replaceChildren(...weeks.map(w=>new Option('Week '+w+(w===currentWeek?' (current week)':w===previousWeek?' (previous week)':''),w)));
   resultsWeek.value=String(chosen);
   resultsWeek.disabled=false;
-  const plans=gradeSuggestions(captures.filter(s=>Number(s.week)===chosen)).sort((a,b)=>Date.parse(b.captured_at_utc)-Date.parse(a.captured_at_utc));
+  const progress=p=>p.pending===0?2:p.pending<p.legs.length?1:0;
+  const plans=gradeSuggestions(captures.filter(s=>Number(s.week)===chosen))
+   .sort((a,b)=>progress(b)-progress(a)||Date.parse(b.captured_at_utc)-Date.parse(a.captured_at_utc));
   if(!plans.length){
    rows.replaceChildren();
    totals.textContent='No suggested parlays were captured here for Week '+chosen+'.';
    return;
   }
+  const netByPlan=plans.map(suggestedParlayNet);
+  const settled=netByPlan.filter(net=>net!==null);
+  const netTotal=settled.reduce((sum,net)=>sum+net,0);
+  const stakeSummary=settled.length
+   ?money(settled.length*hypotheticalStake)+' hypothetical stakes on '+settled.length+' settled · '+signedMoney(netTotal)+' estimated net.'
+   :'No completed parlays with a calculable dollar result.';
   const totalCounts=Object.fromEntries(['hits','misses','pushes','pending','unknown'].map(key=>[key,plans.reduce((sum,p)=>sum+p[key],0)]));
-  totals.textContent=plans.length+(plans.length===1?' parlay':' parlays')+' · '+legCounts(totalCounts)+' across all legs';
+  totals.textContent=plans.length+(plans.length===1?' parlay':' parlays')+' · '+legCounts(totalCounts)+' across all legs. '+stakeSummary;
   const expanded=new Set([...rows.querySelectorAll('details[open]')].map(item=>item.dataset.resultId));
-  rows.innerHTML=plans.map(p=>{
+  rows.innerHTML=plans.map((p,i)=>{
    const id=shortId(p.signature);
    const legs=p.legs.map(l=>{
     const details=[l.matchup, l.line===''?'':'Line '+l.line, l.actual===''?'':'Actual '+l.actual,l.final_score,l.reason].filter(Boolean).map(esc).join(' · ');
     return '<li><strong>'+esc(l.outcome)+' · '+esc(l.prediction)+'</strong><div class="mu">'+details+'</div></li>';
    }).join('');
+   const decided=p.pending===0&&(p.outcome==='WON_MODEL'||p.outcome==='LOST_MODEL');
+   const verdict=decided?(p.outcome==='WON_MODEL'
+    ?'<strong style="color:#146c43;background:#d1e7dd;padding:2px 6px;border-radius:4px">HIT</strong>'
+    :'<strong style="color:#842029;background:#f8d7da;padding:2px 6px;border-radius:4px">MISS</strong>'):resultLabels[p.outcome];
+   const net=netByPlan[i];
+   const stakeLine=net===null
+    ?(p.outcome==='WON_MODEL'?'Captured odds unavailable':'Dollar result pending or unavailable')
+    :'$10 hypothetical stake · '+signedMoney(net)+' estimated net';
    return '<details class="card" data-result-id="'+id+'"'+(expanded.has(id)?' open':'')+'><summary><b>'+
-    esc([p.type,p.variant].filter(Boolean).join(' · '))+'</b><div class="mu">'+p.legs.length+' legs · '+legCounts(p)+' · '+resultLabels[p.outcome]+'</div></summary>'+
+    esc([p.type,p.variant].filter(Boolean).join(' · '))+'</b><div class="mu">'+p.legs.length+' legs · '+legCounts(p)+' · '+verdict+'</div><div class="mu">'+stakeLine+'</div></summary>'+
     '<ol style="padding-inline-start:20px">'+legs+'</ol></details>';
   }).join('');
  }
