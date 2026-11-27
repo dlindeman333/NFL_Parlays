@@ -273,6 +273,26 @@ with sync_playwright() as p:
           if(!phase4Top12GameCandidates(g).some(x=>x.p===current))throw Error('Capture uses the same eligible player pool');
           window.captureFixture=phase4Top12GameCandidates(g).map(x=>[x.p.i,x.line,advancedPickSide(x)]);
         }""",game_id)
+        # Entered TD odds change value, while its probability matches the game card.
+        assert page.locator('#advRank').input_value()=='probability'
+        page.evaluate("""() => {
+          renderAdvanced();
+          const pick=window._advPicks.find(x=>x.p.k==='td');
+          if(!pick)throw Error('Expected an eligible TD fixture');
+          const stat=weatherPlayerStat(pick.p,pick.g);
+          advManual[pick.key]={line:0,odds:200,side:'o',book:'DraftKings',updated:new Date().toISOString()};
+          const priced=advMetrics(pick.p,pick.g);
+          if(priced.line!==null||stat.p!==priced.prob||stat.proj!==priced.projection)
+            throw Error('Entered TD price changed the event or forecast');
+          const rank=document.getElementById('advRank');
+          rank.value='value';
+          rank.dispatchEvent(new Event('change'));
+          if(window._advPicks.length!==1||window._advPicks[0].key!==pick.key)
+            throw Error('Value ranking must include only the priced fixture');
+          delete advManual[pick.key];
+          rank.value='probability';
+          rank.dispatchEvent(new Event('change'));
+        }""")
         if page.locator('#qfCollapse').get_attribute('open') is None:
             page.locator('#qfCollapseToggle').click()
         page.locator('#qfSportsbook').select_option('DraftKings')
