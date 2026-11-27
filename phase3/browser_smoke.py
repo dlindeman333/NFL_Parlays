@@ -293,6 +293,33 @@ with sync_playwright() as p:
           rank.value='probability';
           rank.dispatchEvent(new Event('change'));
         }""")
+        roster_select=page.locator('#roster-remove-'+game_id)
+        roster=roster_select.locator('xpath=ancestor::details[1]')
+        roster.locator('summary').click()
+        removed=roster_select.locator('option').filter(has_text='Fixture Current').get_attribute('value')
+        draft_before=page.evaluate('JSON.stringify(legs)')
+        roster_select.select_option(removed)
+        roster.get_by_role('button',name='Remove player',exact=True).click()
+        assert 'removed from' in roster.get_by_role('status').inner_text()
+        assert page.evaluate("""({id,key}) => {
+          const game=games.find(g=>g.id===id);
+          const removed=p=>p?.n==='Fixture Current';
+          const player=PLY.find(p=>removed(p)&&p.k==='td');
+          const stored=JSON.parse(phase3LocalStorage.getItem(MANUAL_ROSTER_REMOVALS_KEY));
+          return stored[key].fromWeek===wk && manualRosterExcluded(player,{...game,week:wk+1}) &&
+            !manualRosterExcluded(player,{...game,week:wk-1}) &&
+            !manualRosterExcluded({...player,tm:game.h},game) &&
+            !gamePickCandidates(game).some(x=>removed(x.player)) &&
+            !gameBestPickRows(game).some(x=>removed(playerForMarket(x.mk))) &&
+            !filteredParlayCandidates().some(x=>removed(x.player)) &&
+            !window._advPicks.some(x=>removed(x.p)) &&
+            JSON.stringify(phase4Top12GameCandidates(game).map(x=>[x.p.i,x.line,advancedPickSide(x)]))===JSON.stringify(window.captureFixture);
+        }""",{'id':game_id,'key':removed})
+        assert page.evaluate('JSON.stringify(legs)')==draft_before
+        roster.get_by_role('button',name='Restore Fixture Current',exact=False).click()
+        assert 'restored to' in roster.get_by_role('status').inner_text()
+        assert page.evaluate("""id => gamePickCandidates(games.find(g=>g.id===id))
+          .some(x=>x.player?.n==='Fixture Current')""",game_id)
         if page.locator('#qfCollapse').get_attribute('open') is None:
             page.locator('#qfCollapseToggle').click()
         page.locator('#qfSportsbook').select_option('DraftKings')

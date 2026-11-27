@@ -1104,7 +1104,8 @@ function reliablePlayerUsage(p,side='o'){
  const carries=avg('rushing_attempts'),targets=avg('targets');
  return carries!==null&&targets!==null&&carries+targets>=2;
 }
-function playerSuggested(p){
+function playerSuggested(p,g){
+ if(g&&manualRosterExcluded(p,g))return false;
  const stats=p.k==='td'?null:recentContribution(p),position=String(stats?.position||'').trim().toUpperCase();
  if(phase3PlayerOut(p)||!playerAvailable(p)||p.k==='ru'&&['WR','TE'].includes(position))return false;
  // Reject old or ambiguous team assignments using the newest available roster rows.
@@ -1290,12 +1291,61 @@ function manualRosterOptions(g){
  for(const p of PLY){if(!playerAvailable(p)||p.tm===g.a||p.tm===g.h)continue;const id=playerIdentity(p.n);if(!id)continue;const key=p.tm+'|'+id;if(!names.has(key))names.set(key,{tm:p.tm,n:p.n,position:p.position||'',markets:[]});names.get(key).markets.push(p);}
  return [...names.values()].sort((a,b)=>a.n.localeCompare(b.n)||a.tm.localeCompare(b.tm));
 }
+const MANUAL_ROSTER_REMOVALS_KEY='nflp-manual-roster-removals-v1';
+let manualRosterRemovals={};
+try{
+ const saved=JSON.parse(phase3LocalStorage.getItem(MANUAL_ROSTER_REMOVALS_KEY)||'{}');
+ if(saved&&typeof saved==='object'&&!Array.isArray(saved))manualRosterRemovals=saved;
+}catch(e){}
+function manualRemovalKey(team,name){return JSON.stringify([SEASON,team,playerIdentity(name)]);}
+function manualRosterExcluded(p,g){
+ const removal=manualRosterRemovals[manualRemovalKey(p.tm,p.n)];
+ return !g.sc&&!!removal&&Number(g.week||wk)>=removal.fromWeek;
+}
+function manualRemovalOptions(g){
+ const players=new Map();
+ for(const p of PLY){
+  if(![g.a,g.h].includes(p.tm)||!playerIdentity(p.n)||manualRosterExcluded(p,g))continue;
+  players.set(manualRemovalKey(p.tm,p.n),{name:p.n,team:p.tm});
+ }
+ return [...players.entries()].sort(([,a],[,b])=>a.name.localeCompare(b.name)||a.team.localeCompare(b.team));
+}
+function manualRemovalControls(g){
+ const id=esc(g.id), options=manualRemovalOptions(g);
+ const removals=Object.entries(manualRosterRemovals).filter(([,entry])=>entry?.season===SEASON&&[g.a,g.h].includes(entry.team));
+ const list=removals.map(([key,entry])=>'<li>'+esc(entry.name)+' ('+esc(entry.team)+') · Week '+esc(entry.fromWeek)+' onward <button type="button" class="btn alt" data-removal-key="'+esc(key)+'" aria-label="Restore '+esc(entry.name)+' to '+esc(entry.team)+' picks" onclick="setManualRosterRemoval(&quot;'+id+'&quot;,this.dataset.removalKey,true)">Restore</button></li>').join('');
+ return '<div class="override-result"><b>Remove player from roster</b><p class="mu">Hide a traded or cut player’s recommendations for their former team on this device from the selected week through the end of the season. Restore the player here at any time.</p>'+
+  '<div class="tools"><label>Player on current roster <select id="roster-remove-'+id+'"><option value="">Choose player</option>'+
+  options.map(([key,player])=>'<option value="'+esc(key)+'">'+esc(player.name)+' ('+esc(player.team)+')</option>').join('')+
+  '</select></label><button type="button" class="btn alt" onclick="setManualRosterRemoval(&quot;'+id+'&quot;,document.getElementById(&quot;roster-remove-'+id+'&quot;).value,false)"'+(options.length?'':' disabled')+'>Remove player</button></div>'+
+  (list?'<ul style="padding-left:20px">'+list+'</ul>':'')+'<p class="mu" id="roster-remove-status-'+id+'" role="status"></p></div>';
+}
+function setManualRosterRemoval(id,key,restore){
+ const g=games.find(x=>String(x.id)===String(id));
+ if(!g||g.sc||SEASON!==MODEL_SEASON)return;
+ const next={...manualRosterRemovals};
+ const player=restore?next[key]:manualRemovalOptions(g).find(([value])=>value===key)?.[1];
+ const status=()=>document.getElementById('roster-remove-status-'+id);
+ if(!player||![g.a,g.h].includes(player.team)){
+  if(status())status().textContent='Choose a player from this matchup.';
+  return;
+ }
+ if(restore)delete next[key];
+ else next[key]={...player,season:SEASON,fromWeek:Math.min(Number(g.week||wk),next[key]?.fromWeek??Infinity)};
+ try{phase3LocalStorage.setItem(MANUAL_ROSTER_REMOVALS_KEY,JSON.stringify(next));}
+ catch(e){if(status())status().textContent='Unable to save this roster adjustment on your device.';return;}
+ manualRosterRemovals=next;
+ openRosterPanels.add(gamePicksKey(id));
+ draw();plays();renderAdvanced();
+ document.getElementById('roster-remove-'+id)?.focus({preventScroll:true});
+ if(status())status().textContent=player.name+(restore?' restored to ':' removed from ')+player.team+' recommendations on this device.';
+}
 function manualRosterPanel(g){
  if(g.sc||SEASON!==MODEL_SEASON)return '';
  const key=manualRosterKey(g),saved=manualRosterOverrides[key],options=manualRosterOptions(g);
  const playerSelect='<option value="">Choose a player from another team</option>'+options.map((x,i)=>'<option value="'+i+'">'+esc(x.n)+' ('+esc(x.tm)+')</option>').join('');
  const current=saved?manualRosterPreview(g,saved):'';
- return '<details class="roster-override" '+(openRosterPanels.has(gamePicksKey(g.id))?'open ':'')+'ontoggle="rememberRosterPanel(&quot;'+esc(g.id)+'&quot;,this.open)"><summary><b>Move player to another team</b> · new-team scenario</summary><p class="mu">Device-only, game-specific projection. Not an official trade, active-roster verification, sportsbook recommendation, or tracked AI prediction.</p><div class="tools"><label>Destination team<select id="roster-team-'+esc(g.id)+'"><option value="'+esc(g.a)+'">'+esc(g.a)+'</option><option value="'+esc(g.h)+'">'+esc(g.h)+'</option></select></label><label style="flex:1;min-width:180px">Player<select id="roster-player-'+esc(g.id)+'">'+playerSelect+'</select></label><button type="button" class="btn alt" onclick="addManualRoster(&quot;'+esc(g.id)+'&quot;)">Calculate</button></div><div class="override-result" id="roster-preview-'+esc(g.id)+'">'+(current||'Select a player and destination team to preview new-team matchup-adjusted projections.')+'</div></details>';
+ return '<details class="roster-override" '+(openRosterPanels.has(gamePicksKey(g.id))?'open ':'')+'ontoggle="rememberRosterPanel(&quot;'+esc(g.id)+'&quot;,this.open)"><summary><b>Manual roster adjustments</b></summary><div><b>Move player to another team</b></div><p class="mu">Device-only, game-specific projection. Not an official trade, active-roster verification, sportsbook recommendation, or tracked AI prediction.</p><div class="tools"><label>Destination team<select id="roster-team-'+esc(g.id)+'"><option value="'+esc(g.a)+'">'+esc(g.a)+'</option><option value="'+esc(g.h)+'">'+esc(g.h)+'</option></select></label><label style="flex:1;min-width:180px">Player<select id="roster-player-'+esc(g.id)+'">'+playerSelect+'</select></label><button type="button" class="btn alt" onclick="addManualRoster(&quot;'+esc(g.id)+'&quot;)">Calculate</button></div><div class="override-result" id="roster-preview-'+esc(g.id)+'">'+(current||'Select a player and destination team to preview new-team matchup-adjusted projections.')+'</div>'+manualRemovalControls(g)+'</details>';
 }
 function manualRosterPreview(g,saved){
  const option=manualRosterOptions(g).find(x=>x.tm===saved.sourceTeam&&playerIdentity(x.n)===saved.identity);
@@ -1420,7 +1470,7 @@ function allManualScenarioHTML(limit=12){
  return '<div class="card"><b>Manual Override scenarios · not verified recommendations</b>'+gamesWithScenarios.map(id=>manualScenarioHTML(games.find(g=>g.id===id),limit)).join('')+'</div>';
 }
 function injuryTag(p,week=wk){return `<small class="mu ui-injury-label" data-injury-player="${esc(p.n)}" data-injury-team="${esc(p.tm)}" data-injury-week="${Number(week)}">${esc(window.phase3InjuryLabel?.(p.n,p.tm,week)||'Injury status loading')}</small>`;}
-const plBtns=(g,k,b)=>PLY.filter(p=>p.k===k&&(p.tm===g.a||p.tm===g.h)&&playerSuggested(p)).map(p=>{const s=weatherPlayerStat(p,g),sub=(q,reference)=>am(dec(reference))+" · "+Math.round(q*100)+"%";if(!s)return '';const reference=s.referenceProbability??s.p;const buttons=(playerRecommendationAllowed(g,p,'o',s.line)?b('p'+p.i,'o',k==='td'?'Anytime TD':'Over',sub(s.p,reference)):'')+(k!=='td'&&playerRecommendationAllowed(g,p,'u',s.line)?b('p'+p.i,'u','Under',sub(1-s.p,1-reference)):'');return buttons?'<div class="m">'+esc(p.n)+' ('+p.tm+')'+(k==='td'?'':' · line '+s.line)+' '+injuryTag(p)+(p.dynamic?' <small class="mu">'+p.samples+' completed games</small>':'')+'</div>'+buttons:'';}).join('');
+const plBtns=(g,k,b)=>PLY.filter(p=>p.k===k&&(p.tm===g.a||p.tm===g.h)&&playerSuggested(p,g)).map(p=>{const s=weatherPlayerStat(p,g),sub=(q,reference)=>am(dec(reference))+" · "+Math.round(q*100)+"%";if(!s)return '';const reference=s.referenceProbability??s.p;const buttons=(playerRecommendationAllowed(g,p,'o',s.line)?b('p'+p.i,'o',k==='td'?'Anytime TD':'Over',sub(s.p,reference)):'')+(k!=='td'&&playerRecommendationAllowed(g,p,'u',s.line)?b('p'+p.i,'u','Under',sub(1-s.p,1-reference)):'');return buttons?'<div class="m">'+esc(p.n)+' ('+p.tm+')'+(k==='td'?'':' · line '+s.line)+' '+injuryTag(p)+(p.dynamic?' <small class="mu">'+p.samples+' completed games</small>':'')+'</div>'+buttons:'';}).join('');
 const hr=tm=>{const m=/(\d+):(\d+) (AM|PM)/.exec(tm);return m?(+m[1]%12)+(m[3]==="PM"?12:0)+(+m[2])/60:0};
 const bucket=tm=>{const h=hr(tm);return h<11?"early":h<15?"aft":h<19?"eve":"late"};
 const vis=g=>filterHas(tf,bucket(g.tm))&&(!gameQuery||`${g.a} ${g.h} ${T[g.a]?.[0]||""} ${T[g.h]?.[0]||""}`.toLowerCase().includes(gameQuery));
@@ -1540,7 +1590,7 @@ function gamePickCandidates(g,includeManual=false,ignoreBook=false,book=sportsbo
  for(const t of ['a','h'])if(verifiedTeamPointsLine(g,t)!==null)for(const side of ['o','u'])add('teamtot'+t,side,'game');
 
  for(const t of ['a','h'])for(const side of ['o','u'])add('td'+t,side,'td');
- for(const p of PLY.filter(p=>(p.tm===g.a||p.tm===g.h)&&playerSuggested(p))){
+ for(const p of PLY.filter(p=>(p.tm===g.a||p.tm===g.h)&&playerSuggested(p,g))){
   const entered=advManual[advKey(g,p)];
   const manual=includeManual&&(!book||entered?.book===book)?entered:null;
   if(manual&&Number.isFinite(Number(manual.line))&&Number(manual.line)>=0&&oddsDecimal(manual.odds)!==null){const side=p.k!=='td'&&manual.side==='u'?'u':'o';
@@ -1600,7 +1650,7 @@ function moreGamePicks(g,b){
  const key=gamePicksKey(g.id),f=allPickFilters.get(key)||{},closed=allPickCollapsed.get(key)||new Set();
  const all=sortedMorePicks(g).filter(x=>!x.player||!phase3PlayerOut(x.player));
  const best=new Set(gameBestPickRows(g).slice(0,8).map(x=>x.mk+'|'+x.sd));
- const suggested=new Set(phase4Top12GameCandidates(g).filter(x=>sportsbookAllows(g,'p'+x.p.i,advancedPickSide(x),x.p.k==='td'?'':x.line)).slice(0,12).filter(x=>{if(x.manual)return false;const baseline=pstat(x.p,g);return !!baseline&&(x.p.k==='td'?x.line==null:Number.isFinite(x.line)&&x.line===baseline.line);}).map(x=>'p'+x.p.i+'|'+advancedPickSide(x)));
+ const suggested=new Set(phase4Top12GameCandidates(g).filter(x=>!manualRosterExcluded(x.p,g)&&sportsbookAllows(g,'p'+x.p.i,advancedPickSide(x),x.p.k==='td'?'':x.line)).slice(0,12).filter(x=>{if(x.manual)return false;const baseline=pstat(x.p,g);return !!baseline&&(x.p.k==='td'?x.line==null:Number.isFinite(x.line)&&x.line===baseline.line);}).map(x=>'p'+x.p.i+'|'+advancedPickSide(x)));
  const visible=all.filter(x=>(!f.market||allPickMarket(x)===f.market)&&(!f.position||x.position===f.position)&&(!f.team||allPickTeam(x)===f.team));
  const select=(k,label,values)=>'<label>'+label+' <select aria-label="'+label+'" onchange="setAllPickFilter(\''+g.id+'\',\''+k+'\',this.value)"><option value="">All</option>'+values.map(v=>'<option value="'+esc(v)+'" '+(f[k]===v?'selected':'')+'>'+esc(v)+'</option>').join('')+'</select></label>';
  const controls='<div class="tools" style="flex-wrap:wrap">'+select('market','Market',[...new Set(all.map(allPickMarket))])+select('position','Position',[...new Set(all.map(x=>x.position))])+select('team','Team',[g.a,g.h])+'<button class="btn alt" onclick="resetAllPickFilters(\''+g.id+'\')">Reset Filters</button><button class="btn alt" onclick="setAllPickGroups(\''+g.id+'\',false)">Expand All</button><button class="btn alt" onclick="setAllPickGroups(\''+g.id+'\',true)">Collapse All</button></div>';
@@ -1647,7 +1697,7 @@ function scrollToRiskParlaySettings(){
  const offset=desktop&&nav?nav.getBoundingClientRect().height+12:12;
  window.scrollTo({top:Math.max(0,window.scrollY+target.getBoundingClientRect().top-offset),behavior:'smooth'});
 }
-function filteredParlayContext(){return JSON.stringify([SEASON,wk,mode,riskParlayLegs,focus,tf,pf,gameQuery,sportsbookFilter,sportsbookFilter?Object.entries(bookLines).filter(([,at])=>currentBookLine(at)):[],riskParlayFrom,riskParlayThrough,riskParlayHideBelowBreakEven,regularOnly,enhancedUnderOnly,supportedTeamOnly,playerDataRevision,teamPointsRevision,phase4Weather]);}
+function filteredParlayContext(){return JSON.stringify([SEASON,wk,mode,riskParlayLegs,focus,tf,pf,gameQuery,sportsbookFilter,sportsbookFilter?Object.entries(bookLines).filter(([,at])=>currentBookLine(at)):[],riskParlayFrom,riskParlayThrough,riskParlayHideBelowBreakEven,regularOnly,enhancedUnderOnly,supportedTeamOnly,playerDataRevision,teamPointsRevision,phase4Weather,manualRosterRemovals]);}
 function filteredParlayCandidates(onlyAnytimeTD=false){
  refreshPlayerMarkets();if(SEASON!==MODEL_SEASON||mode==='same'&&!focus)return [];
  const now=Date.now();return games.filter(g=>!g.sc&&vis(g)&&(mode!=='same'||g.id===focus)&&Number.isFinite(Date.parse(g.date||''))&&Date.parse(g.date)>now)
@@ -1967,7 +2017,7 @@ function gameBestPickRows(g){
  if(allPickTypes()){const p=weatherTeamProbability(g,"ml","h",g.p),h=p>=.5;it.push({mk:"ml",sd:h?"h":"a",p:h?p:1-p,priceProbability:h?g.p:1-g.p,txt:(h?g.h:g.a)+" moneyline",why:"Model margin "+f1(Math.abs(g.m))+" pts"+(g.fp!=null?", schedule feed "+P((h?g.fp:1-g.fp)*100)+"%":"")})}
 
  if(filterHas(pf,'td'))['a','h'].forEach(t=>{const p=weatherTeamProbability(g,'td'+t,'o',g.pp[t].tdp),o=p>=.5;it.push({mk:'td'+t,sd:o?'o':'u',p:o?p:1-p,priceProbability:o?g.pp[t].tdp:1-g.pp[t].tdp,txt:(t==='a'?g.a:g.h)+' '+(o?'Over ':'Under ')+PN.td[1]+' team TDs',why:'Model team touchdown estimate'})});
- PLY.filter(p=>(p.tm===g.a||p.tm===g.h)&&filterHas(pf,p.k)&&playerSuggested(p)).forEach(p=>{const s=weatherPlayerStat(p,g);if(!s)return;const o=p.k==="td"||s.p>=.5;if(!playerRecommendationAllowed(g,p,o?'o':'u',s.line))return;it.push({mk:"p"+p.i,sd:o?"o":"u",p:o?s.p:1-s.p,priceProbability:o?(s.referenceProbability??s.p):1-(s.referenceProbability??s.p),txt:p.k==="td"?p.n+" anytime TD":p.n+" "+(o?"Over ":"Under ")+s.line+(p.k==="ps"?" pass yds":p.k==="ru"?" rush yds":p.k==="rec"?" receiving yds":p.k==="rcp"?" receptions":""),why:p.k==="td"?f1(p.v)+" TDs per game this season, projects "+f1(s.proj)+" here":"Averages "+Math.round(p.v)+" yds per game, projects about "+Math.round(s.proj)+" here"})});
+ PLY.filter(p=>(p.tm===g.a||p.tm===g.h)&&filterHas(pf,p.k)&&playerSuggested(p,g)).forEach(p=>{const s=weatherPlayerStat(p,g);if(!s)return;const o=p.k==="td"||s.p>=.5;if(!playerRecommendationAllowed(g,p,o?'o':'u',s.line))return;it.push({mk:"p"+p.i,sd:o?"o":"u",p:o?s.p:1-s.p,priceProbability:o?(s.referenceProbability??s.p):1-(s.referenceProbability??s.p),txt:p.k==="td"?p.n+" anytime TD":p.n+" "+(o?"Over ":"Under ")+s.line+(p.k==="ps"?" pass yds":p.k==="ru"?" rush yds":p.k==="rec"?" receiving yds":p.k==="rcp"?" receptions":""),why:p.k==="td"?f1(p.v)+" TDs per game this season, projects "+f1(s.proj)+" here":"Averages "+Math.round(p.v)+" yds per game, projects about "+Math.round(s.proj)+" here"})});
  it.sort((a,b)=>b.p-a.p);return it.filter(x=>sportsbookAllows(g,x.mk,x.sd));
 }
 function det(g){if(SEASON!==MODEL_SEASON||openG!==g.id)return "";const P=Math.round,it=gameBestPickRows(g);
@@ -2009,7 +2059,7 @@ function pick(gid,mkt,side){if(!teamMarketAllowed(mkt)&&/^td[a-z]$/.test(String(
   const i=legs.findIndex(l=>matches(l)&&l.side===side);
   if(i>-1){legs.splice(i,1);draw();aiSelectionFeedback('Selection removed from Current parlay: '+legs.length+' legs remain.');return true;}
   const player=playerForMarket(mkt);
-  if(!sportsbookAllows(game,mkt,side)||player&&(!playerSuggested(player)||!reliablePlayerUsage(player,side))){
+  if(!sportsbookAllows(game,mkt,side)||player&&(!playerSuggested(player,game)||!reliablePlayerUsage(player,side))){
    aiSelectionFeedback('This recommendation is no longer eligible under the current filters.');return false;
   }
   const next=mode==='same'?legs.filter(l=>!matches(l)):legs.slice();
@@ -2296,7 +2346,7 @@ function plays(){
 
  if(filterHas(pf,'td'))for(const pf of ['td']){const L=[];(WKS[wk]||[]).filter(g=>!g.sc&&vis(g)).forEach(g=>["a","h"].forEach(t=>{const baseline=g.pp[t][pf+"p"],p=weatherTeamProbability(g,pf+t,"o",baseline),o=p>=.5;if(!sportsbookAllows(g,pf+t,o?'o':'u'))return;L.push({g,t,o,p:o?p:1-p,priceProbability:o?baseline:1-baseline})}));L.sort((a,b)=>b.p-a.p);
   h+=`<div class="card"><b>Top ${PL[pf]} plays</b>`+(L.slice(0,6).map(x=>{const tm=x.t==="a"?x.g.a:x.g.h;return`<div class="pl ${x.p<.6?"med":""}"><b>${tm} ${x.o?"Over":"Under"} ${PN[pf][1]} ${PN[pf][0]}</b> · ${Math.round(x.p*100)}% · ${am(dec(x.priceProbability))}<div class="mu">vs ${x.t==="a"?x.g.h:x.g.a} · projected ${pf==="td"?f1(weatherTeamProjection(x.g)?(x.t==="a"?weatherTeamProjection(x.g).away:weatherTeamProjection(x.g).home)*.1:x.g.pp[x.t].td)+" TDs":Math.round(x.g.pp[x.t][pf+"y"])+" yds"}</div><button type="button" class="btn alt" onclick="quickAddRecommended('${x.g.id}','${pf+x.t}','${x.o?'o':'u'}')">+ Add to parlay</button></div>`}).join("")||`<div class="mu">No team picks match the current filters and loaded data.</div>`)+`</div>`}
-  {const Q=[];(WKS[wk]||[]).filter(g=>!g.sc&&vis(g)).forEach(g=>PLY.forEach(p=>{if((p.tm===g.a||p.tm===g.h)&&filterHas(pf,p.k)&&playerSuggested(p)){const s=weatherPlayerStat(p,g);if(!s)return;const o=p.k==="td"||s.p>=.5;if(!playerRecommendationAllowed(g,p,o?'o':'u',s.line))return;Q.push({p,g,o,q:o?s.p:1-s.p,s})}}));Q.sort((a,b)=>b.q-a.q);
+  {const Q=[];(WKS[wk]||[]).filter(g=>!g.sc&&vis(g)).forEach(g=>PLY.forEach(p=>{if((p.tm===g.a||p.tm===g.h)&&filterHas(pf,p.k)&&playerSuggested(p,g)){const s=weatherPlayerStat(p,g);if(!s)return;const o=p.k==="td"||s.p>=.5;if(!playerRecommendationAllowed(g,p,o?'o':'u',s.line))return;Q.push({p,g,o,q:o?s.p:1-s.p,s})}}));Q.sort((a,b)=>b.q-a.q);
   h+=`<div class="card"><b>Top player picks${allPickTypes()?"":" ("+pickTypes().map(k=>PL[k]).join(", ")+")"}</b>`+(Q.slice(0,6).map(x=>`<div class="pl ${x.q<.6?"med":""}"><b>${esc(x.p.k==="td"?x.p.n+" anytime TD":x.p.n+" "+(x.o?"Over ":"Under ")+x.s.line+(x.p.k==="ps"?" pass yds":x.p.k==="rec"?" receiving yds":x.p.k==="rcp"?" receptions":" rush yds"))}</b>${injuryTag(x.p)} · ${Math.round(x.q*100)}% · ${am(dec(x.s.referenceProbability==null?x.q:x.o?x.s.referenceProbability:1-x.s.referenceProbability))}<div class="mu">${x.g.a} @ ${x.g.h}</div><button type="button" class="btn alt" onclick="quickAddRecommended('${x.g.id}','p${x.p.i}','${x.o?'o':'u'}')">+ Add to parlay</button>${playerStatsButton(x.p,x.g)}</div>`).join("")||`<div class="mu">No player picks match the current filters and loaded data.</div>`)+`</div>`}
   h+=allManualScenarioHTML();
   // Retrospective evaluations only: these are not verified pregame predictions.
@@ -2538,7 +2588,7 @@ function advAdd(index){
  if(!game||game.sc){aiSelectionFeedback('Selection not added: game unavailable or completed.');return;}
  if(mode==='same'&&focus&&String(focus)!==String(game.id)){aiSelectionFeedback('Selection not added: this same-game slip is for a different matchup. Use a multi-game slip to combine games.');return;}
  const side=advancedPickSide(x);
- if(!playerSuggested(x.p)||!playerRecommendationAllowed(game,x.p,side,x.line)){
+ if(!playerSuggested(x.p,game)||!playerRecommendationAllowed(game,x.p,side,x.line)){
   aiSelectionFeedback('This recommendation is no longer eligible under the current filters.');return;
  }
  const text=advancedSelectionText(x);
@@ -2709,7 +2759,7 @@ function renderAdvanced(){
  const rank=$('advRank');
  rank.disabled=view==='optimizer';
  const byValue=!rank.disabled&&rank.value==='value';
- const candidates=(WKS[wk]||[]).filter(g=>!g.sc&&vis(g)).flatMap(g=>PLY.filter(p=>(p.tm===g.a||p.tm===g.h)&&filterHas(pf,p.k)&&(market==='all'||p.k===market)&&playerSuggested(p)).map(p=>{
+ const candidates=(WKS[wk]||[]).filter(g=>!g.sc&&vis(g)).flatMap(g=>PLY.filter(p=>(p.tm===g.a||p.tm===g.h)&&filterHas(pf,p.k)&&(market==='all'||p.k===market)&&playerSuggested(p,g)).map(p=>{
   const entered=advManual[advKey(g,p)];
   const useManual=!sportsbookFilter||entered?.book===sportsbookFilter&&
    sportsbookAllows(g,'p'+p.i,entered.side,p.k==='td'?'':entered.line);
