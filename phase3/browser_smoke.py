@@ -374,6 +374,46 @@ with sync_playwright() as p:
         assert page.locator('#qfAdvanced').get_attribute('open') is not None
         assert page.locator('#qfSportsbook').input_value()=='DraftKings'
         assert not page.locator('#qfUnder').is_checked()
+        # Seed frozen, device-only suggestions for a synthetic account on two weeks.
+        result_weeks=page.evaluate("""() => {
+          const previous=Math.max(1,estimatedNFLWeek()-1), other=previous===1?2:previous-1;
+          const owner='synthetic-suggestion-reader';
+          window.phase3VerifiedSuggestionAccountId=()=>owner;
+          const make=(week,variant,score)=>{
+           const id='synthetic-parlay-result-'+week;
+           WKS[week]=[...(WKS[week]||[]),{id,week,a:'BUF',h:'MIA',sc:score,tot:99.5}];
+           const leg={season:SEASON,week,game_id:id,matchup:'BUF @ MIA',
+            kickoff_at_utc:'2026-11-19T01:00:00Z'};
+           return {version:1,owner,season:SEASON,week,type:'Risk comparison',variant,signature:id,
+            captured_at_utc:'2026-11-19T00:10:00Z',legs:[
+             {...leg,market_code:'ml',side:'a',prediction:'BUF moneyline',line:''},
+             {...leg,market_code:'tot',side:'o',prediction:'Game total Over 50.5',line:50.5}
+            ]};
+          };
+          const first=make(previous,'Previous fixture',[27,14]);
+          const second=make(other,'Earlier fixture',[30,28]);
+          const late={...first,signature:'late',variant:'Late fixture',captured_at_utc:'2026-11-19T00:45:00Z'};
+          phase3LocalStorage.setItem('nflp-suggested-parlay-history-v1-'+owner,JSON.stringify([first,second,late]));
+          return [previous,other];
+        }""")
+        page.evaluate("document.getElementById('advTabPerformance').click()")
+        results=page.locator('#suggestedParlayResults')
+        selector=results.get_by_label('Results week')
+        assert selector.input_value()==str(result_weeks[0])
+        assert '1 HIT · 1 MISS' in results.inner_text()
+        assert 'Late fixture' not in results.inner_text()
+        results.locator('[data-result-id] summary').first.evaluate('(summary) => summary.click()')
+        assert 'HIT · BUF moneyline' in results.inner_text()
+        assert 'MISS · Game total Over 50.5' in results.inner_text()
+        assert 'Line 50.5 · Actual 41' in results.inner_text()
+        selector.select_option(str(result_weeks[1]),force=True)
+        assert '2 HIT · 0 MISS' in results.inner_text()
+        assert 'Earlier fixture' in results.inner_text() and 'Previous fixture' not in results.inner_text()
+        page.evaluate("""() => {
+          window.phase3VerifiedSuggestionAccountId=()=>null;
+          document.dispatchEvent(new Event('phase3-account-signed-out'));
+        }""")
+        assert 'Sign in to view' in results.inner_text() and 'Earlier fixture' not in results.inner_text()
         print('Participation, sportsbook evidence, capture isolation and persistent filters passed',flush=True)
         assert not errors,errors
         assert not writes,'browser smoke must never write to a production backend'
