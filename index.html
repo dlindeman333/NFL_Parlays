@@ -2399,14 +2399,13 @@ function weatherTeamProbability(g,market,side,baseline){
  const over=line===null?pois3(weather[team]*.1):Math.max(.05,Math.min(.95,nc((weather[team]-line)/9.5)));
  return side==='o'?over:1-over;
 }
+// Shared model projection for interactive recommendations; manual odds remain separate.
 function weatherPlayerStat(p,g){
  const baseline=pstat(p,g);
  if(!baseline)return null;
- const weather=phase4WeatherForGame(g);
- if(weather.code==='none')return baseline;
- const projection=baseline.proj*weather.factor(p.k);
- const probability=p.k==='td'?1-Math.exp(-projection):propMarketOver(p.k,projection,baseline.line,sourcePlayer(p)||p);
- return {...baseline,proj:projection,p:.5+(probability-.5)*.94,referenceProbability:baseline.p};
+ const metrics=advMetrics(p,g,{useManual:false});
+ if(!metrics)return null;
+ return {...baseline,proj:metrics.projection,p:metrics.prob,referenceProbability:baseline.p};
 }
 function advLogs(p){return phase4PlayerHistory(p).filter(r=>Number.isFinite(r[p.k==='ps'?'passing_yards':p.k==='ru'?'rushing_yards':p.k==='rec'?'receiving_yards':p.k==='rcp'?'receptions':'touchdowns']));}
 function advAvg(a){return a.length?a.reduce((v,x)=>v+x,0)/a.length:null;}
