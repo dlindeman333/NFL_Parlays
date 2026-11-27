@@ -830,7 +830,7 @@ html{scroll-padding-top:175px}#topAccountPanel,#myParlays,#savedParlaySlips,#bui
 <div id="bestRiskParlayResults" aria-live="polite"></div>
 <h2 id="advancedPredictions">AI Matchup Recommendations</h2>
 <details class="card" id="phase3AdvancedMethodology" style="margin:8px 0 12px"><summary style="cursor:pointer;font-weight:700">How matchup analysis works (advanced details)</summary><p class="mu">Data-driven matchup analysis using available model estimates and imported player game logs. Not a live generative AI service. Sportsbook lines are optional and entered manually; no paid API or background odds scraping.</p><p class="mu">Model estimates are not sportsbook odds. Verify current lines, player availability, and kickoff times before making selections.</p></details>
-<div aria-label="AI Matchups sections" class="tools" role="tablist"><button aria-selected="true" class="btn" id="advTabRecommendations" type="button">Recommendations</button><button aria-selected="false" class="btn alt" id="advTabPerformance" type="button">Prediction Performance</button></div><div id="advRecommendationPanel"><div class="card"><div class="tools"><label for="advView"><b>View</b></label><select id="advView"><option value="picks">Top picks</option><option value="games">Game matchups</option><option value="parlays">Suggested parlay</option></select><label for="advMarket"><b>Market</b></label><select id="advMarket"><option value="all">All</option><option value="ps">Passing yards</option><option value="ru">Rushing yards</option><option value="td">Touchdowns</option></select></div><div class="mu" id="advStatus" role="status"></div><div id="advResults"></div><div class="card" hidden="" id="advEditor"><b id="advEditTitle">Sportsbook line</b><div class="mu">Enter a line you personally verified at the sportsbook. These values are not automatically refreshed or cloud-synced.</div><div class="tools"><label>Side <select id="advSide"><option value="o">Over</option><option value="u">Under</option></select></label><select id="advBook"><option>DraftKings</option><option>FanDuel</option><option>Other</option></select><label>Line <input id="advLine" min="0" placeholder="225.5" step="0.5" type="number"/></label><label>American odds <input id="advOdds" placeholder="-110" step="1" type="number"/></label><button class="btn" id="advSaveLine" type="button">Save line</button><button class="btn alt" id="advCancelLine" type="button">Cancel</button></div></div></div>
+<div aria-label="AI Matchups sections" class="tools" role="tablist"><button aria-selected="true" class="btn" id="advTabRecommendations" type="button">Recommendations</button><button aria-selected="false" class="btn alt" id="advTabPerformance" type="button">Prediction Performance</button></div><div id="advRecommendationPanel"><div class="card"><div class="tools"><label for="advView"><b>View</b></label><select id="advView"><option value="picks">Top picks</option><option value="games">Game matchups</option><option value="parlays">Suggested parlay</option></select><label for="advMarket"><b>Market</b></label><select id="advMarket"><option value="all">All</option><option value="ps">Passing yards</option><option value="ru">Rushing yards</option><option value="td">Touchdowns</option></select></div><div class="tools"><label for="advRank"><b>Rank by</b></label><select id="advRank"><option value="probability">Model hit probability</option><option value="value">Expected value at entered odds</option></select></div><div class="mu" id="advStatus" role="status"></div><div id="advResults"></div><div class="card" hidden="" id="advEditor"><b id="advEditTitle">Sportsbook line</b><div class="mu">Enter a line you personally verified at the sportsbook. These values are not automatically refreshed or cloud-synced.</div><div class="tools"><label>Side <select id="advSide"><option value="o">Over</option><option value="u">Under</option></select></label><select id="advBook"><option>DraftKings</option><option>FanDuel</option><option>Other</option></select><label>Line <input id="advLine" min="0" placeholder="225.5" step="0.5" type="number"/></label><label>American odds <input id="advOdds" placeholder="-110" step="1" type="number"/></label><button class="btn" id="advSaveLine" type="button">Save line</button><button class="btn alt" id="advCancelLine" type="button">Cancel</button></div></div></div>
 </div><div hidden="" id="advPerformancePanel"><div class="card"><b>Tracked AI recommendations</b><p class="mu">Save a local snapshot of currently ranked recommendations at least 30 minutes before scheduled kickoff. These browser snapshots are not independently verified official predictions. Once final player statistics are imported, this tab grades the original lines without changing the prediction engine. Snapshots stay in this browser; export a backup to preserve them. Only pregame snapshots count.</p><div class="tools"><button class="btn" id="advTrackSnapshot" type="button">Save current Top 12 predictions</button><button class="btn alt" id="advExportTracking" type="button">Export tracking history</button><button class="btn alt" id="advImportTracking" type="button">Import tracking history</button><input accept=".json,application/json" hidden="" id="advImportTrackingFile" type="file"/></div><div class="mu" id="advTrackingStatus" role="status"></div><div id="advTrackingResults"></div></div><details class="card" id="cloudUserPredictionHistory" style="margin-top:12px"><summary style="cursor:pointer;font-weight:700">My cloud prediction history</summary><p class="mu">Verified cloud-published predictions and their final results appear automatically on PC and iPhone after sign-in, including games you did not manually track. The shared prediction archive is read-only; private account subscriptions remain separate. Local/imported browser snapshots never become verified cloud forecasts.</p><div class="mu" id="cloudUserPredictionHistoryStatus" role="status">Sign in to view your cloud prediction history.</div><div id="cloudUserPredictionHistoryResults"></div><button class="btn alt" id="cloudUserPredictionHistoryRefresh" type="button">Refresh my cloud history</button></details><div class="card" id="cloudOfficialGrades" style="margin-top:12px"><b>Automated cloud grading</b><p class="mu">Verified cloud grade records are shown separately from browser estimates. No records are changed here.</p><div class="mu" id="cloudOfficialGradesStatus" role="status">Waiting to load cloud grades…</div><div id="cloudOfficialGradesResults"></div><button class="btn alt" id="cloudOfficialGradesRefresh" type="button">Refresh official grades</button></div><h2 id="aiPerformance">Previous Week &amp; Season AI Performance</h2><div aria-live="polite" class="mu" hidden="" id="boxState" role="status"></div><div class="card" id="archivedPerformance"><b>Archived pregame prediction accuracy</b><div class="mu">Checking for timestamped pregame snapshots…</div></div><div id="performance"></div><dialog aria-label="AI performance pick details" class="performance-modal" id="performanceDetails"><div class="performance-modal-inner"><div class="performance-modal-head"><h3 id="performanceDetailsTitle">Pick details</h3><button class="btn alt" id="closePerformanceDetails" type="button">Close ✕</button></div><div id="performanceDetailsBody"></div></div></dialog><div class="mu">Only predictions with verifiable final results are scored. Player props require matching weekly CSV data. The existing performance cards below are retrospective model evaluations; archived pregame accuracy is shown separately above; unavailable outcomes are excluded from hit percentages.</div>
 </div>
 <script>
@@ -1647,7 +1647,7 @@ function scrollToRiskParlaySettings(){
  const offset=desktop&&nav?nav.getBoundingClientRect().height+12:12;
  window.scrollTo({top:Math.max(0,window.scrollY+target.getBoundingClientRect().top-offset),behavior:'smooth'});
 }
-function filteredParlayContext(){return JSON.stringify([SEASON,wk,mode,riskParlayLegs,focus,tf,pf,gameQuery,sportsbookFilter,sportsbookFilter?Object.entries(bookLines).filter(([,at])=>currentBookLine(at)):[],riskParlayFrom,riskParlayThrough,riskParlayHideBelowBreakEven,regularOnly,enhancedUnderOnly,supportedTeamOnly,playerDataRevision,teamPointsRevision]);}
+function filteredParlayContext(){return JSON.stringify([SEASON,wk,mode,riskParlayLegs,focus,tf,pf,gameQuery,sportsbookFilter,sportsbookFilter?Object.entries(bookLines).filter(([,at])=>currentBookLine(at)):[],riskParlayFrom,riskParlayThrough,riskParlayHideBelowBreakEven,regularOnly,enhancedUnderOnly,supportedTeamOnly,playerDataRevision,teamPointsRevision,phase4Weather]);}
 function filteredParlayCandidates(onlyAnytimeTD=false){
  refreshPlayerMarkets();if(SEASON!==MODEL_SEASON||mode==='same'&&!focus)return [];
  const now=Date.now();return games.filter(g=>!g.sc&&vis(g)&&(mode!=='same'||g.id===focus)&&Number.isFinite(Date.parse(g.date||''))&&Date.parse(g.date)>now)
@@ -2401,11 +2401,9 @@ function weatherTeamProbability(g,market,side,baseline){
 }
 // Shared model projection for interactive recommendations; manual odds remain separate.
 function weatherPlayerStat(p,g){
- const baseline=pstat(p,g);
- if(!baseline)return null;
  const metrics=advMetrics(p,g,{useManual:false});
  if(!metrics)return null;
- return {...baseline,proj:metrics.projection,p:metrics.prob,referenceProbability:baseline.p};
+ return {...metrics.s,proj:metrics.projection,p:metrics.prob,referenceProbability:metrics.s.p};
 }
 function advLogs(p){return phase4PlayerHistory(p).filter(r=>Number.isFinite(r[p.k==='ps'?'passing_yards':p.k==='ru'?'rushing_yards':p.k==='rec'?'receiving_yards':p.k==='rcp'?'receptions':'touchdowns']));}
 function advAvg(a){return a.length?a.reduce((v,x)=>v+x,0)/a.length:null;}
@@ -2467,9 +2465,9 @@ function advMetrics(p,g,{useManual=true}={}){
   (newTeam? .95:1)*weather.factor(p.k)*injuryFactor);
  const baseline=p.k==='td'?null:Number(s.line);
  const key=advKey(g,p),manual=useManual?advManual[key]:null;
- const validLine=manual&&Number.isFinite(Number(manual.line))&&Number(manual.line)>=0;
- const line=validLine?Number(manual.line):baseline;
- const hasOdds=validLine&&Number.isFinite(Number(manual.odds))&&Number(manual.odds)!==0;
+ const validLine=manual&&(p.k==='td'||Number.isFinite(Number(manual.line))&&Number(manual.line)>=0)&&oddsDecimal(manual.odds)!==null;
+ const line=validLine&&p.k!=='td'?Number(manual.line):baseline;
+ const hasOdds=validLine;
  const odds=hasOdds?Number(manual.odds):null;
  const spread=vals.length>=3?Math.max(p.k==='td'?.35:1,Math.sqrt(advAvg(vals.map(v=>(v-advAvg(vals))**2)))):Math.max(p.k==='td'?.5:10,p.v*(p.k==='ps'?.22:.38));
  const z=line==null?null:(projection-line)/spread;
@@ -2477,10 +2475,12 @@ function advMetrics(p,g,{useManual=true}={}){
   p.k==='rec'||p.k==='rcp'?propReceivingOver(p.k,projection,line,propReceivingContext(p)):
   p.k==='ps'||p.k==='ru'?propYardageOver(p.k,projection,line,p,false):
   1/(1+Math.exp(-1.7*z));
- // Shrink model probabilities toward an uncertain 50/50 baseline when sample
+ // Shrink model probabilities toward a baseline when sample
  // size, player movement, injury, or manual weather scenarios raise risk.
+ // Anytime TD uses its season-based baseline as the prior for a rare event.
  const credibility=phase4Clamp((.65+.035*Math.min(vals.length,5))*(newTeam? .86:1)*(injuryFactor<1? .9:1)*(weather.code!=='none'? .94:1),.45,.85);
- const prob=phase4Clamp(.5+(rawProb-.5)*credibility,.05,.95);
+ const prior=p.k==='td'?s.p:.5;
+ const prob=phase4Clamp(prior+(rawProb-prior)*credibility,.05,.95);
  const americanImplied=odds==null?null:(odds>0?100/(odds+100):(-odds)/((-odds)+100));
  const selectedManualProb=manual?.side==='u'&&p.k!=='td'?1-prob:prob;
  const noPushReference=p.k==='td'||line!=null&&Math.abs(line-Math.floor(line)-.5)<1e-8;
@@ -2513,10 +2513,11 @@ function phase4Top12GameCandidates(g){
 window.phase4Top12GameCandidates=phase4Top12GameCandidates;
 function advSaveOdds(key){
  const line=document.getElementById('advLine').value.trim(),odds=document.getElementById('advOdds').value.trim(),book=document.getElementById('advBook').value,side=document.getElementById('advSide').value;
- if(!line||!Number.isFinite(Number(line))||Number(line)<0){$('advStatus').textContent='Enter a valid nonnegative sportsbook line.';return;}
- if(!odds||!Number.isFinite(Number(odds))||Number(odds)===0){$('advStatus').textContent='Enter American odds, e.g. -110 or +120.';return;}
- if(side==='u'&&(window._advPicks||[]).some(x=>x.key===key&&x.p.k==='td')){$('advStatus').textContent='Anytime TD recommendations use the touchdown-to-score side only.';return;}
- advManual[key]={line:Number(line),odds:Number(odds),side:side==='u'?'u':'o',book,updated:new Date().toISOString()};
+ const touchdown=(window._advPicks||[]).some(x=>x.key===key&&x.p.k==='td');
+ if(!touchdown&&(!line||!Number.isFinite(Number(line))||Number(line)<0)){$('advStatus').textContent='Enter a valid nonnegative sportsbook line.';return;}
+ if(oddsDecimal(odds)===null){$('advStatus').textContent='Enter American odds, e.g. -110 or +120.';return;}
+ if(side==='u'&&touchdown){$('advStatus').textContent='Anytime TD recommendations use the touchdown-to-score side only.';return;}
+ advManual[key]={line:touchdown?0.5:Number(line),odds:Number(odds),side:side==='u'?'u':'o',book,updated:new Date().toISOString()};
  try{phase3LocalStorage.setItem(ADV_ODDS_KEY,JSON.stringify(advManual))}catch(e){$('advStatus').textContent='Browser storage full; sportsbook line could not be saved.';return;}
  renderAdvanced();$('advStatus').textContent='Manual sportsbook line saved on this device. Verify the line is still current before using it.';
 }
@@ -2525,6 +2526,11 @@ function phase4ProjectionUnit(k){return k==='td'?'TDs':k==='rcp'?'receptions':'y
 function phase4ExpectedValue(prob,odds){
  const price=oddsDecimal(odds);
  return price===null||!Number.isFinite(prob)?null:prob*(price-1)-(1-prob);
+}
+function advancedSelectionText(x){
+ const prop=phase4MarketLabel(x.p.k);
+ const threshold=x.p.k==='td'?'':(advancedPickSide(x)==='u'?'Under ':'Over ')+x.line+' ';
+ return x.p.n+' '+threshold+prop;
 }
 function advAdd(index){
  const x=window._advPicks?.[index];if(!x)return;
@@ -2535,7 +2541,7 @@ function advAdd(index){
  if(!playerSuggested(x.p)||!playerRecommendationAllowed(game,x.p,side,x.line)){
   aiSelectionFeedback('This recommendation is no longer eligible under the current filters.');return;
  }
- const text=x.p.k==='td'?x.p.n+' anytime TD':x.p.n+' '+(side==='u'?'Under ':'Over ')+x.line+' '+phase4MarketLabel(x.p.k);
+ const text=advancedSelectionText(x);
  if(legs.some(l=>(String(l.gid)===String(game.id)&&l.mkt==='p'+x.p.i)||l.custom&&l.m===game.a+' @ '+game.h&&l.t===text)){
   aiSelectionFeedback('Selection not added: this player market is already in Current parlay.');return;
  }
@@ -2546,12 +2552,31 @@ function advAdd(index){
  }else legs.push(freezeNewPlayerLeg(game.id,'p'+x.p.i,side));
  draw();aiSelectionFeedback('Added to Current parlay: '+legs.length+' of '+N+' legs. Other market selections are preserved. Save the parlay when finished.');
 }
+function advancedSelectionHit(x){
+ return advancedPickSide(x)==='u'?1-x.prob:x.prob;
+}
+function advancedSelectionValue(x){
+ const noPush=x.p.k==='td'||Number.isFinite(x.line)&&Math.abs(x.line-Math.floor(x.line)-.5)<1e-8;
+ return x.manual&&noPush?phase4ExpectedValue(advancedSelectionHit(x),x.odds):null;
+}
+function rankAdvancedSelections(candidates,byValue){
+ const ranked=candidates.map(pick=>({pick,hit:advancedSelectionHit(pick),value:byValue?advancedSelectionValue(pick):null}));
+ return ranked.filter(row=>!byValue||row.value!==null)
+  .sort((a,b)=>(byValue?b.value-a.value:0)||b.hit-a.hit||b.pick.score-a.pick.score)
+  .map(row=>row.pick);
+}
+function advancedSuggestedLegs(candidates){
+ const byGame=new Map();
+ for(const pick of candidates){
+  if(!byGame.has(pick.g.id))byGame.set(pick.g.id,pick);
+  if(byGame.size===5)break;
+ }
+ return [...byGame.values()];
+}
 function advCard(x,i){
- const prop=phase4MarketLabel(x.p.k);
- const selection=x.line==null?x.p.n+' '+prop:x.p.n+' '+(advancedPickSide(x)==='o'?'Over':'Under')+' '+x.line+' '+prop;
- const selectedSide=advancedPickSide(x),selectedHit=selectedSide==='u'?1-x.prob:x.prob;
- const pushSupported=x.p.k==='td'||Number.isFinite(x.line)&&Math.abs(x.line-Math.floor(x.line)-.5)<1e-8;
- const value=x.manual&&pushSupported?phase4ExpectedValue(selectedHit,x.odds):null;
+ const selection=advancedSelectionText(x);
+ const selectedHit=advancedSelectionHit(x);
+ const value=advancedSelectionValue(x);
  const valueText=value==null?(x.manual?'Integer line: pushes not modeled; value unavailable.':'Enter verified sportsbook odds to estimate value.'):
   ((value>=0?'+':'')+(value*100).toFixed(1)+'% expected net return per $1 at entered odds (uncalibrated, before any fees)');
  const confidence=x.logs>=5?'5+ games of player logs':x.logs>=3?'3–4 player game logs':'Limited player game logs';
@@ -2559,6 +2584,7 @@ function advCard(x,i){
  const num=n=>Number.isFinite(n)?n.toFixed(1):'unavailable';
  const opp=S[x.opponent],own=S[x.p.tm];
  const spread=x.line==null?'Not available':((x.projection-x.line)>=0?'+':'')+(x.projection-x.line).toFixed(1);
+ const selectedSide=advancedPickSide(x);
  const success=selectedSide==='u'?x.underHits:x.hits;
  const hitRate=x.sample&&x.line!=null?`${success} of ${x.sample} (${Math.round(100*success/x.sample)}%)`:'Insufficient matching game logs';
  const risk=x.logs<3?'Limited player-game history makes this projection particularly uncertain.':
@@ -2571,7 +2597,7 @@ function advCard(x,i){
  <b>Matchup factors</b><div class="mu">${esc(x.p.tm)} model scoring estimate: ${num(own.ppg)} points/game; ${esc(x.opponent)} estimated points allowed: ${num(opp.opp)} points/game. Defensive adjustment: ${(x.defenseFactor*100).toFixed(0)}% of neutral. ${esc(x.defenseLabel)}. Not a verified position-specific defense rating.</div>
  <b>Phase 4 context</b><div class="mu">Recent opportunity adjustment: ${(x.usageFactor*100).toFixed(0)}% · Evidence weight: ${(x.credibility*100).toFixed(0)}% · Weather: ${esc(x.weather.label)}. ${esc(x.phase4Notes.join('; ')||'No confirmed trade, injury or weather adjustment.')} Historical logs can include a previous team; current team eligibility requires a matching recent record.</div>
  <b>Sportsbook comparison</b><div class="mu">${oddsDetail}${x.edge==null?'':` Model probability minus odds-implied break-even probability: ${(x.edge*100).toFixed(1)} percentage points (uncalibrated estimate).`}</div>
- <b>Selection HIT probability vs. bet value</b><div class="mu">${esc(selectedSide==='u'?'Under':'Over')} · estimated HIT ${pct(selectedHit)} (not empirically calibrated). Bet value: ${esc(valueText)}. Bookmaker margin cannot be removed without both verified side prices.</div>
+ <b>Selection HIT probability vs. bet value</b><div class="mu">${x.p.k==='td'?'Anytime TD':selectedSide==='u'?'Under':'Over'} · estimated HIT ${pct(selectedHit)} (not empirically calibrated). Bet value: ${esc(valueText)}. Bookmaker margin cannot be removed without both verified side prices.</div>
  <b>Risk and data quality</b><div class="mu">${esc(risk)} ${esc(confidence)}. Probabilities are unvalidated model estimates, not measured prediction accuracy.</div>
  </div></details>`;
  return `<div class="pl ${x.logs<3?'med':''}" style="padding:10px 0"><b>${esc(selection)}</b> ${x.newTeam?'<span class="phase4-new-team">NEW TEAM</span>':''} · ${esc(x.g.a)} @ ${esc(x.g.h)}${playerStatsButton(x.p,x.g)}<div class="mu" data-injury-player="${esc(x.p.n)}" data-injury-team="${esc(x.p.tm)}" data-injury-week="${Number(x.g.week||wk)}">${esc(window.phase3InjuryLabel?.(x.p.n,x.p.tm,x.g.week||wk)||'Injury status not loaded')}</div><div class="mu">Selection odds: ${esc(String(advancedPickOdds(x)))} (${x.manual?'manually entered':'model estimate'})</div><div class="mu">Projected ${x.projection.toFixed(1)} ${phase4ProjectionUnit(x.p.k)} · Risk-adjusted model Over probability ${pct(x.prob)} · ${esc(confidence)}</div><div class="mu"><b>Selection HIT: ${pct(selectedHit)}</b> (uncalibrated) · Bet value: ${esc(valueText)}</div><div class="mu">Last 3: ${x.last3==null?'unavailable':x.last3.toFixed(1)} · Last 5: ${x.last5==null?'unavailable':x.last5.toFixed(1)}${x.sample&&x.line!=null?' · Over this line in '+x.hits+'/'+x.sample+' logged games':''}</div><div class="mu">Opponent ${esc(x.opponent)} allows an estimated ${S[x.opponent].opp.toFixed(1)} points/game (broad defensive proxy, not positional defense ranking). ${x.manual?esc(x.manual.book)+' manually entered '+esc(String(x.odds))+' odds · '+new Date(x.manual.updated).toLocaleString():'No verified sportsbook line; using model reference threshold.'}</div>${x.edge==null?'':`<div class="mu"><b>Estimated probability edge vs. entered odds: ${(x.edge*100).toFixed(1)} percentage points</b> (model estimate; not guaranteed value).</div>`}${details}<div class="tools"><button type="button" class="btn alt" onclick="advAdd(${i})">+ Add to current parlay</button><button type="button" class="btn alt" onclick="advEdit(${i})">${x.manual?'Edit':'Enter'} sportsbook line</button></div></div>`;
@@ -2581,7 +2607,8 @@ function advEdit(i){
  const el=$('advEditor');if(!el)return;
  el.hidden=false;el.dataset.index=i;el.dataset.key=x.key;
  $('advEditTitle').textContent=x.p.n+' — '+phase4MarketLabel(x.p.k);
- $('advLine').value=x.manual?.line??x.line??'';$('advOdds').value=x.manual?.odds??'';$('advBook').value=x.manual?.book||'DraftKings';$('advSide').value=x.manual?.side==='u'&&x.p.k!=='td'?'u':'o';
+ $('advLine').disabled=x.p.k==='td';$('advSide').disabled=x.p.k==='td';
+ $('advLine').value=x.p.k==='td'?'':x.manual?.line??x.line??'';$('advOdds').value=x.manual?.odds??'';$('advBook').value=x.manual?.book||'DraftKings';$('advSide').value=x.manual?.side==='u'&&x.p.k!=='td'?'u':'o';
  el.scrollIntoView({behavior:'smooth',block:'nearest'});
 }
 let phase4OptimizerPlans=[];
@@ -2679,15 +2706,20 @@ function renderAdvanced(){
  if(SEASON!==MODEL_SEASON){root.innerHTML='<div class="warn">Matchup recommendations require updated season-specific model baselines.</div>';return;}
  const market=$('advMarket').value,view=$('advView').value;
  phase4RefreshWeatherGames();if($('phase4OptimizerOptions'))$('phase4OptimizerOptions').hidden=view!=='optimizer';
- const all=(WKS[wk]||[]).filter(g=>!g.sc&&vis(g)).flatMap(g=>PLY.filter(p=>(p.tm===g.a||p.tm===g.h)&&filterHas(pf,p.k)&&(market==='all'||p.k===market)&&playerSuggested(p)).map(p=>{
+ const rank=$('advRank');
+ rank.disabled=view==='optimizer';
+ const byValue=!rank.disabled&&rank.value==='value';
+ const candidates=(WKS[wk]||[]).filter(g=>!g.sc&&vis(g)).flatMap(g=>PLY.filter(p=>(p.tm===g.a||p.tm===g.h)&&filterHas(pf,p.k)&&(market==='all'||p.k===market)&&playerSuggested(p)).map(p=>{
   const entered=advManual[advKey(g,p)];
   const useManual=!sportsbookFilter||entered?.book===sportsbookFilter&&
    sportsbookAllows(g,'p'+p.i,entered.side,p.k==='td'?'':entered.line);
   return advMetrics(p,g,{useManual});
  }).filter(Boolean).filter(x=>playerRecommendationAllowed(x.g,x.p,advancedPickSide(x),x.line)).filter(x=>!regularOnly||x.p.k!=='ru'||Number(x.line)>=5));
- all.sort((a,b)=>b.score-a.score);window._advPicks=all;
+ const all=rankAdvancedSelections(candidates,byValue);
+ window._advPicks=all;
+ window._advSuggestedLegs=[];
  const gamesCount=new Set(all.map(x=>x.g.id)).size;
- $('advStatus').textContent=`${all.length} model candidates across ${gamesCount} upcoming games. Phase 4 uses weighted recent player logs, team changes, bounded matchup adjustments and risk discounts. Estimates are not validated sportsbook probabilities or live lines.`;
+ $('advStatus').textContent=`${all.length} model candidates across ${gamesCount} upcoming games. ${byValue?'Ranked by estimated return using entered odds. Switch to Model hit probability to see unpriced picks and enter lines.':view==='optimizer'?'Optimizer ranks combinations by estimated joint hit probability with an uncertainty adjustment.':'Ranked by estimated probability of the displayed selection.'}`;
  let html='';
  if(view==='games'){
   const groups=[...new Set(all.map(x=>x.g.id))];
@@ -2695,13 +2727,14 @@ function renderAdvanced(){
  }else if(view==='optimizer'){
   html=phase4RenderOptimizer(all);
  }else if(view==='parlays'){
-  const unique=[],seen=new Set();for(const x of all){if(seen.has(x.g.id))continue;seen.add(x.g.id);unique.push(x);if(unique.length===5)break;}
+  const unique=advancedSuggestedLegs(all);
+  if(unique.length>=2)window._advSuggestedLegs=unique;
   const legSummary=unique.map((x,i)=>{
    const marketLabel=phase4MarketLabel(x.p.k);
    const lineText=x.line==null?'Anytime touchdown':`${advancedPickSide(x)==='o'?'Over':'Under'} ${x.line}`;
    return `<li><b>${esc(x.p.n)}</b> — ${esc(marketLabel)} · ${esc(lineText)} ${playerStatsButton(x.p,x.g)}<div class="mu">${esc(x.g.a)} @ ${esc(x.g.h)} · ${x.manual?'Manually entered '+esc(x.manual.book)+' odds '+esc(String(x.odds)):'No verified sportsbook odds'}</div></li>`;
   }).join('');
-  html=`<section aria-label="Suggested parlay details" class="card"><h3>Suggested ${unique.length}-leg parlay</h3><div class="mu">Illustrative picks from different games, not a verified sportsbook ticket. Model probabilities are uncalibrated; combined odds and independence are not assumed.</div><ol>${legSummary}</ol><div class="mu">Use the Add to current parlay control below each pick. Verify live lines, odds, kickoff and injuries before saving.</div></section>`+unique.map(x=>advCard(x,all.indexOf(x))).join('');
+  html=unique.length<2?'<p class="mu">At least two games with eligible picks are required for a suggested parlay.</p>':`<section aria-label="Suggested parlay details" class="card"><h3>Suggested ${unique.length}-leg parlay</h3><div class="mu">Illustrative picks from different games, not a verified sportsbook ticket. Model probabilities are uncalibrated; combined odds and independence are not assumed.</div><ol>${legSummary}</ol><div class="mu">Use the Add to current parlay control below each pick. Verify live lines, odds, kickoff and injuries before saving.</div></section>`+unique.map(x=>advCard(x,all.indexOf(x))).join('');
  }else html=all.slice(0,12).map((x,i)=>advCard(x,i)).join('');
  html=allManualScenarioHTML()+html;
  root.innerHTML=html||'<div class="mu">No eligible upcoming player predictions for the selected week. Refresh the NFL schedule or change the market filter.</div>';
@@ -2771,7 +2804,7 @@ $('phase4SaveWeather').addEventListener('click',()=>saveGameWeather(
  $('phase4WeatherGame').value,readWeatherSelection('phase4Weather'),$('phase4WeatherStatus')
 ));
 renderAdvanced();
-$('advView').onchange=renderAdvanced;$('advMarket').onchange=renderAdvanced;
+$('advRank').onchange=renderAdvanced;$('advView').onchange=renderAdvanced;$('advMarket').onchange=renderAdvanced;
 $('advSaveLine').onclick=()=>{const x=(window._advPicks||[]).find(x=>x.key===$('advEditor').dataset.key);if(x)advSaveOdds(x.key);else $('advStatus').textContent='This pick is no longer in the filtered results. Reopen its sportsbook line editor before saving.';};
 $('advCancelLine').onclick=()=>{$('advEditor').hidden=true};
 
@@ -5579,7 +5612,8 @@ recovery.onclick=async()=>{recovery.disabled=true;recoveryStatus.textContent='Ve
   const x={m,s},meta=performancePickExportFields(g,x);
   const player=raw.player||raw.x?.p||null;
   const manual=raw.x?.manual||(raw.source==='entered odds'&&player?advManual[advKey(g,player)]:null);
-  const line=manual&&m!=='ml'&&Number.isFinite(Number(manual.line))?Number(manual.line):meta.line;
+  const line=player?.k==='td'?0.5:raw.x&&Number.isFinite(raw.x.line)?raw.x.line:
+   manual&&m!=='ml'&&Number.isFinite(Number(manual.line))?Number(manual.line):meta.line;
   const probability=Number(raw.probability??raw.prob);
   const decimal=Number(raw.decimal);
   return {season:SEASON,week,game_id:String(g.id),matchup:String(g.a)+' @ '+String(g.h),kickoff_at_utc:new Date(g.date).toISOString(),
@@ -5630,14 +5664,15 @@ recovery.onclick=async()=>{recovery.disabled=true;recoveryStatus.textContent='Ve
  window.phase3CaptureCurrentAdvancedSuggestions=view=>{
   if(!account())return;
   if(view==='parlays'){
-   const unique=[],seen=new Set();for(const x of window._advPicks||[]){if(seen.has(x.g.id))continue;seen.add(x.g.id);
-    unique.push({g:x.g,mkt:'p'+x.p.i,side:advancedPickSide(x),text:x.p.n+' '+phase4MarketLabel(x.p.k),
-     player:x.p,probability:x.prob,source:x.manual?'entered odds':'model estimate',decimal:x.odds?oddsDecimal(Number(x.odds)):''});if(unique.length===5)break;}
-   capturePlan('AI matchup suggestion','Suggested parlay',unique);
+   const rows=(window._advSuggestedLegs||[]).map(x=>({
+    x,side:advancedPickSide(x),text:advancedSelectionText(x),probability:advancedSelectionHit(x),
+    source:x.manual?'entered odds':'model estimate',decimal:oddsDecimal(advancedPickOdds(x))
+   }));
+   capturePlan('AI matchup suggestion','Suggested parlay',rows);
   }
   if(view==='optimizer')for(let i=0;i<phase4OptimizerPlans.length;i++){
    const plan=phase4OptimizerPlans[i],rows=plan.rows.map(r=>({x:r.x,g:r.x.g,mkt:'p'+r.x.p.i,side:r.side,
-    text:r.x.p.n+' '+phase4MarketLabel(r.x.p.k),player:r.x.p,probability:r.prob,
+    text:advancedSelectionText(r.x),player:r.x.p,probability:r.prob,
     source:r.x.manual?'entered odds':'model estimate',decimal:r.price>0?1+r.price/100:1+100/Math.abs(r.price)}));
    capturePlan('Risk-aware optimizer','Option '+(i+1),rows,
     {joint:plan.rows.reduce((a,r)=>a*r.prob,1),price:rows.reduce((a,r)=>a*(r.decimal||1),1)});
