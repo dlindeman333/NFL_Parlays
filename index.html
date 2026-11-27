@@ -3731,6 +3731,7 @@ function renderPerformance(){if(SEASON!==MODEL_SEASON){$("performance").innerHTM
   if(performanceActive.period==='previous')$('performanceDetailsTitle').textContent=`${performanceContexts.previous.label} — ${{best:'Best Picks',potential:'Potential Plays',combined:'Combined (unique picks)'}[performanceActive.kind]}`;
   drawPerformanceDetails();
  }
+ window.phase3RenderSuggestedParlayResults?.();
 }
 
 updateBoxState();drawF();switchSlip(activeSlip);renderSaved();
@@ -5790,14 +5791,84 @@ recovery.onclick=async()=>{recovery.disabled=true;recoveryStatus.textContent='Ve
   for(const group of across.values())if(new Set(group.map(p=>p.week)).size>1)result.push(total(group,'ALL_WEEKS_TOTAL'));
   return result;
  }
+ function isPregameSuggestion(s){
+  const captured=Date.parse(s.captured_at_utc);
+  return Number.isFinite(captured)&&s.legs.length>=2&&s.legs.length<=8&&s.legs.every(leg=>
+   leg&&Date.parse(leg.kickoff_at_utc)-captured>=30*60000);
+ }
+ function gradeSuggestions(captures){
+  return captures.map(s=>evaluated(s,findGame,performancePickExportFields));
+ }
+
+ const panel=$('advPerformancePanel');
+ const resultsSection=document.createElement('details');
+ resultsSection.className='card';
+ resultsSection.id='suggestedParlayResults';
+ resultsSection.open=true;
+ resultsSection.innerHTML='<summary><b>Suggested Parlay Results</b></summary>'+
+  '<p class="mu">Results for suggestions captured in this browser while signed in. Legs are graded against the original picks when final scores and stats are available.</p>'+
+  '<div class="tools"><label for="suggestedParlayWeek">Results week</label> <select id="suggestedParlayWeek" disabled></select></div>'+
+  '<p class="mu" id="suggestedParlayTotals" role="status"></p><div id="suggestedParlayRows"></div>';
+ panel.prepend(resultsSection);
+ const resultsWeek=$('suggestedParlayWeek'),totals=$('suggestedParlayTotals'),rows=$('suggestedParlayRows');
+ const resultLabels={WON_MODEL:'Won',LOST_MODEL:'Lost',OPEN:'Open',PUSH_REVIEW:'Push review',UNVERIFIED:'Unverified'};
+ const legCounts=p=>p.hits+' HIT · '+p.misses+' MISS'+
+  (p.pushes?' · '+p.pushes+' PUSH':'')+(p.pending?' · '+p.pending+' pending':'')+(p.unknown?' · '+p.unknown+' unverified':'');
+ function clearSuggestionResults(message){
+  resultsWeek.replaceChildren();
+  resultsWeek.disabled=true;
+  rows.replaceChildren();
+  totals.textContent=message;
+ }
+ function renderSuggestionResults(){
+  if(!account()){clearSuggestionResults('Sign in to view your suggested parlay results from this browser.');return;}
+  if(panel.hidden||!resultsSection.open)return;
+  let captures;
+  try{captures=readHistory().filter(s=>Number(s.season)===SEASON&&isPregameSuggestion(s));}
+  catch(e){clearSuggestionResults('Unable to read suggested parlay history. '+e.message);return;}
+  const currentWeek=estimatedNFLWeek();
+  const previousWeek=Math.max(1,currentWeek-1);
+  const weeks=[...new Set([previousWeek,...captures.map(s=>Number(s.week)).filter(w=>Number.isInteger(w)&&w>=1&&w<=22)])].sort((a,b)=>b-a);
+  const chosen=weeks.includes(Number(resultsWeek.value))?Number(resultsWeek.value):previousWeek;
+  resultsWeek.replaceChildren(...weeks.map(w=>new Option('Week '+w+(w===previousWeek&&currentWeek>1?' (previous week)':''),w)));
+  resultsWeek.value=String(chosen);
+  resultsWeek.disabled=false;
+  const plans=gradeSuggestions(captures.filter(s=>Number(s.week)===chosen)).sort((a,b)=>Date.parse(b.captured_at_utc)-Date.parse(a.captured_at_utc));
+  if(!plans.length){
+   rows.replaceChildren();
+   totals.textContent='No suggested parlays were captured here for Week '+chosen+'.';
+   return;
+  }
+  const totalCounts=Object.fromEntries(['hits','misses','pushes','pending','unknown'].map(key=>[key,plans.reduce((sum,p)=>sum+p[key],0)]));
+  totals.textContent=plans.length+(plans.length===1?' parlay':' parlays')+' · '+legCounts(totalCounts)+' across all legs';
+  const expanded=new Set([...rows.querySelectorAll('details[open]')].map(item=>item.dataset.resultId));
+  rows.innerHTML=plans.map(p=>{
+   const id=shortId(p.signature);
+   const legs=p.legs.map(l=>{
+    const details=[l.matchup, l.line===''?'':'Line '+l.line, l.actual===''?'':'Actual '+l.actual,l.final_score,l.reason].filter(Boolean).map(esc).join(' · ');
+    return '<li><strong>'+esc(l.outcome)+' · '+esc(l.prediction)+'</strong><div class="mu">'+details+'</div></li>';
+   }).join('');
+   return '<details class="card" data-result-id="'+id+'"'+(expanded.has(id)?' open':'')+'><summary><b>'+
+    esc([p.type,p.variant].filter(Boolean).join(' · '))+'</b><div class="mu">'+p.legs.length+' legs · '+legCounts(p)+' · '+resultLabels[p.outcome]+'</div></summary>'+
+    '<ol style="padding-inline-start:20px">'+legs+'</ol></details>';
+  }).join('');
+ }
+ window.phase3RenderSuggestedParlayResults=renderSuggestionResults;
+ resultsWeek.addEventListener('change',renderSuggestionResults);
+ resultsSection.addEventListener('toggle',renderSuggestionResults);
+ $('advTabPerformance').addEventListener('click',renderSuggestionResults);
+ document.addEventListener('phase3-account-signed-out',()=>clearSuggestionResults('Sign in to view your suggested parlay results from this browser.'));
+ document.addEventListener('phase3-account-verified',()=>{
+  clearSuggestionResults('');
+  renderSuggestionResults();
+ });
+ renderSuggestionResults();
+
  // Pure helpers are available to offline synthetic regression tests.
  window.phase3ParlayExcelCore=Object.freeze({gradeLeg,evaluated,groupedSubtotals,readHistory});
  window.phase3SuggestedParlayWorkbookSheets=(year,weeks,detailRows,allReportRows)=>{
-  const eligible=readHistory().filter(s=>s.season===year&&weeks.has(Number(s.week))&&
-   Array.isArray(s.legs)&&s.legs.length>=2&&s.legs.length<=8&&s.legs.every(l=>
-    Number.isFinite(Date.parse(l.kickoff_at_utc))&&Number.isFinite(Date.parse(s.captured_at_utc))&&
-    Date.parse(l.kickoff_at_utc)-Date.parse(s.captured_at_utc)>=30*60000));
-  const plans=eligible.map(s=>evaluated(s,findGame,performancePickExportFields));
+  const eligible=readHistory().filter(s=>s.season===year&&weeks.has(Number(s.week))&&isPregameSuggestion(s));
+  const plans=gradeSuggestions(eligible);
   const summarized=groupedSubtotals(plans),sheetRow=p=>[p.record_type||'SUGGESTED_PARLAY',p.season,p.week,p.type,p.variant,
    p.risk_range||'',p.captured_at_utc||'',p.record_type?'Device subtotal':'Device timestamp (unverified)',
    p.suggestion_count|| (p.record_type?0:1),p.record_type?'':p.legs.length,
