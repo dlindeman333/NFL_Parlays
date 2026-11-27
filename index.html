@@ -5739,6 +5739,7 @@ recovery.onclick=async()=>{recovery.disabled=true;recoveryStatus.textContent='Ve
     {joint:plan.rows.reduce((a,r)=>a*r.prob,1),price:rows.reduce((a,r)=>a*(r.decimal||1),1)});
   }
  };
+ const isFrozenPlayerMarket=code=>/^p(?:\d+|x_\d{4}_[A-Z]+_.+_(?:ps|ru|rec|rcp|td))$/.test(String(code));
  function gradeLeg(leg,game,fields){
   if(!game||!Array.isArray(game.sc)||game.sc.length!==2||game.sc.some(v=>typeof v!=='number'||!Number.isFinite(v)))
    return {outcome:'PENDING',actual:'',reason:'Verified final score unavailable'};
@@ -5749,7 +5750,7 @@ recovery.onclick=async()=>{recovery.disabled=true;recoveryStatus.textContent='Ve
    return {outcome:selected>other?'HIT':'MISS',actual:'',reason:'Verified final score'};}
   const line=leg.line,actual=m==='sp'?(s==='a'?away-home:home-away):m==='tot'?away+home:fields?.actual_value;
   if(typeof actual!=='number'||!Number.isFinite(actual))return {outcome:'UNVERIFIED',actual:'',reason:'Verified final market statistic unavailable'};
-  if(/^p\d+$/.test(m)&&leg.market==='Anytime touchdown')return{outcome:actual>=1?'HIT':'MISS',actual,reason:'Verified player touchdowns'};
+  if(isFrozenPlayerMarket(m)&&leg.market==='Anytime touchdown')return{outcome:actual>=1?'HIT':'MISS',actual,reason:'Verified player touchdowns'};
   if(typeof line!=='number'||!Number.isFinite(line))return{outcome:'UNVERIFIED',actual,reason:'Original frozen prediction line unavailable'};
   if(!['a','h'].includes(s)&&!['o','u'].includes(s))return{outcome:'UNVERIFIED',actual,reason:'Unsupported pick direction'};
   const diff=m==='sp'?actual+line:actual-line;
@@ -5761,7 +5762,7 @@ recovery.onclick=async()=>{recovery.disabled=true;recoveryStatus.textContent='Ve
   const legs=s.legs.map((leg,i)=>{
    const g=gameLookup(leg);
    const fields=validFinal(g)?describe(g,{...leg,m:leg.market_code,s:leg.side}):{};
-   const mismatched=/^p\d+$/.test(leg.market_code)&&g&&Array.isArray(g.sc)&&
+   const mismatched=isFrozenPlayerMarket(leg.market_code)&&g&&Array.isArray(g.sc)&&
     String(fields?.player_or_team||'').trim().toLowerCase()!==String(leg.player_or_team||'').trim().toLowerCase();
    return {...leg,leg_number:i+1,final_score:g&&Array.isArray(g.sc)?
     String(g.a)+' '+g.sc[0]+' - '+String(g.h)+' '+g.sc[1]:'',
@@ -5803,7 +5804,7 @@ recovery.onclick=async()=>{recovery.disabled=true;recoveryStatus.textContent='Ve
    leg&&Date.parse(leg.kickoff_at_utc)-captured>=30*60000);
  }
  function describeFrozenLeg(g,leg){
-  if(!/^p\d+$/.test(leg.market_code))return performancePickExportFields(g,{m:leg.market_code,s:leg.side});
+  if(!isFrozenPlayerMarket(leg.market_code))return performancePickExportFields(g,{m:leg.market_code,s:leg.side});
   const stat={'Passing yards':'passing_yards','Rushing yards':'rushing_yards','Receiving yards':'receiving_yards',
    Receptions:'receptions','Anytime touchdown':'touchdowns'}[leg.market];
   const teams=leg.player_team?[leg.player_team]:[g.a,g.h];
