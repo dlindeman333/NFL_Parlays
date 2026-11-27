@@ -293,14 +293,15 @@ with sync_playwright() as p:
           rank.value='probability';
           rank.dispatchEvent(new Event('change'));
         }""")
-        roster_select=page.locator('#roster-remove-'+game_id)
-        roster=roster_select.locator('xpath=ancestor::details[1]')
-        roster.locator('summary').click()
+        roster=page.locator('#manualOverrideManager')
+        if roster.get_attribute('open') is None:
+            roster.locator('summary').click()
+        roster_select=roster.get_by_label('Player and former team')
         removed=roster_select.locator('option').filter(has_text='Fixture Current').get_attribute('value')
         draft_before=page.evaluate('JSON.stringify(legs)')
         roster_select.select_option(removed)
         roster.get_by_role('button',name='Remove player',exact=True).click()
-        assert 'removed from' in roster.get_by_role('status').inner_text()
+        assert 'removed from' in roster.locator('#manualRosterRemovalStatus').inner_text()
         assert page.evaluate("""({id,key}) => {
           const game=games.find(g=>g.id===id);
           const removed=p=>p?.n==='Fixture Current';
@@ -317,7 +318,7 @@ with sync_playwright() as p:
         }""",{'id':game_id,'key':removed})
         assert page.evaluate('JSON.stringify(legs)')==draft_before
         roster.get_by_role('button',name='Restore Fixture Current',exact=False).click()
-        assert 'restored to' in roster.get_by_role('status').inner_text()
+        assert 'restored to' in roster.locator('#manualRosterRemovalStatus').inner_text()
         assert page.evaluate("""id => gamePickCandidates(games.find(g=>g.id===id))
           .some(x=>x.player?.n==='Fixture Current')""",game_id)
         if page.locator('#qfCollapse').get_attribute('open') is None:

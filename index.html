@@ -798,7 +798,7 @@ html{scroll-padding-top:175px}#topAccountPanel,#myParlays,#savedParlaySlips,#bui
 <div class="row" style="margin-top:10px"><b>Picks</b><span class="mu">Select one or more types; All includes game markets.</span></div><div class="row" id="pf" style="margin-top:4px"></div><p class="mu">Receiving yards and receptions require completed-game player statistics. No projections are shown when supporting data is unavailable.</p>
 <div class="team-pick-setting"><label><input checked="" id="supportedTeamOnly" onchange="setSupportedTeamOnly(this.checked)" type="checkbox"/> <b>Exclude Infrequently Used Team Picks</b></label><p class="mu">On by default: show team moneyline, spread, game totals, team points totals and team total touchdowns. Other team specialty picks are hidden from recommendations; saved picks are preserved.</p></div><h3 class="filter-group-title">Player eligibility &amp; risk</h3><label><input id="enhancedUnderOnly" type="checkbox" checked onchange="setEnhancedUnderOnly(this.checked)"/> <b>Enhanced UNDER eligibility</b></label><p class="mu">Require stronger recent usage for UNDER recommendations. Baseline participation always applies.</p><div style="margin-top:12px"><label><input checked="" id="regularOnly" onchange="setRegularOnly(this.checked)" type="checkbox"/> <b>Regular contributors only</b></label><p class="mu">Baseline recommendations require participation in at least 3 of the last 4 completed team games, with market-specific usage. Enhanced UNDER also requires an appearance in the latest completed team game and higher average usage. Anytime TD requires an average of 2 combined carries and targets, or a touchdown in the recent team-game window. Turning this option off relaxes the additional legacy contributor checks, not the baseline safety rules. Existing selections stay intact.</p></div><fieldset style="margin:12px 0 0;padding:10px;border:1px solid var(--bd);border-radius:8px"><legend><b>Risk factor — combined parlay odds</b></legend><div class="row"><label for="oddsFrom">From <input id="oddsFrom" inputmode="text" placeholder="+500" step="1" style="width:100px" type="number"/></label><label for="oddsThrough">Through <input id="oddsThrough" inputmode="text" placeholder="+2000" step="1" style="width:100px" type="number"/></label><button class="btn alt" onclick="applyOddsRange()" type="button">Apply odds range</button><button class="btn alt" id="quickViewParlays" onclick="quickViewFilteredParlays()" type="button">Quick view: X-leg parlays in range</button></div><p class="mu" style="margin:6px 0 0">Rounded American odds for the whole parlay, inclusive. Blank means no limit. Individual picks remain visible. Model prices are estimates.</p><div aria-live="polite" class="mu" id="oddsFilterStatus" role="status"></div><div class="mu" id="combinedOddsStatus" role="status"></div></fieldset>
 <div class="mu" id="hint" style="margin-top:8px"></div>
-</div></details></aside><main aria-label="NFL game cards" class="responsive-game-main"><h2 id="gameSection">Games</h2><div class="toolbar"><input aria-label="Search games" id="gameSearch" placeholder="Search teams or matchups" type="search"/><span class="mu" id="gameCount"></span><button aria-controls="previousGames" aria-expanded="false" class="btn alt" id="togglePreviousGames" onclick="togglePreviousGames()" type="button">Show previous weeks</button></div><details id="manualOverrideManager" class="card"><summary>Manual Override Management <span id="manualOverrideManagerCount" class="manual-manager-count">Checking saved scenarios…</span></summary><div class="manual-manager-content"><p class="mu">New-team scenarios are saved only in this browser and are specific to a season, week and matchup. Removing one does not change official predictions, saved parlays, or hypothetical legs already added to a draft.</p><div id="manualOverrideManagerList"></div><div class="manual-manager-footer"><button class="btn alt" type="button" id="clearAllManualOverrides" onclick="clearAllManualRosterOverrides()">Clear All Manual Overrides…</button></div><div id="manualOverrideManagerStatus" class="mu" aria-live="polite" role="status" style="margin-top:9px"></div></div></details><div id="games"></div><div id="previousGames" style="display:none"></div></main></div>
+</div></details></aside><main aria-label="NFL game cards" class="responsive-game-main"><h2 id="gameSection">Games</h2><div class="toolbar"><input aria-label="Search games" id="gameSearch" placeholder="Search teams or matchups" type="search"/><span class="mu" id="gameCount"></span><button aria-controls="previousGames" aria-expanded="false" class="btn alt" id="togglePreviousGames" onclick="togglePreviousGames()" type="button">Show previous weeks</button></div><details id="manualOverrideManager" class="card"><summary>Manual Override Management <span id="manualOverrideManagerCount" class="manual-manager-count">Checking saved scenarios…</span></summary><div class="manual-manager-content"><div id="manualRosterRemovalEditor"></div><p id="manualRosterRemovalStatus" class="mu" role="status"></p><h3>Saved new-team scenarios</h3><p class="mu">New-team scenarios are saved only in this browser and are specific to a season, week and matchup. Removing one does not change official predictions, saved parlays, or hypothetical legs already added to a draft.</p><div id="manualOverrideManagerList"></div><div class="manual-manager-footer"><button class="btn alt" type="button" id="clearAllManualOverrides" onclick="clearAllManualRosterOverrides()">Clear All New-Team Scenarios…</button></div><div id="manualOverrideManagerStatus" class="mu" aria-live="polite" role="status" style="margin-top:9px"></div></div></details><div id="games"></div><div id="previousGames" style="display:none"></div></main></div>
 
 
 <section id="draftManagement"><h2>Draft slips</h2><div class="mu">Only slips with selections (plus your currently selected draft) are shown. Manage each slip using its own controls.</div><div class="tools"><button class="btn" id="newSlip">+ New slip</button><button class="btn alt" id="clearAllSlips">Delete all slips</button></div><div class="draft-card-grid" id="slipTabs"></div></section>
@@ -1302,50 +1302,54 @@ function manualRosterExcluded(p,g){
  const removal=manualRosterRemovals[manualRemovalKey(p.tm,p.n)];
  return !g.sc&&!!removal&&Number(g.week||wk)>=removal.fromWeek;
 }
-function manualRemovalOptions(g){
+function manualRemovalOptions(){
  const players=new Map();
  for(const p of PLY){
-  if(![g.a,g.h].includes(p.tm)||!playerIdentity(p.n)||manualRosterExcluded(p,g))continue;
-  players.set(manualRemovalKey(p.tm,p.n),{name:p.n,team:p.tm});
+  const key=manualRemovalKey(p.tm,p.n);
+  if(!playerIdentity(p.n)||manualRosterRemovals[key]?.fromWeek<=wk)continue;
+  players.set(key,{name:p.n,team:p.tm});
  }
  return [...players.entries()].sort(([,a],[,b])=>a.name.localeCompare(b.name)||a.team.localeCompare(b.team));
 }
-function manualRemovalControls(g){
- const id=esc(g.id), options=manualRemovalOptions(g);
- const removals=Object.entries(manualRosterRemovals).filter(([,entry])=>entry?.season===SEASON&&[g.a,g.h].includes(entry.team));
- const list=removals.map(([key,entry])=>'<li>'+esc(entry.name)+' ('+esc(entry.team)+') · Week '+esc(entry.fromWeek)+' onward <button type="button" class="btn alt" data-removal-key="'+esc(key)+'" aria-label="Restore '+esc(entry.name)+' to '+esc(entry.team)+' picks" onclick="setManualRosterRemoval(&quot;'+id+'&quot;,this.dataset.removalKey,true)">Restore</button></li>').join('');
- return '<div class="override-result"><b>Remove player from roster</b><p class="mu">Hide a traded or cut player’s recommendations for their former team on this device from the selected week through the end of the season. Restore the player here at any time.</p>'+
-  '<div class="tools"><label>Player on current roster <select id="roster-remove-'+id+'"><option value="">Choose player</option>'+
+function renderManualRosterRemovalEditor(){
+ const editor=$('manualRosterRemovalEditor');
+ if(SEASON!==MODEL_SEASON){editor.innerHTML='';return;}
+ const previous=$('manualRosterRemovalPlayer')?.value;
+ const options=manualRemovalOptions();
+ const removals=Object.entries(manualRosterRemovals).filter(([,entry])=>entry?.season===SEASON)
+  .sort(([,a],[,b])=>a.name.localeCompare(b.name)||a.team.localeCompare(b.team));
+ const list=removals.map(([key,entry])=>'<li class="manual-override-row"><span>'+esc(entry.name)+' ('+esc(entry.team)+') · Week '+esc(entry.fromWeek)+' onward</span><button type="button" class="btn alt" data-removal-key="'+esc(key)+'" aria-label="Restore '+esc(entry.name)+' to '+esc(entry.team)+' picks" onclick="setManualRosterRemoval(this.dataset.removalKey,true)">Restore</button></li>').join('');
+ editor.innerHTML='<h3>Remove player from roster</h3><p class="mu">Hide a traded or cut player’s former-team picks in this browser from Week '+esc(wk)+' through the end of the season.</p>'+
+  '<div class="tools"><label for="manualRosterRemovalPlayer">Player and former team</label><select id="manualRosterRemovalPlayer"><option value="">Choose player</option>'+
   options.map(([key,player])=>'<option value="'+esc(key)+'">'+esc(player.name)+' ('+esc(player.team)+')</option>').join('')+
-  '</select></label><button type="button" class="btn alt" onclick="setManualRosterRemoval(&quot;'+id+'&quot;,document.getElementById(&quot;roster-remove-'+id+'&quot;).value,false)"'+(options.length?'':' disabled')+'>Remove player</button></div>'+
-  (list?'<ul style="padding-left:20px">'+list+'</ul>':'')+'<p class="mu" id="roster-remove-status-'+id+'" role="status"></p></div>';
+  '</select><button type="button" class="btn alt" onclick="setManualRosterRemoval(document.getElementById(&quot;manualRosterRemovalPlayer&quot;).value,false)"'+(options.length?'':' disabled')+'>Remove player</button></div>'+
+  (list?'<ul style="list-style:none;padding:0">'+list+'</ul>':'');
+ if(options.some(([key])=>key===previous))$('manualRosterRemovalPlayer').value=previous;
 }
-function setManualRosterRemoval(id,key,restore){
- const g=games.find(x=>String(x.id)===String(id));
- if(!g||g.sc||SEASON!==MODEL_SEASON)return;
+function setManualRosterRemoval(key,restore){
+ if(SEASON!==MODEL_SEASON)return;
  const next={...manualRosterRemovals};
- const player=restore?next[key]:manualRemovalOptions(g).find(([value])=>value===key)?.[1];
- const status=()=>document.getElementById('roster-remove-status-'+id);
- if(!player||![g.a,g.h].includes(player.team)){
-  if(status())status().textContent='Choose a player from this matchup.';
+ const player=restore?next[key]:manualRemovalOptions().find(([value])=>value===key)?.[1];
+ const status=$('manualRosterRemovalStatus');
+ if(!player||restore&&player.season!==SEASON){
+  status.textContent='Choose a player and former team.';
   return;
  }
  if(restore)delete next[key];
- else next[key]={...player,season:SEASON,fromWeek:Math.min(Number(g.week||wk),next[key]?.fromWeek??Infinity)};
+ else next[key]={...player,season:SEASON,fromWeek:wk};
  try{phase3LocalStorage.setItem(MANUAL_ROSTER_REMOVALS_KEY,JSON.stringify(next));}
- catch(e){if(status())status().textContent='Unable to save this roster adjustment on your device.';return;}
+ catch(e){status.textContent='Unable to save this roster adjustment in your browser.';return;}
  manualRosterRemovals=next;
- openRosterPanels.add(gamePicksKey(id));
  draw();plays();renderAdvanced();
- document.getElementById('roster-remove-'+id)?.focus({preventScroll:true});
- if(status())status().textContent=player.name+(restore?' restored to ':' removed from ')+player.team+' recommendations on this device.';
+ $('manualRosterRemovalPlayer')?.focus({preventScroll:true});
+ status.textContent=player.name+(restore?' restored to ':' removed from ')+player.team+' recommendations in this browser.';
 }
 function manualRosterPanel(g){
  if(g.sc||SEASON!==MODEL_SEASON)return '';
  const key=manualRosterKey(g),saved=manualRosterOverrides[key],options=manualRosterOptions(g);
  const playerSelect='<option value="">Choose a player from another team</option>'+options.map((x,i)=>'<option value="'+i+'">'+esc(x.n)+' ('+esc(x.tm)+')</option>').join('');
  const current=saved?manualRosterPreview(g,saved):'';
- return '<details class="roster-override" '+(openRosterPanels.has(gamePicksKey(g.id))?'open ':'')+'ontoggle="rememberRosterPanel(&quot;'+esc(g.id)+'&quot;,this.open)"><summary><b>Manual roster adjustments</b></summary><div><b>Move player to another team</b></div><p class="mu">Device-only, game-specific projection. Not an official trade, active-roster verification, sportsbook recommendation, or tracked AI prediction.</p><div class="tools"><label>Destination team<select id="roster-team-'+esc(g.id)+'"><option value="'+esc(g.a)+'">'+esc(g.a)+'</option><option value="'+esc(g.h)+'">'+esc(g.h)+'</option></select></label><label style="flex:1;min-width:180px">Player<select id="roster-player-'+esc(g.id)+'">'+playerSelect+'</select></label><button type="button" class="btn alt" onclick="addManualRoster(&quot;'+esc(g.id)+'&quot;)">Calculate</button></div><div class="override-result" id="roster-preview-'+esc(g.id)+'">'+(current||'Select a player and destination team to preview new-team matchup-adjusted projections.')+'</div>'+manualRemovalControls(g)+'</details>';
+ return '<details class="roster-override" '+(openRosterPanels.has(gamePicksKey(g.id))?'open ':'')+'ontoggle="rememberRosterPanel(&quot;'+esc(g.id)+'&quot;,this.open)"><summary><b>Move player to another team</b> · new-team scenario</summary><p class="mu">Device-only, game-specific projection. Not an official trade, active-roster verification, sportsbook recommendation, or tracked AI prediction.</p><div class="tools"><label>Destination team<select id="roster-team-'+esc(g.id)+'"><option value="'+esc(g.a)+'">'+esc(g.a)+'</option><option value="'+esc(g.h)+'">'+esc(g.h)+'</option></select></label><label style="flex:1;min-width:180px">Player<select id="roster-player-'+esc(g.id)+'">'+playerSelect+'</select></label><button type="button" class="btn alt" onclick="addManualRoster(&quot;'+esc(g.id)+'&quot;)">Calculate</button></div><div class="override-result" id="roster-preview-'+esc(g.id)+'">'+(current||'Select a player and destination team to preview new-team matchup-adjusted projections.')+'</div></details>';
 }
 function manualRosterPreview(g,saved){
  const option=manualRosterOptions(g).find(x=>x.tm===saved.sourceTeam&&playerIdentity(x.n)===saved.identity);
@@ -1388,9 +1392,10 @@ function manualRosterManagerEntries(){
 }
 function renderManualRosterManager(){
  const host=document.getElementById('manualOverrideManager'),list=document.getElementById('manualOverrideManagerList');if(!host||!list)return;
+ renderManualRosterRemovalEditor();
  const entries=manualRosterManagerEntries();manualRosterManagerKeys=entries.map(([key])=>key);
  document.getElementById('manualOverrideManagerCount').textContent='· '+entries.length+' saved '+(entries.length===1?'scenario':'scenarios');
- if(!host.dataset.initialized){host.open=entries.length>0;host.dataset.initialized='1';}
+ if(!host.dataset.initialized){host.open=entries.length>0||Object.values(manualRosterRemovals).some(entry=>entry?.season===SEASON);host.dataset.initialized='1';}
  list.innerHTML=entries.map(([key,value],index)=>{
   const saved=value&&typeof value==='object'?value:{},parts=key.split('|');
   const player=PLY.find(p=>p.tm===saved.sourceTeam&&playerIdentity(p.n)===saved.identity)?.n||saved.name||saved.identity||'Unknown player';
