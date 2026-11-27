@@ -382,8 +382,8 @@ with sync_playwright() as p:
           window.phase3VerifiedSuggestionAccountId=()=>owner;
           const make=(week,variant,score)=>{
            const id='synthetic-parlay-result-'+week;
-           WKS[week]=[...(WKS[week]||[]),{id,week,a:'BUF',h:'MIA',sc:score,tot:99.5}];
-           const leg={season:SEASON,week,game_id:id,matchup:'BUF @ MIA',
+           WKS[week]=[...(WKS[week]||[]),{id,week,a:'BUF',h:'MIA',sc:score,tot:99.5,date:'2026-11-19T01:00:00Z'}];
+           const leg={season:SEASON,week,game_id:'archived-'+id,matchup:'BUF @ MIA',
             kickoff_at_utc:'2026-11-19T01:00:00Z'};
            return {version:1,owner,season:SEASON,week,type:'Risk comparison',variant,signature:id,
             captured_at_utc:'2026-11-19T00:10:00Z',estimated_combined_decimal_odds:3,legs:[
@@ -394,7 +394,7 @@ with sync_playwright() as p:
           const first=make(previous,'Previous fixture',[27,14]);
           const second=make(other,'Earlier fixture',[30,28]);
           const late={...first,signature:'late',variant:'Late fixture',captured_at_utc:'2026-11-19T00:45:00Z'};
-          phase3LocalStorage.setItem('nflp-suggested-parlay-history-v1-'+owner,JSON.stringify([first,second,late,{...first,signature:'pending',variant:'Pending fixture',legs:first.legs.map(leg=>({...leg,game_id:'fixture-not-final'}))}]));
+          phase3LocalStorage.setItem('nflp-suggested-parlay-history-v1-'+owner,JSON.stringify([first,second,late,{...first,signature:'pending',variant:'Pending fixture',legs:first.legs.map(leg=>({...leg,game_id:'fixture-not-final',matchup:'KC @ DEN'}))}]));
           return [previous,other,current];
         }""")
         page.evaluate("document.getElementById('advTabPerformance').click()")
@@ -409,6 +409,18 @@ with sync_playwright() as p:
         assert 'HIT · BUF moneyline' in results.inner_text()
         assert 'MISS · Game total Over 50.5' in results.inner_text()
         assert 'Line 50.5 · Actual 41' in results.inner_text()
+        page.evaluate("""() => {
+          document.dispatchEvent(new Event('phase3-account-verified'));
+          window.phase3RenderSuggestedParlayResults();
+        }""")
+        assert results.locator('[data-result-id][open]').count()==1
+        completion=results.get_by_label('Completion')
+        completion.select_option('2',force=True)
+        assert results.locator('[data-result-id]').count()==1
+        completion.select_option('1',force=True)
+        assert 'No suggested parlays match this completion filter' in results.inner_text()
+        completion.select_option('all',force=True)
+
         selector.select_option(str(result_weeks[1]),force=True)
         assert '2 HIT · 0 MISS' in results.inner_text()
         assert '$10.00 hypothetical stakes on 1 settled · +$20.00 estimated net' in results.inner_text()
