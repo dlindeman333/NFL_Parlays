@@ -394,7 +394,7 @@ with sync_playwright() as p:
           const first=make(previous,'Previous fixture',[27,14]);
           const second=make(other,'Earlier fixture',[30,28]);
           const late={...first,signature:'late',variant:'Late fixture',captured_at_utc:'2026-11-19T00:45:00Z'};
-          phase3LocalStorage.setItem('nflp-suggested-parlay-history-v1-'+owner,JSON.stringify([first,second,late]));
+          phase3LocalStorage.setItem('nflp-suggested-parlay-history-v1-'+owner,JSON.stringify([first,second,late,{...first,signature:'pending',variant:'Pending fixture',legs:first.legs.map(leg=>({...leg,game_id:'fixture-not-final'}))}]));
           return [previous,other,current];
         }""")
         page.evaluate("document.getElementById('advTabPerformance').click()")
@@ -402,7 +402,7 @@ with sync_playwright() as p:
         selector=results.get_by_label('Results week')
         assert selector.input_value()==str(result_weeks[0])
         assert '1 HIT · 1 MISS' in results.inner_text()
-        assert '-$10.00 estimated net on 1 settled' in results.inner_text()
+        assert '$10.00 hypothetical stakes on 1 settled · -$10.00 estimated net' in results.inner_text()
         assert 'Late fixture' not in results.inner_text()
         assert results.locator('[data-result-id] summary strong').inner_text()=='MISS'
         results.locator('[data-result-id] summary').first.evaluate('(summary) => summary.click()')
@@ -411,7 +411,7 @@ with sync_playwright() as p:
         assert 'Line 50.5 · Actual 41' in results.inner_text()
         selector.select_option(str(result_weeks[1]),force=True)
         assert '2 HIT · 0 MISS' in results.inner_text()
-        assert '+$20.00 estimated net on 1 settled' in results.inner_text()
+        assert '$10.00 hypothetical stakes on 1 settled · +$20.00 estimated net' in results.inner_text()
         assert results.locator('[data-result-id] summary strong').inner_text()=='HIT'
         assert 'Earlier fixture' in results.inner_text() and 'Previous fixture' not in results.inner_text()
         current=str(result_weeks[2])

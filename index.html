@@ -5862,9 +5862,9 @@ recovery.onclick=async()=>{recovery.disabled=true;recoveryStatus.textContent='Ve
   const netByPlan=plans.map(suggestedParlayNet);
   const settled=netByPlan.filter(net=>net!==null);
   const netTotal=settled.reduce((sum,net)=>sum+net,0);
-  const stakeSummary='Hypothetical $10 per parlay · '+money(plans.length*hypotheticalStake)+' total stakes · '+
-   (settled.length?signedMoney(netTotal)+' estimated net on '+settled.length+' settled':'Estimated net pending')+
-   (settled.length<plans.length?' · '+(plans.length-settled.length)+' pending or unavailable':'')+'.';
+  const stakeSummary=settled.length
+   ?money(settled.length*hypotheticalStake)+' hypothetical stakes on '+settled.length+' settled · '+signedMoney(netTotal)+' estimated net.'
+   :'No completed parlays with a calculable dollar result.';
   const totalCounts=Object.fromEntries(['hits','misses','pushes','pending','unknown'].map(key=>[key,plans.reduce((sum,p)=>sum+p[key],0)]));
   totals.textContent=plans.length+(plans.length===1?' parlay':' parlays')+' · '+legCounts(totalCounts)+' across all legs. '+stakeSummary;
   const expanded=new Set([...rows.querySelectorAll('details[open]')].map(item=>item.dataset.resultId));
@@ -5879,9 +5879,9 @@ recovery.onclick=async()=>{recovery.disabled=true;recoveryStatus.textContent='Ve
     ?'<strong style="color:#146c43;background:#d1e7dd;padding:2px 6px;border-radius:4px">HIT</strong>'
     :'<strong style="color:#842029;background:#f8d7da;padding:2px 6px;border-radius:4px">MISS</strong>'):resultLabels[p.outcome];
    const net=netByPlan[i];
-   const stakeLine='$10 hypothetical stake · '+(net===null
-    ?p.outcome==='WON_MODEL'?'Captured odds unavailable':'Net result pending or unavailable'
-    :signedMoney(net)+' estimated net');
+   const stakeLine=net===null
+    ?(p.outcome==='WON_MODEL'?'Captured odds unavailable':'Dollar result pending or unavailable')
+    :'$10 hypothetical stake · '+signedMoney(net)+' estimated net';
    return '<details class="card" data-result-id="'+id+'"'+(expanded.has(id)?' open':'')+'><summary><b>'+
     esc([p.type,p.variant].filter(Boolean).join(' · '))+'</b><div class="mu">'+p.legs.length+' legs · '+legCounts(p)+' · '+verdict+'</div><div class="mu">'+stakeLine+'</div></summary>'+
     '<ol style="padding-inline-start:20px">'+legs+'</ol></details>';
