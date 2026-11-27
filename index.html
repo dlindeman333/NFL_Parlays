@@ -5811,6 +5811,9 @@ recovery.onclick=async()=>{recovery.disabled=true;recoveryStatus.textContent='Ve
   '<p class="mu" id="suggestedParlayTotals" role="status"></p><div id="suggestedParlayRows"></div>';
  panel.prepend(resultsSection);
  const resultsWeek=$('suggestedParlayWeek'),totals=$('suggestedParlayTotals'),rows=$('suggestedParlayRows');
+ const resultsWeekKey='nflp-suggested-results-week-v1:'+SEASON;
+ let selectedResultsWeek;
+ try{selectedResultsWeek=Number(phase3LocalStorage.getItem(resultsWeekKey));}catch(e){}
  const resultLabels={WON_MODEL:'Won',LOST_MODEL:'Lost',OPEN:'Open',PUSH_REVIEW:'Push review',UNVERIFIED:'Unverified'};
  const legCounts=p=>p.hits+' HIT · '+p.misses+' MISS'+
   (p.pushes?' · '+p.pushes+' PUSH':'')+(p.pending?' · '+p.pending+' pending':'')+(p.unknown?' · '+p.unknown+' unverified':'');
@@ -5828,9 +5831,9 @@ recovery.onclick=async()=>{recovery.disabled=true;recoveryStatus.textContent='Ve
   catch(e){clearSuggestionResults('Unable to read suggested parlay history. '+e.message);return;}
   const currentWeek=estimatedNFLWeek();
   const previousWeek=Math.max(1,currentWeek-1);
-  const weeks=[...new Set([previousWeek,...captures.map(s=>Number(s.week)).filter(w=>Number.isInteger(w)&&w>=1&&w<=22)])].sort((a,b)=>b-a);
-  const chosen=weeks.includes(Number(resultsWeek.value))?Number(resultsWeek.value):previousWeek;
-  resultsWeek.replaceChildren(...weeks.map(w=>new Option('Week '+w+(w===previousWeek&&currentWeek>1?' (previous week)':''),w)));
+  const weeks=[...new Set([currentWeek,previousWeek,...captures.map(s=>Number(s.week)).filter(w=>Number.isInteger(w)&&w>=1&&w<=22)])].sort((a,b)=>b-a);
+  const chosen=weeks.includes(selectedResultsWeek)?selectedResultsWeek:previousWeek;
+  resultsWeek.replaceChildren(...weeks.map(w=>new Option('Week '+w+(w===currentWeek?' (current week)':w===previousWeek?' (previous week)':''),w)));
   resultsWeek.value=String(chosen);
   resultsWeek.disabled=false;
   const plans=gradeSuggestions(captures.filter(s=>Number(s.week)===chosen)).sort((a,b)=>Date.parse(b.captured_at_utc)-Date.parse(a.captured_at_utc));
@@ -5854,7 +5857,11 @@ recovery.onclick=async()=>{recovery.disabled=true;recoveryStatus.textContent='Ve
   }).join('');
  }
  window.phase3RenderSuggestedParlayResults=renderSuggestionResults;
- resultsWeek.addEventListener('change',renderSuggestionResults);
+ resultsWeek.addEventListener('change',()=>{
+  selectedResultsWeek=Number(resultsWeek.value);
+  try{phase3LocalStorage.setItem(resultsWeekKey,String(selectedResultsWeek));}catch(e){}
+  renderSuggestionResults();
+ });
  resultsSection.addEventListener('toggle',renderSuggestionResults);
  $('advTabPerformance').addEventListener('click',renderSuggestionResults);
  document.addEventListener('phase3-account-signed-out',()=>clearSuggestionResults('Sign in to view your suggested parlay results from this browser.'));

@@ -376,7 +376,8 @@ with sync_playwright() as p:
         assert not page.locator('#qfUnder').is_checked()
         # Seed frozen, device-only suggestions for a synthetic account on two weeks.
         result_weeks=page.evaluate("""() => {
-          const previous=Math.max(1,estimatedNFLWeek()-1), other=previous===1?2:previous-1;
+          const current=estimatedNFLWeek(), previous=Math.max(1,current-1);
+          const other=current<=2?3:previous-1;
           const owner='synthetic-suggestion-reader';
           window.phase3VerifiedSuggestionAccountId=()=>owner;
           const make=(week,variant,score)=>{
@@ -394,7 +395,7 @@ with sync_playwright() as p:
           const second=make(other,'Earlier fixture',[30,28]);
           const late={...first,signature:'late',variant:'Late fixture',captured_at_utc:'2026-11-19T00:45:00Z'};
           phase3LocalStorage.setItem('nflp-suggested-parlay-history-v1-'+owner,JSON.stringify([first,second,late]));
-          return [previous,other];
+          return [previous,other,current];
         }""")
         page.evaluate("document.getElementById('advTabPerformance').click()")
         results=page.locator('#suggestedParlayResults')
@@ -409,6 +410,18 @@ with sync_playwright() as p:
         selector.select_option(str(result_weeks[1]),force=True)
         assert '2 HIT · 0 MISS' in results.inner_text()
         assert 'Earlier fixture' in results.inner_text() and 'Previous fixture' not in results.inner_text()
+        current=str(result_weeks[2])
+        assert '(current week)' in selector.locator(f'option[value="{current}"]').inner_text()
+        selector.select_option(current,force=True)
+        page.evaluate("""() => {
+          window.phase3RenderSuggestedParlayResults();
+          document.dispatchEvent(new Event('phase3-account-verified'));
+        }""")
+        assert selector.input_value()==current
+        assert page.evaluate("phase3LocalStorage.getItem('nflp-suggested-results-week-v1:'+SEASON)")==current
+        if result_weeks[2]!=result_weeks[0]:
+            assert 'No suggested parlays were captured here for Week '+current in results.inner_text()
+
         page.evaluate("""() => {
           window.phase3VerifiedSuggestionAccountId=()=>null;
           document.dispatchEvent(new Event('phase3-account-signed-out'));
