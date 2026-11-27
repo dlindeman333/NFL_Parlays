@@ -386,7 +386,7 @@ with sync_playwright() as p:
            const leg={season:SEASON,week,game_id:id,matchup:'BUF @ MIA',
             kickoff_at_utc:'2026-11-19T01:00:00Z'};
            return {version:1,owner,season:SEASON,week,type:'Risk comparison',variant,signature:id,
-            captured_at_utc:'2026-11-19T00:10:00Z',legs:[
+            captured_at_utc:'2026-11-19T00:10:00Z',estimated_combined_decimal_odds:3,legs:[
              {...leg,market_code:'ml',side:'a',prediction:'BUF moneyline',line:''},
              {...leg,market_code:'tot',side:'o',prediction:'Game total Over 50.5',line:50.5}
             ]};
@@ -402,6 +402,7 @@ with sync_playwright() as p:
         selector=results.get_by_label('Results week')
         assert selector.input_value()==str(result_weeks[0])
         assert '1 HIT · 1 MISS' in results.inner_text()
+        assert '-$10.00 estimated net on 1 settled' in results.inner_text()
         assert 'Late fixture' not in results.inner_text()
         assert results.locator('[data-result-id] summary strong').inner_text()=='MISS'
         results.locator('[data-result-id] summary').first.evaluate('(summary) => summary.click()')
@@ -410,6 +411,7 @@ with sync_playwright() as p:
         assert 'Line 50.5 · Actual 41' in results.inner_text()
         selector.select_option(str(result_weeks[1]),force=True)
         assert '2 HIT · 0 MISS' in results.inner_text()
+        assert '+$20.00 estimated net on 1 settled' in results.inner_text()
         assert results.locator('[data-result-id] summary strong').inner_text()=='HIT'
         assert 'Earlier fixture' in results.inner_text() and 'Previous fixture' not in results.inner_text()
         current=str(result_weeks[2])
