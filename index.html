@@ -5836,7 +5836,9 @@ recovery.onclick=async()=>{recovery.disabled=true;recoveryStatus.textContent='Ve
   resultsWeek.replaceChildren(...weeks.map(w=>new Option('Week '+w+(w===currentWeek?' (current week)':w===previousWeek?' (previous week)':''),w)));
   resultsWeek.value=String(chosen);
   resultsWeek.disabled=false;
-  const plans=gradeSuggestions(captures.filter(s=>Number(s.week)===chosen)).sort((a,b)=>Date.parse(b.captured_at_utc)-Date.parse(a.captured_at_utc));
+  const progress=p=>p.pending===0?2:p.pending<p.legs.length?1:0;
+  const plans=gradeSuggestions(captures.filter(s=>Number(s.week)===chosen))
+   .sort((a,b)=>progress(b)-progress(a)||Date.parse(b.captured_at_utc)-Date.parse(a.captured_at_utc));
   if(!plans.length){
    rows.replaceChildren();
    totals.textContent='No suggested parlays were captured here for Week '+chosen+'.';
@@ -5851,8 +5853,12 @@ recovery.onclick=async()=>{recovery.disabled=true;recoveryStatus.textContent='Ve
     const details=[l.matchup, l.line===''?'':'Line '+l.line, l.actual===''?'':'Actual '+l.actual,l.final_score,l.reason].filter(Boolean).map(esc).join(' · ');
     return '<li><strong>'+esc(l.outcome)+' · '+esc(l.prediction)+'</strong><div class="mu">'+details+'</div></li>';
    }).join('');
+   const decided=p.pending===0&&(p.outcome==='WON_MODEL'||p.outcome==='LOST_MODEL');
+   const verdict=decided?(p.outcome==='WON_MODEL'
+    ?'<strong style="color:#146c43;background:#d1e7dd;padding:2px 6px;border-radius:4px">HIT</strong>'
+    :'<strong style="color:#842029;background:#f8d7da;padding:2px 6px;border-radius:4px">MISS</strong>'):resultLabels[p.outcome];
    return '<details class="card" data-result-id="'+id+'"'+(expanded.has(id)?' open':'')+'><summary><b>'+
-    esc([p.type,p.variant].filter(Boolean).join(' · '))+'</b><div class="mu">'+p.legs.length+' legs · '+legCounts(p)+' · '+resultLabels[p.outcome]+'</div></summary>'+
+    esc([p.type,p.variant].filter(Boolean).join(' · '))+'</b><div class="mu">'+p.legs.length+' legs · '+legCounts(p)+' · '+verdict+'</div></summary>'+
     '<ol style="padding-inline-start:20px">'+legs+'</ol></details>';
   }).join('');
  }

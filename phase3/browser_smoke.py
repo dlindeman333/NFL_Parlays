@@ -403,12 +403,14 @@ with sync_playwright() as p:
         assert selector.input_value()==str(result_weeks[0])
         assert '1 HIT · 1 MISS' in results.inner_text()
         assert 'Late fixture' not in results.inner_text()
+        assert results.locator('[data-result-id] summary strong').inner_text()=='MISS'
         results.locator('[data-result-id] summary').first.evaluate('(summary) => summary.click()')
         assert 'HIT · BUF moneyline' in results.inner_text()
         assert 'MISS · Game total Over 50.5' in results.inner_text()
         assert 'Line 50.5 · Actual 41' in results.inner_text()
         selector.select_option(str(result_weeks[1]),force=True)
         assert '2 HIT · 0 MISS' in results.inner_text()
+        assert results.locator('[data-result-id] summary strong').inner_text()=='HIT'
         assert 'Earlier fixture' in results.inner_text() and 'Previous fixture' not in results.inner_text()
         current=str(result_weeks[2])
         assert '(current week)' in selector.locator(f'option[value="{current}"]').inner_text()
