@@ -798,7 +798,7 @@ html{scroll-padding-top:175px}#topAccountPanel,#myParlays,#savedParlaySlips,#bui
 <div class="row" style="margin-top:10px"><b>Picks</b><span class="mu">Select one or more types; All includes game markets.</span></div><div class="row" id="pf" style="margin-top:4px"></div><p class="mu">Receiving yards and receptions require completed-game player statistics. No projections are shown when supporting data is unavailable.</p>
 <div class="team-pick-setting"><label><input checked="" id="supportedTeamOnly" onchange="setSupportedTeamOnly(this.checked)" type="checkbox"/> <b>Exclude Infrequently Used Team Picks</b></label><p class="mu">On by default: show team moneyline, spread, game totals, team points totals and team total touchdowns. Other team specialty picks are hidden from recommendations; saved picks are preserved.</p></div><h3 class="filter-group-title">Player eligibility &amp; risk</h3><label><input id="enhancedUnderOnly" type="checkbox" checked onchange="setEnhancedUnderOnly(this.checked)"/> <b>Enhanced UNDER eligibility</b></label><p class="mu">Require stronger recent usage for UNDER recommendations. Baseline participation always applies.</p><div style="margin-top:12px"><label><input checked="" id="regularOnly" onchange="setRegularOnly(this.checked)" type="checkbox"/> <b>Regular contributors only</b></label><p class="mu">Baseline recommendations require participation in at least 3 of the last 4 completed team games, with market-specific usage. Enhanced UNDER also requires an appearance in the latest completed team game and higher average usage. Anytime TD requires an average of 2 combined carries and targets, or a touchdown in the recent team-game window. Turning this option off relaxes the additional legacy contributor checks, not the baseline safety rules. Existing selections stay intact.</p></div><fieldset style="margin:12px 0 0;padding:10px;border:1px solid var(--bd);border-radius:8px"><legend><b>Risk factor — combined parlay odds</b></legend><div class="row"><label for="oddsFrom">From <input id="oddsFrom" inputmode="text" placeholder="+500" step="1" style="width:100px" type="number"/></label><label for="oddsThrough">Through <input id="oddsThrough" inputmode="text" placeholder="+2000" step="1" style="width:100px" type="number"/></label><button class="btn alt" onclick="applyOddsRange()" type="button">Apply odds range</button><button class="btn alt" id="quickViewParlays" onclick="quickViewFilteredParlays()" type="button">Quick view: X-leg parlays in range</button></div><p class="mu" style="margin:6px 0 0">Rounded American odds for the whole parlay, inclusive. Blank means no limit. Individual picks remain visible. Model prices are estimates.</p><div aria-live="polite" class="mu" id="oddsFilterStatus" role="status"></div><div class="mu" id="combinedOddsStatus" role="status"></div></fieldset>
 <div class="mu" id="hint" style="margin-top:8px"></div>
-</div></details></aside><main aria-label="NFL game cards" class="responsive-game-main"><h2 id="gameSection">Games</h2><div class="toolbar"><input aria-label="Search games" id="gameSearch" placeholder="Search teams or matchups" type="search"/><span class="mu" id="gameCount"></span><button aria-controls="previousGames" aria-expanded="false" class="btn alt" id="togglePreviousGames" onclick="togglePreviousGames()" type="button">Show previous weeks</button></div><details id="manualOverrideManager" class="card"><summary>Manual Override Management <span id="manualOverrideManagerCount" class="manual-manager-count">Checking saved scenarios…</span></summary><div class="manual-manager-content"><p class="mu">New-team scenarios are saved only in this browser and are specific to a season, week and matchup. Removing one does not change official predictions, saved parlays, or hypothetical legs already added to a draft.</p><div id="manualOverrideManagerList"></div><div class="manual-manager-footer"><button class="btn alt" type="button" id="clearAllManualOverrides" onclick="clearAllManualRosterOverrides()">Clear All Manual Overrides…</button></div><div id="manualOverrideManagerStatus" class="mu" aria-live="polite" role="status" style="margin-top:9px"></div></div></details><div id="games"></div><div id="previousGames" style="display:none"></div></main></div>
+</div></details></aside><main aria-label="NFL game cards" class="responsive-game-main"><h2 id="gameSection">Games</h2><div class="toolbar"><input aria-label="Search games" id="gameSearch" placeholder="Search teams or matchups" type="search"/><span class="mu" id="gameCount"></span><button aria-controls="previousGames" aria-expanded="false" class="btn alt" id="togglePreviousGames" onclick="togglePreviousGames()" type="button">Show previous weeks</button></div><details id="manualOverrideManager" class="card"><summary>Manual Override Management <span id="manualOverrideManagerCount" class="manual-manager-count">Checking saved scenarios…</span></summary><div class="manual-manager-content"><div id="manualRosterRemovalEditor"></div><p id="manualRosterRemovalStatus" class="mu" role="status"></p><h3>Saved new-team scenarios</h3><p class="mu">New-team scenarios are saved only in this browser and are specific to a season, week and matchup. Removing one does not change official predictions, saved parlays, or hypothetical legs already added to a draft.</p><div id="manualOverrideManagerList"></div><div class="manual-manager-footer"><button class="btn alt" type="button" id="clearAllManualOverrides" onclick="clearAllManualRosterOverrides()">Clear All New-Team Scenarios…</button></div><div id="manualOverrideManagerStatus" class="mu" aria-live="polite" role="status" style="margin-top:9px"></div></div></details><div id="games"></div><div id="previousGames" style="display:none"></div></main></div>
 
 
 <section id="draftManagement"><h2>Draft slips</h2><div class="mu">Only slips with selections (plus your currently selected draft) are shown. Manage each slip using its own controls.</div><div class="tools"><button class="btn" id="newSlip">+ New slip</button><button class="btn alt" id="clearAllSlips">Delete all slips</button></div><div class="draft-card-grid" id="slipTabs"></div></section>
@@ -1104,7 +1104,8 @@ function reliablePlayerUsage(p,side='o'){
  const carries=avg('rushing_attempts'),targets=avg('targets');
  return carries!==null&&targets!==null&&carries+targets>=2;
 }
-function playerSuggested(p){
+function playerSuggested(p,g){
+ if(g&&manualRosterExcluded(p,g))return false;
  const stats=p.k==='td'?null:recentContribution(p),position=String(stats?.position||'').trim().toUpperCase();
  if(phase3PlayerOut(p)||!playerAvailable(p)||p.k==='ru'&&['WR','TE'].includes(position))return false;
  // Reject old or ambiguous team assignments using the newest available roster rows.
@@ -1290,6 +1291,59 @@ function manualRosterOptions(g){
  for(const p of PLY){if(!playerAvailable(p)||p.tm===g.a||p.tm===g.h)continue;const id=playerIdentity(p.n);if(!id)continue;const key=p.tm+'|'+id;if(!names.has(key))names.set(key,{tm:p.tm,n:p.n,position:p.position||'',markets:[]});names.get(key).markets.push(p);}
  return [...names.values()].sort((a,b)=>a.n.localeCompare(b.n)||a.tm.localeCompare(b.tm));
 }
+const MANUAL_ROSTER_REMOVALS_KEY='nflp-manual-roster-removals-v1';
+let manualRosterRemovals={};
+try{
+ const saved=JSON.parse(phase3LocalStorage.getItem(MANUAL_ROSTER_REMOVALS_KEY)||'{}');
+ if(saved&&typeof saved==='object'&&!Array.isArray(saved))manualRosterRemovals=saved;
+}catch(e){}
+function manualRemovalKey(team,name){return JSON.stringify([SEASON,team,playerIdentity(name)]);}
+function manualRosterExcluded(p,g){
+ const removal=manualRosterRemovals[manualRemovalKey(p.tm,p.n)];
+ return !g.sc&&!!removal&&Number(g.week||wk)>=removal.fromWeek;
+}
+function manualRemovalOptions(){
+ const players=new Map();
+ for(const p of PLY){
+  const key=manualRemovalKey(p.tm,p.n);
+  if(!playerIdentity(p.n)||manualRosterRemovals[key]?.fromWeek<=wk)continue;
+  players.set(key,{name:p.n,team:p.tm});
+ }
+ return [...players.entries()].sort(([,a],[,b])=>a.name.localeCompare(b.name)||a.team.localeCompare(b.team));
+}
+function renderManualRosterRemovalEditor(){
+ const editor=$('manualRosterRemovalEditor');
+ if(SEASON!==MODEL_SEASON){editor.innerHTML='';return;}
+ const previous=$('manualRosterRemovalPlayer')?.value;
+ const options=manualRemovalOptions();
+ const removals=Object.entries(manualRosterRemovals).filter(([,entry])=>entry?.season===SEASON)
+  .sort(([,a],[,b])=>a.name.localeCompare(b.name)||a.team.localeCompare(b.team));
+ const list=removals.map(([key,entry])=>'<li class="manual-override-row"><span>'+esc(entry.name)+' ('+esc(entry.team)+') · Week '+esc(entry.fromWeek)+' onward</span><button type="button" class="btn alt" data-removal-key="'+esc(key)+'" aria-label="Restore '+esc(entry.name)+' to '+esc(entry.team)+' picks" onclick="setManualRosterRemoval(this.dataset.removalKey,true)">Restore</button></li>').join('');
+ editor.innerHTML='<h3>Remove player from roster</h3><p class="mu">Hide a traded or cut player’s former-team picks in this browser from Week '+esc(wk)+' through the end of the season.</p>'+
+  '<div class="tools"><label for="manualRosterRemovalPlayer">Player and former team</label><select id="manualRosterRemovalPlayer"><option value="">Choose player</option>'+
+  options.map(([key,player])=>'<option value="'+esc(key)+'">'+esc(player.name)+' ('+esc(player.team)+')</option>').join('')+
+  '</select><button type="button" class="btn alt" onclick="setManualRosterRemoval(document.getElementById(&quot;manualRosterRemovalPlayer&quot;).value,false)"'+(options.length?'':' disabled')+'>Remove player</button></div>'+
+  (list?'<ul style="list-style:none;padding:0">'+list+'</ul>':'');
+ if(options.some(([key])=>key===previous))$('manualRosterRemovalPlayer').value=previous;
+}
+function setManualRosterRemoval(key,restore){
+ if(SEASON!==MODEL_SEASON)return;
+ const next={...manualRosterRemovals};
+ const player=restore?next[key]:manualRemovalOptions().find(([value])=>value===key)?.[1];
+ const status=$('manualRosterRemovalStatus');
+ if(!player||restore&&player.season!==SEASON){
+  status.textContent='Choose a player and former team.';
+  return;
+ }
+ if(restore)delete next[key];
+ else next[key]={...player,season:SEASON,fromWeek:wk};
+ try{phase3LocalStorage.setItem(MANUAL_ROSTER_REMOVALS_KEY,JSON.stringify(next));}
+ catch(e){status.textContent='Unable to save this roster adjustment in your browser.';return;}
+ manualRosterRemovals=next;
+ draw();plays();renderAdvanced();
+ $('manualRosterRemovalPlayer')?.focus({preventScroll:true});
+ status.textContent=player.name+(restore?' restored to ':' removed from ')+player.team+' recommendations in this browser.';
+}
 function manualRosterPanel(g){
  if(g.sc||SEASON!==MODEL_SEASON)return '';
  const key=manualRosterKey(g),saved=manualRosterOverrides[key],options=manualRosterOptions(g);
@@ -1338,9 +1392,10 @@ function manualRosterManagerEntries(){
 }
 function renderManualRosterManager(){
  const host=document.getElementById('manualOverrideManager'),list=document.getElementById('manualOverrideManagerList');if(!host||!list)return;
+ renderManualRosterRemovalEditor();
  const entries=manualRosterManagerEntries();manualRosterManagerKeys=entries.map(([key])=>key);
  document.getElementById('manualOverrideManagerCount').textContent='· '+entries.length+' saved '+(entries.length===1?'scenario':'scenarios');
- if(!host.dataset.initialized){host.open=entries.length>0;host.dataset.initialized='1';}
+ if(!host.dataset.initialized){host.open=entries.length>0||Object.values(manualRosterRemovals).some(entry=>entry?.season===SEASON);host.dataset.initialized='1';}
  list.innerHTML=entries.map(([key,value],index)=>{
   const saved=value&&typeof value==='object'?value:{},parts=key.split('|');
   const player=PLY.find(p=>p.tm===saved.sourceTeam&&playerIdentity(p.n)===saved.identity)?.n||saved.name||saved.identity||'Unknown player';
@@ -1420,7 +1475,7 @@ function allManualScenarioHTML(limit=12){
  return '<div class="card"><b>Manual Override scenarios · not verified recommendations</b>'+gamesWithScenarios.map(id=>manualScenarioHTML(games.find(g=>g.id===id),limit)).join('')+'</div>';
 }
 function injuryTag(p,week=wk){return `<small class="mu ui-injury-label" data-injury-player="${esc(p.n)}" data-injury-team="${esc(p.tm)}" data-injury-week="${Number(week)}">${esc(window.phase3InjuryLabel?.(p.n,p.tm,week)||'Injury status loading')}</small>`;}
-const plBtns=(g,k,b)=>PLY.filter(p=>p.k===k&&(p.tm===g.a||p.tm===g.h)&&playerSuggested(p)).map(p=>{const s=weatherPlayerStat(p,g),sub=(q,reference)=>am(dec(reference))+" · "+Math.round(q*100)+"%";if(!s)return '';const reference=s.referenceProbability??s.p;const buttons=(playerRecommendationAllowed(g,p,'o',s.line)?b('p'+p.i,'o',k==='td'?'Anytime TD':'Over',sub(s.p,reference)):'')+(k!=='td'&&playerRecommendationAllowed(g,p,'u',s.line)?b('p'+p.i,'u','Under',sub(1-s.p,1-reference)):'');return buttons?'<div class="m">'+esc(p.n)+' ('+p.tm+')'+(k==='td'?'':' · line '+s.line)+' '+injuryTag(p)+(p.dynamic?' <small class="mu">'+p.samples+' completed games</small>':'')+'</div>'+buttons:'';}).join('');
+const plBtns=(g,k,b)=>PLY.filter(p=>p.k===k&&(p.tm===g.a||p.tm===g.h)&&playerSuggested(p,g)).map(p=>{const s=weatherPlayerStat(p,g),sub=(q,reference)=>am(dec(reference))+" · "+Math.round(q*100)+"%";if(!s)return '';const reference=s.referenceProbability??s.p;const buttons=(playerRecommendationAllowed(g,p,'o',s.line)?b('p'+p.i,'o',k==='td'?'Anytime TD':'Over',sub(s.p,reference)):'')+(k!=='td'&&playerRecommendationAllowed(g,p,'u',s.line)?b('p'+p.i,'u','Under',sub(1-s.p,1-reference)):'');return buttons?'<div class="m">'+esc(p.n)+' ('+p.tm+')'+(k==='td'?'':' · line '+s.line)+' '+injuryTag(p)+(p.dynamic?' <small class="mu">'+p.samples+' completed games</small>':'')+'</div>'+buttons:'';}).join('');
 const hr=tm=>{const m=/(\d+):(\d+) (AM|PM)/.exec(tm);return m?(+m[1]%12)+(m[3]==="PM"?12:0)+(+m[2])/60:0};
 const bucket=tm=>{const h=hr(tm);return h<11?"early":h<15?"aft":h<19?"eve":"late"};
 const vis=g=>filterHas(tf,bucket(g.tm))&&(!gameQuery||`${g.a} ${g.h} ${T[g.a]?.[0]||""} ${T[g.h]?.[0]||""}`.toLowerCase().includes(gameQuery));
@@ -1540,7 +1595,7 @@ function gamePickCandidates(g,includeManual=false,ignoreBook=false,book=sportsbo
  for(const t of ['a','h'])if(verifiedTeamPointsLine(g,t)!==null)for(const side of ['o','u'])add('teamtot'+t,side,'game');
 
  for(const t of ['a','h'])for(const side of ['o','u'])add('td'+t,side,'td');
- for(const p of PLY.filter(p=>(p.tm===g.a||p.tm===g.h)&&playerSuggested(p))){
+ for(const p of PLY.filter(p=>(p.tm===g.a||p.tm===g.h)&&playerSuggested(p,g))){
   const entered=advManual[advKey(g,p)];
   const manual=includeManual&&(!book||entered?.book===book)?entered:null;
   if(manual&&Number.isFinite(Number(manual.line))&&Number(manual.line)>=0&&oddsDecimal(manual.odds)!==null){const side=p.k!=='td'&&manual.side==='u'?'u':'o';
@@ -1600,7 +1655,7 @@ function moreGamePicks(g,b){
  const key=gamePicksKey(g.id),f=allPickFilters.get(key)||{},closed=allPickCollapsed.get(key)||new Set();
  const all=sortedMorePicks(g).filter(x=>!x.player||!phase3PlayerOut(x.player));
  const best=new Set(gameBestPickRows(g).slice(0,8).map(x=>x.mk+'|'+x.sd));
- const suggested=new Set(phase4Top12GameCandidates(g).filter(x=>sportsbookAllows(g,'p'+x.p.i,advancedPickSide(x),x.p.k==='td'?'':x.line)).slice(0,12).filter(x=>{if(x.manual)return false;const baseline=pstat(x.p,g);return !!baseline&&(x.p.k==='td'?x.line==null:Number.isFinite(x.line)&&x.line===baseline.line);}).map(x=>'p'+x.p.i+'|'+advancedPickSide(x)));
+ const suggested=new Set(phase4Top12GameCandidates(g).filter(x=>!manualRosterExcluded(x.p,g)&&sportsbookAllows(g,'p'+x.p.i,advancedPickSide(x),x.p.k==='td'?'':x.line)).slice(0,12).filter(x=>{if(x.manual)return false;const baseline=pstat(x.p,g);return !!baseline&&(x.p.k==='td'?x.line==null:Number.isFinite(x.line)&&x.line===baseline.line);}).map(x=>'p'+x.p.i+'|'+advancedPickSide(x)));
  const visible=all.filter(x=>(!f.market||allPickMarket(x)===f.market)&&(!f.position||x.position===f.position)&&(!f.team||allPickTeam(x)===f.team));
  const select=(k,label,values)=>'<label>'+label+' <select aria-label="'+label+'" onchange="setAllPickFilter(\''+g.id+'\',\''+k+'\',this.value)"><option value="">All</option>'+values.map(v=>'<option value="'+esc(v)+'" '+(f[k]===v?'selected':'')+'>'+esc(v)+'</option>').join('')+'</select></label>';
  const controls='<div class="tools" style="flex-wrap:wrap">'+select('market','Market',[...new Set(all.map(allPickMarket))])+select('position','Position',[...new Set(all.map(x=>x.position))])+select('team','Team',[g.a,g.h])+'<button class="btn alt" onclick="resetAllPickFilters(\''+g.id+'\')">Reset Filters</button><button class="btn alt" onclick="setAllPickGroups(\''+g.id+'\',false)">Expand All</button><button class="btn alt" onclick="setAllPickGroups(\''+g.id+'\',true)">Collapse All</button></div>';
@@ -1647,7 +1702,7 @@ function scrollToRiskParlaySettings(){
  const offset=desktop&&nav?nav.getBoundingClientRect().height+12:12;
  window.scrollTo({top:Math.max(0,window.scrollY+target.getBoundingClientRect().top-offset),behavior:'smooth'});
 }
-function filteredParlayContext(){return JSON.stringify([SEASON,wk,mode,riskParlayLegs,focus,tf,pf,gameQuery,sportsbookFilter,sportsbookFilter?Object.entries(bookLines).filter(([,at])=>currentBookLine(at)):[],riskParlayFrom,riskParlayThrough,riskParlayHideBelowBreakEven,regularOnly,enhancedUnderOnly,supportedTeamOnly,playerDataRevision,teamPointsRevision,phase4Weather]);}
+function filteredParlayContext(){return JSON.stringify([SEASON,wk,mode,riskParlayLegs,focus,tf,pf,gameQuery,sportsbookFilter,sportsbookFilter?Object.entries(bookLines).filter(([,at])=>currentBookLine(at)):[],riskParlayFrom,riskParlayThrough,riskParlayHideBelowBreakEven,regularOnly,enhancedUnderOnly,supportedTeamOnly,playerDataRevision,teamPointsRevision,phase4Weather,manualRosterRemovals]);}
 function filteredParlayCandidates(onlyAnytimeTD=false){
  refreshPlayerMarkets();if(SEASON!==MODEL_SEASON||mode==='same'&&!focus)return [];
  const now=Date.now();return games.filter(g=>!g.sc&&vis(g)&&(mode!=='same'||g.id===focus)&&Number.isFinite(Date.parse(g.date||''))&&Date.parse(g.date)>now)
@@ -1967,7 +2022,7 @@ function gameBestPickRows(g){
  if(allPickTypes()){const p=weatherTeamProbability(g,"ml","h",g.p),h=p>=.5;it.push({mk:"ml",sd:h?"h":"a",p:h?p:1-p,priceProbability:h?g.p:1-g.p,txt:(h?g.h:g.a)+" moneyline",why:"Model margin "+f1(Math.abs(g.m))+" pts"+(g.fp!=null?", schedule feed "+P((h?g.fp:1-g.fp)*100)+"%":"")})}
 
  if(filterHas(pf,'td'))['a','h'].forEach(t=>{const p=weatherTeamProbability(g,'td'+t,'o',g.pp[t].tdp),o=p>=.5;it.push({mk:'td'+t,sd:o?'o':'u',p:o?p:1-p,priceProbability:o?g.pp[t].tdp:1-g.pp[t].tdp,txt:(t==='a'?g.a:g.h)+' '+(o?'Over ':'Under ')+PN.td[1]+' team TDs',why:'Model team touchdown estimate'})});
- PLY.filter(p=>(p.tm===g.a||p.tm===g.h)&&filterHas(pf,p.k)&&playerSuggested(p)).forEach(p=>{const s=weatherPlayerStat(p,g);if(!s)return;const o=p.k==="td"||s.p>=.5;if(!playerRecommendationAllowed(g,p,o?'o':'u',s.line))return;it.push({mk:"p"+p.i,sd:o?"o":"u",p:o?s.p:1-s.p,priceProbability:o?(s.referenceProbability??s.p):1-(s.referenceProbability??s.p),txt:p.k==="td"?p.n+" anytime TD":p.n+" "+(o?"Over ":"Under ")+s.line+(p.k==="ps"?" pass yds":p.k==="ru"?" rush yds":p.k==="rec"?" receiving yds":p.k==="rcp"?" receptions":""),why:p.k==="td"?f1(p.v)+" TDs per game this season, projects "+f1(s.proj)+" here":"Averages "+Math.round(p.v)+" yds per game, projects about "+Math.round(s.proj)+" here"})});
+ PLY.filter(p=>(p.tm===g.a||p.tm===g.h)&&filterHas(pf,p.k)&&playerSuggested(p,g)).forEach(p=>{const s=weatherPlayerStat(p,g);if(!s)return;const o=p.k==="td"||s.p>=.5;if(!playerRecommendationAllowed(g,p,o?'o':'u',s.line))return;it.push({mk:"p"+p.i,sd:o?"o":"u",p:o?s.p:1-s.p,priceProbability:o?(s.referenceProbability??s.p):1-(s.referenceProbability??s.p),txt:p.k==="td"?p.n+" anytime TD":p.n+" "+(o?"Over ":"Under ")+s.line+(p.k==="ps"?" pass yds":p.k==="ru"?" rush yds":p.k==="rec"?" receiving yds":p.k==="rcp"?" receptions":""),why:p.k==="td"?f1(p.v)+" TDs per game this season, projects "+f1(s.proj)+" here":"Averages "+Math.round(p.v)+" yds per game, projects about "+Math.round(s.proj)+" here"})});
  it.sort((a,b)=>b.p-a.p);return it.filter(x=>sportsbookAllows(g,x.mk,x.sd));
 }
 function det(g){if(SEASON!==MODEL_SEASON||openG!==g.id)return "";const P=Math.round,it=gameBestPickRows(g);
@@ -2009,7 +2064,7 @@ function pick(gid,mkt,side){if(!teamMarketAllowed(mkt)&&/^td[a-z]$/.test(String(
   const i=legs.findIndex(l=>matches(l)&&l.side===side);
   if(i>-1){legs.splice(i,1);draw();aiSelectionFeedback('Selection removed from Current parlay: '+legs.length+' legs remain.');return true;}
   const player=playerForMarket(mkt);
-  if(!sportsbookAllows(game,mkt,side)||player&&(!playerSuggested(player)||!reliablePlayerUsage(player,side))){
+  if(!sportsbookAllows(game,mkt,side)||player&&(!playerSuggested(player,game)||!reliablePlayerUsage(player,side))){
    aiSelectionFeedback('This recommendation is no longer eligible under the current filters.');return false;
   }
   const next=mode==='same'?legs.filter(l=>!matches(l)):legs.slice();
@@ -2296,7 +2351,7 @@ function plays(){
 
  if(filterHas(pf,'td'))for(const pf of ['td']){const L=[];(WKS[wk]||[]).filter(g=>!g.sc&&vis(g)).forEach(g=>["a","h"].forEach(t=>{const baseline=g.pp[t][pf+"p"],p=weatherTeamProbability(g,pf+t,"o",baseline),o=p>=.5;if(!sportsbookAllows(g,pf+t,o?'o':'u'))return;L.push({g,t,o,p:o?p:1-p,priceProbability:o?baseline:1-baseline})}));L.sort((a,b)=>b.p-a.p);
   h+=`<div class="card"><b>Top ${PL[pf]} plays</b>`+(L.slice(0,6).map(x=>{const tm=x.t==="a"?x.g.a:x.g.h;return`<div class="pl ${x.p<.6?"med":""}"><b>${tm} ${x.o?"Over":"Under"} ${PN[pf][1]} ${PN[pf][0]}</b> · ${Math.round(x.p*100)}% · ${am(dec(x.priceProbability))}<div class="mu">vs ${x.t==="a"?x.g.h:x.g.a} · projected ${pf==="td"?f1(weatherTeamProjection(x.g)?(x.t==="a"?weatherTeamProjection(x.g).away:weatherTeamProjection(x.g).home)*.1:x.g.pp[x.t].td)+" TDs":Math.round(x.g.pp[x.t][pf+"y"])+" yds"}</div><button type="button" class="btn alt" onclick="quickAddRecommended('${x.g.id}','${pf+x.t}','${x.o?'o':'u'}')">+ Add to parlay</button></div>`}).join("")||`<div class="mu">No team picks match the current filters and loaded data.</div>`)+`</div>`}
-  {const Q=[];(WKS[wk]||[]).filter(g=>!g.sc&&vis(g)).forEach(g=>PLY.forEach(p=>{if((p.tm===g.a||p.tm===g.h)&&filterHas(pf,p.k)&&playerSuggested(p)){const s=weatherPlayerStat(p,g);if(!s)return;const o=p.k==="td"||s.p>=.5;if(!playerRecommendationAllowed(g,p,o?'o':'u',s.line))return;Q.push({p,g,o,q:o?s.p:1-s.p,s})}}));Q.sort((a,b)=>b.q-a.q);
+  {const Q=[];(WKS[wk]||[]).filter(g=>!g.sc&&vis(g)).forEach(g=>PLY.forEach(p=>{if((p.tm===g.a||p.tm===g.h)&&filterHas(pf,p.k)&&playerSuggested(p,g)){const s=weatherPlayerStat(p,g);if(!s)return;const o=p.k==="td"||s.p>=.5;if(!playerRecommendationAllowed(g,p,o?'o':'u',s.line))return;Q.push({p,g,o,q:o?s.p:1-s.p,s})}}));Q.sort((a,b)=>b.q-a.q);
   h+=`<div class="card"><b>Top player picks${allPickTypes()?"":" ("+pickTypes().map(k=>PL[k]).join(", ")+")"}</b>`+(Q.slice(0,6).map(x=>`<div class="pl ${x.q<.6?"med":""}"><b>${esc(x.p.k==="td"?x.p.n+" anytime TD":x.p.n+" "+(x.o?"Over ":"Under ")+x.s.line+(x.p.k==="ps"?" pass yds":x.p.k==="rec"?" receiving yds":x.p.k==="rcp"?" receptions":" rush yds"))}</b>${injuryTag(x.p)} · ${Math.round(x.q*100)}% · ${am(dec(x.s.referenceProbability==null?x.q:x.o?x.s.referenceProbability:1-x.s.referenceProbability))}<div class="mu">${x.g.a} @ ${x.g.h}</div><button type="button" class="btn alt" onclick="quickAddRecommended('${x.g.id}','p${x.p.i}','${x.o?'o':'u'}')">+ Add to parlay</button>${playerStatsButton(x.p,x.g)}</div>`).join("")||`<div class="mu">No player picks match the current filters and loaded data.</div>`)+`</div>`}
   h+=allManualScenarioHTML();
   // Retrospective evaluations only: these are not verified pregame predictions.
@@ -2538,7 +2593,7 @@ function advAdd(index){
  if(!game||game.sc){aiSelectionFeedback('Selection not added: game unavailable or completed.');return;}
  if(mode==='same'&&focus&&String(focus)!==String(game.id)){aiSelectionFeedback('Selection not added: this same-game slip is for a different matchup. Use a multi-game slip to combine games.');return;}
  const side=advancedPickSide(x);
- if(!playerSuggested(x.p)||!playerRecommendationAllowed(game,x.p,side,x.line)){
+ if(!playerSuggested(x.p,game)||!playerRecommendationAllowed(game,x.p,side,x.line)){
   aiSelectionFeedback('This recommendation is no longer eligible under the current filters.');return;
  }
  const text=advancedSelectionText(x);
@@ -2709,7 +2764,7 @@ function renderAdvanced(){
  const rank=$('advRank');
  rank.disabled=view==='optimizer';
  const byValue=!rank.disabled&&rank.value==='value';
- const candidates=(WKS[wk]||[]).filter(g=>!g.sc&&vis(g)).flatMap(g=>PLY.filter(p=>(p.tm===g.a||p.tm===g.h)&&filterHas(pf,p.k)&&(market==='all'||p.k===market)&&playerSuggested(p)).map(p=>{
+ const candidates=(WKS[wk]||[]).filter(g=>!g.sc&&vis(g)).flatMap(g=>PLY.filter(p=>(p.tm===g.a||p.tm===g.h)&&filterHas(pf,p.k)&&(market==='all'||p.k===market)&&playerSuggested(p,g)).map(p=>{
   const entered=advManual[advKey(g,p)];
   const useManual=!sportsbookFilter||entered?.book===sportsbookFilter&&
    sportsbookAllows(g,'p'+p.i,entered.side,p.k==='td'?'':entered.line);
