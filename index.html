@@ -758,7 +758,7 @@ html{scroll-padding-top:175px}#topAccountPanel,#myParlays,#savedParlaySlips,#bui
 <div class="header-schedule"><div class="toolbar"><label for="seasonSelect" style="font-weight:700">Season</label><select aria-label="NFL season" id="seasonSelect"></select><label for="wkTop" style="font-weight:700">Week</label><select aria-label="NFL week (top selector)" id="wkTop"></select><button class="btn" id="refresh" type="button">↻ Refresh</button><button class="btn alt" hidden="" id="boxRefresh" type="button">↻ Load completed team box scores</button></div></div>
 </section><section aria-label="My parlay results" class="header-parlay-metrics"><div class="header-metrics-label">🏆 MY PARLAYS</div><div class="header-metrics-grid"><div class="header-metric"><strong id="headerParlayWon">0</strong><span>WON</span></div><div class="header-metric"><strong id="headerParlayLost">0</strong><span>LOST</span></div><div class="header-metric"><strong id="headerParlayOpen">0</strong><span>OPEN</span></div></div></section></div></div>
 <div class="refresh-status-line"><span aria-live="polite" class="data-state" id="dataState" role="status">Offline snapshot • 2026 weeks 9–10</span></div>
-<details class="navlinks skip-native-drawer" id="stickySkipNavigation" aria-label="Skip to application sections"><summary id="skipNavToggle" aria-controls="skipNavLinks"><span>▲ Skip To</span><span class="skip-drawer-hint">Tap to open or close</span></summary><div id="skipNavLinks" class="skip-nav-grid"><a href="#topAccountPanel">Account</a><a href="#uiParlaySummary">My Parlays</a><a href="#savedParlaySlips">Saved Parlays</a><a href="#builderSettingsTitle">Filters</a><a href="#uiInjurySection">Injuries</a><a href="#gameSection">Games</a><a href="#recommendations">Potential Plays</a><a href="#bestRiskParlayControls">Risk Parlays</a><a href="#advancedPredictions">AI Matchups</a><a href="#advPerformancePanel">AI Performance</a><a href="#cloudUserPredictionHistory">Prediction History</a></div></details><style id="quickFilters20261123">
+<details class="navlinks skip-native-drawer" id="stickySkipNavigation" aria-label="Skip to application sections"><summary id="skipNavToggle" aria-controls="skipNavLinks"><span>▲ Skip To</span><span class="skip-drawer-hint">Tap to open or close</span></summary><div id="skipNavLinks" class="skip-nav-grid"><a href="#topAccountPanel">Account</a><a href="#uiParlaySummary">My Parlays</a><a href="#savedParlaySlips">Saved Parlays</a><a href="#builderSettingsTitle">Filters</a><a href="#uiInjurySection">Injuries</a><a href="#gameSection">Games</a><a href="#recommendations">Potential Plays</a><a href="#bestRiskParlayControls">Risk Parlays</a><a href="#advancedPredictions">AI Matchups</a><a href="#advPerformancePanel">AI Performance</a><a href="#suggestedParlayResults">Suggested Parlay Results</a><a href="#cloudUserPredictionHistory">Prediction History</a></div></details><style id="quickFilters20261123">
 #quickFiltersBar{position:sticky;top:0;z-index:180;background:var(--card);border:1px solid var(--bd);border-radius:12px;padding:9px 12px;margin:8px 0;box-shadow:0 3px 14px #00000015;scroll-margin-top:12px}
 #quickFiltersBar input[type=checkbox]{width:20px;height:20px;flex:none}.book-line-editor fieldset{min-width:0;margin:12px 0;padding:10px;border:1px solid var(--bd);border-radius:9px}.book-line-editor select{max-width:100%;min-height:44px}.book-line-editor label{min-width:0;max-width:100%}@media(min-width:701px){#quickFiltersBar{top:var(--quick-skip-height,0px)}}
 #quickFiltersBar .qf-row{display:flex;align-items:center;gap:8px;flex-wrap:wrap}#quickFiltersBar label{font-size:12px;font-weight:700;display:flex;align-items:center;gap:5px}#quickFiltersBar select,#quickFiltersBar input{font:inherit;max-width:155px;min-width:0;padding:7px;border:1px solid var(--bd);border-radius:8px;background:var(--card);color:var(--tx)}#quickFiltersBar button{padding:7px 10px;white-space:nowrap}#qfChips{display:flex;gap:5px;flex-wrap:wrap;margin-top:5px}#qfChips span{font-size:11px;background:var(--sel);color:var(--tx);padding:3px 8px;border-radius:99px}#qfStatus{font-size:11px;margin-top:3px}#qfAdvanced{display:none}#qfAdvanced[open]{display:block}#qfAdvanced .qf-advanced-body{display:flex;flex-wrap:wrap;gap:8px;align-items:end;padding:9px 0}#qfAdvanced summary{cursor:pointer;font-weight:700}#qfPresetName{width:140px}#quickFiltersBar .qf-title{font-weight:800;color:var(--ok)}
@@ -5566,7 +5566,7 @@ recovery.onclick=async()=>{recovery.disabled=true;recoveryStatus.textContent='Ve
    if(!window.matchMedia('(min-width:701px)').matches)nav.open=false;
    // Align the section heading at the top, including content hidden in details.
    // Performance and cloud history are distinct destinations inside AI Matchups.
-   const independentPanel=['advPerformancePanel','cloudUserPredictionHistory','bestRiskParlayControls'].includes(target.id);
+   const independentPanel=['suggestedParlayResults','advPerformancePanel','cloudUserPredictionHistory','bestRiskParlayControls'].includes(target.id);
    const start=independentPanel?target:target.closest('.ui-section')||target;
    requestAnimationFrame(()=>requestAnimationFrame(()=>{
     const offset=(window.matchMedia('(min-width:701px)').matches?nav.getBoundingClientRect().height:0)+(document.getElementById('quickFiltersBar')?.getBoundingClientRect().height||0)+12;
@@ -5824,14 +5824,14 @@ recovery.onclick=async()=>{recovery.disabled=true;recoveryStatus.textContent='Ve
  resultsSection.open=true;
  resultsSection.innerHTML='<summary><b>Suggested Parlay Results</b></summary>'+
   '<p class="mu">Results for suggestions captured in this browser while signed in. Legs are graded against the original picks when final scores and stats are available.</p>'+
-  '<div class="tools"><label for="suggestedParlayWeek">Results week</label> <select id="suggestedParlayWeek" disabled></select> <label for="suggestedParlayCompletion">Completion</label> <select id="suggestedParlayCompletion"><option value="all">All</option><option value="2">Completed</option><option value="1">Partially completed</option></select></div>'+
+  '<div class="tools"><label for="suggestedParlayWeek">Results week</label> <select id="suggestedParlayWeek" disabled></select> <label for="suggestedParlayCompletion">Completion</label> <select id="suggestedParlayCompletion"><option value="all">All</option><option value="2">Completed</option><option value="1">Partially completed</option></select> <label for="suggestedParlayOutcome">Result</label> <select id="suggestedParlayOutcome"><option value="all">All results</option><option value="WON_MODEL">HIT</option><option value="LOST_MODEL">MISS</option></select></div>'+
   '<p class="mu" id="suggestedParlayTotals" role="status"></p><p id="suggestedParlayDollars"></p><div id="suggestedParlayRows"></div>';
  panel.prepend(resultsSection);
  const resultsWeek=$('suggestedParlayWeek'),totals=$('suggestedParlayTotals'),rows=$('suggestedParlayRows');
  const resultsWeekKey='nflp-suggested-results-week-v1:'+SEASON;
  let selectedResultsWeek;
  try{selectedResultsWeek=Number(phase3LocalStorage.getItem(resultsWeekKey));}catch(e){}
- const completion=$('suggestedParlayCompletion'),dollars=$('suggestedParlayDollars');
+ const completion=$('suggestedParlayCompletion'),outcome=$('suggestedParlayOutcome'),dollars=$('suggestedParlayDollars');
  let displayedOwner=null,displayedRows='';
  const resultLabels={WON_MODEL:'Won',LOST_MODEL:'Lost',OPEN:'Open',PUSH_REVIEW:'Push review',UNVERIFIED:'Unverified'};
  const hypotheticalStake=10;
@@ -5897,6 +5897,7 @@ recovery.onclick=async()=>{recovery.disabled=true;recoveryStatus.textContent='Ve
   const expanded=new Set([...rows.querySelectorAll('details[open]')].map(item=>item.dataset.resultId));
   const markup=plans.map((p,i)=>{
    if(completion.value!=='all'&&Number(completion.value)!==progress(p))return '';
+   if(outcome.value!=='all'&&(p.pending!==0||p.outcome!==outcome.value))return '';
    const id=shortId(p.signature);
    const legs=p.legs.map(l=>{
     const details=[l.matchup, l.line===''?'':'Line '+l.line, l.actual===''?'':'Actual '+l.actual,l.final_score,l.reason].filter(Boolean).map(esc).join(' · ');
@@ -5913,13 +5914,14 @@ recovery.onclick=async()=>{recovery.disabled=true;recoveryStatus.textContent='Ve
    return '<details class="card" data-result-id="'+id+'"><summary><b>'+
     esc([p.type,p.variant].filter(Boolean).join(' · '))+'</b><div class="mu">'+p.legs.length+' legs · '+legCounts(p)+' · '+verdict+'</div><div class="mu">'+stakeLine+'</div></summary>'+
     '<ol style="padding-inline-start:20px">'+legs+'</ol></details>';
-  }).join('')||'<p class="mu">No suggested parlays match this completion filter.</p>';
+  }).join('')||'<p class="mu">No suggested parlays match the selected filters.</p>';
   if(markup===displayedRows)return;
   displayedRows=markup;
   rows.innerHTML=markup;
   for(const item of rows.querySelectorAll('details'))item.open=expanded.has(item.dataset.resultId);
  }
  completion.addEventListener('change',renderSuggestionResults);
+ outcome.addEventListener('change',renderSuggestionResults);
  window.phase3RenderSuggestedParlayResults=renderSuggestionResults;
  resultsWeek.addEventListener('change',()=>{
   selectedResultsWeek=Number(resultsWeek.value);

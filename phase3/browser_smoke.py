@@ -397,11 +397,23 @@ with sync_playwright() as p:
           phase3LocalStorage.setItem('nflp-suggested-parlay-history-v1-'+owner,JSON.stringify([first,second,late,{...first,signature:'pending',variant:'Pending fixture',legs:first.legs.map(leg=>({...leg,game_id:'fixture-not-final',matchup:'KC @ DEN'}))}]));
           return [previous,other,current];
         }""")
-        page.evaluate("document.getElementById('advTabPerformance').click()")
+        page.evaluate("""() => {
+          document.getElementById('advTabRecommendations').click();
+          document.getElementById('suggestedParlayResults').open=false;
+          document.querySelector('#skipNavLinks a[href="#suggestedParlayResults"]').click();
+        }""")
         results=page.locator('#suggestedParlayResults')
         selector=results.get_by_label('Results week')
         assert selector.input_value()==str(result_weeks[0])
         assert '1 HIT · 1 MISS' in results.inner_text()
+        assert results.get_attribute('open') is not None
+        outcome=results.get_by_label('Result',exact=True)
+        outcome.select_option('WON_MODEL',force=True)
+        assert results.locator('[data-result-id]').count()==0
+        outcome.select_option('LOST_MODEL',force=True)
+        assert results.locator('[data-result-id]').count()==1
+        outcome.select_option('all',force=True)
+
         assert '$10.00 hypothetical stakes on 1 settled · -$10.00 estimated net' in results.inner_text()
         assert 'Late fixture' not in results.inner_text()
         assert results.locator('[data-result-id] summary strong').inner_text()=='MISS'
@@ -418,7 +430,7 @@ with sync_playwright() as p:
         completion.select_option('2',force=True)
         assert results.locator('[data-result-id]').count()==1
         completion.select_option('1',force=True)
-        assert 'No suggested parlays match this completion filter' in results.inner_text()
+        assert 'No suggested parlays match the selected filters' in results.inner_text()
         completion.select_option('all',force=True)
 
         selector.select_option(str(result_weeks[1]),force=True)
